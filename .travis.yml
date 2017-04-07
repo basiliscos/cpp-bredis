@@ -18,9 +18,9 @@ addons:
     sources:
     - ubuntu-toolchain-r-test
     packages:
-    - g++-5
+    - g++-4.9
     - clang-3.8
-    - libboost-all-dev
+#    - libboost-all-dev
 
 
 script:
@@ -28,7 +28,6 @@ script:
     - make test
 
 install:
-    - if [ "$CXX" = "g++" ]; then export CXX="g++" CC="gcc"; fi
-    - if [ "$CXX" = "clang++" ]; then export CXX="clang++" CC="clang"; fi
-
+    - if [ "$CXX" = "g++" ]; then export CXX="g++-4.9"; fi
+    - if [ "$CXX" = "clang++" ]; then export CXX="clang++"; fi
 
