@@ -14,7 +14,7 @@ Boost::ASIO low-lever redis client (connector)
 ## Syncronous TCP-connection example
 
 ```cpp
-#include "bredis/SyncConnection.hpp"
+#include <bredis/SyncConnection.hpp>
 #include <boost/variant.hpp>
 #include <boost/utility/string_ref.hpp>
 ...
