@@ -1,0 +1,31 @@
+dist: trusty
+language: cpp
+sudo: false
+compiler:
+    - clang
+    - gcc
+os:
+    - linux
+
+before_script:
+    - mkdir build
+    - cd build
+    - cmake ..
+
+addons:
+  apt:
+    sources:
+    - ubuntu-toolchain-r-test
+    packages:
+    - clang-3.8
+
+
+script:
+    - make
+    - make test
+
+install:
+    - if [ "$CXX" = "g++" ]; then export CXX="g++" CC="gcc"; fi
+    - if [ "$CXX" = "clang++" ]; then export CXX="clang++" CC="clang"; fi
+
+
