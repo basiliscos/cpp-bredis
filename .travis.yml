@@ -17,7 +17,9 @@ addons:
     sources:
     - ubuntu-toolchain-r-test
     packages:
+    - g++-4.9
     - clang-3.8
+    - boost
 
 
 script:
