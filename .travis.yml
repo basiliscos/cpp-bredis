@@ -18,13 +18,13 @@ addons:
     sources:
     - ubuntu-toolchain-r-test
     packages:
-#    - g++-5
+    - g++-5
     - clang-3.8
 #    - libboost-all-dev
 
 
 script:
-    - make
+    - make -v
     - make test
 
 install:
