@@ -1,4 +1,4 @@
-dist: trusty
+dist: yakkety
 language: cpp
 sudo: false
 compiler:
