@@ -16,7 +16,7 @@ find_package(
 #        system
 #    REQUIRED
 )
-include_directories(${bredis_SOURCE_DIR} ${bredis_SOURCE_DIR}/lib)
+include_directories(${bredis_SOURCE_DIR} ${BOOST_INCLUDEDIR})
 
 set(LINK_DEPENDENCIES pthread ${Boost_LIBRARIES})
 
