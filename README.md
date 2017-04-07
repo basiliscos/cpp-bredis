@@ -42,3 +42,11 @@ auto &reply_str = boost::get<r::string_holder_t>(result).str;
 std::string str(reply_str.cbegin(), reply_str.cend());
 ```
 
+# License 
+
+MIT
+
+## See also
+- https://github.com/Cylix/cpp_redis
+- https://github.com/blackjack/booredis
+- https://github.com/nekipelov/redisclient
