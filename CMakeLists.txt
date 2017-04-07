@@ -7,15 +7,15 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 include (CTest)
 enable_testing()
 
-add_definitions(-DBOOST_LOG_DYN_LINK)
-add_definitions(-DBREDIS_DEBUG)
+add_definitions(-DBOOST_ERROR_CODE_HEADER_ONLY)
+#add_definitions(-DBREDIS_DEBUG)
+
 find_package(
     Boost
-    COMPONENTS
-        system
-    REQUIRED
+#    COMPONENTS
+#        system
+#    REQUIRED
 )
-#add_library(ruindol-harvester2 src/Logging.cpp src/URL.cpp  src/LinkVisitor.cpp)
 include_directories(${bredis_SOURCE_DIR} ${bredis_SOURCE_DIR}/lib)
 
 set(LINK_DEPENDENCIES pthread ${Boost_LIBRARIES})

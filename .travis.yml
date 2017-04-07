@@ -1,13 +1,14 @@
-dist: yakkety
 language: cpp
+dist: trusty
 sudo: false
 compiler:
     - clang
-    - gcc
+#    - gcc
 os:
     - linux
 
 before_script:
+    - wget -q -O - http://sourceforge.net/projects/boost/files/boost/1.63.0/boost_1_63_0.tar.gz | tar -xz
     - mkdir build
     - cd build
     - cmake ..
@@ -17,9 +18,9 @@ addons:
     sources:
     - ubuntu-toolchain-r-test
     packages:
-    - g++-4.9
+    - g++-5
     - clang-3.8
-    - libboost-all-dev
+#    - libboost-all-dev
 
 
 script:
@@ -27,7 +28,7 @@ script:
     - make test
 
 install:
-    - if [ "$CXX" = "g++" ]; then export CXX="g++" CC="gcc"; fi
+#    - if [ "$CXX" = "g++" ]; then export CXX="g++" CC="gcc"; fi
     - if [ "$CXX" = "clang++" ]; then export CXX="clang++" CC="clang"; fi
 
 
