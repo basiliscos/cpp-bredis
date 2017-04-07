@@ -19,7 +19,7 @@ addons:
     packages:
     - g++-4.9
     - clang-3.8
-    - boost
+    - libboost-all-dev
 
 
 script:
