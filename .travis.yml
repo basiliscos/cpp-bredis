@@ -24,7 +24,7 @@ addons:
 
 
 script:
-    - make VERBOSE=1
+    - make
     - make test
 
 install:
