@@ -37,8 +37,7 @@ template <typename S> void AsyncConnection<S>::try_write() {
         std::lock_guard<std::mutex> guard(tx_queue_mutex_);
         if (!tx_queue_->empty()) {
             BREDIS_LOG_DEBUG("(a) tx qeue size: " << tx_queue_->size());
-            auto write_queue = std::make_unique<tx_queue_t::element_type>(
-                tx_queue_t::element_type({}));
+            auto write_queue = std::make_unique<tx_queue_t::element_type>();
             std::swap(write_queue, tx_queue_);
             write(*write_queue);
             BREDIS_LOG_DEBUG("(b) tx qeue size: " << tx_queue_->size());

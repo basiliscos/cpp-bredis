@@ -136,9 +136,12 @@ template <typename T, typename W> struct WrapPolicy {
 
 template <typename T> struct MovePolicy {
     using type_t = T;
-    static inline some_result_t value(T &v) {
-        return some_result_t(T{std::move(v)});
-    }
+    static inline some_result_t value(T &v) { return some_result_t(T{v}); }
+};
+
+struct ArrayUnwrapPolicy {
+    using type_t = array_result_t;
+    static inline some_result_t value(type_t &v) { return some_result_t(v); }
 };
 
 template <typename T, typename P>
@@ -199,7 +202,7 @@ static parse_result_t raw_parse(const boost::string_ref &outer_range) {
         return parse_result_t{std::move(t(v)), v.consumed ? v.consumed + 1 : 0};
     }
     case '*': {
-        using policy_t = MovePolicy<array_result_t>;
+        using policy_t = ArrayUnwrapPolicy;
         extractor<optional_array_t> e;
         transform_t<optional_array_t, policy_t, true> t;
         auto v = e(range);

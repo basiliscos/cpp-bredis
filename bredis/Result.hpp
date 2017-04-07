@@ -23,8 +23,8 @@ using string_result_t = boost::string_ref;
 using args_container_t = std::vector<string_result_t>;
 
 struct array_holder_t;
-// using recursive_array_t = array_holder_t;
 using array_result_t = array_holder_t;
+using array_wrapper_t = boost::recursive_wrapper<array_result_t>;
 
 struct protocol_error_t {
     std::string what;
@@ -47,7 +47,7 @@ struct nil_t {
 
 using some_result_t =
     boost::variant<int_result_t, string_holder_t, error_holder_t, nil_t,
-                   boost::recursive_wrapper<array_result_t>, protocol_error_t>;
+                   array_wrapper_t, protocol_error_t>;
 
 struct array_holder_t {
     using recursive_array_t = std::vector<some_result_t>;
@@ -59,9 +59,8 @@ struct parse_result_t {
     size_t consumed;
 };
 
-using redis_result_t =
-    boost::variant<int_result_t, string_holder_t, error_holder_t, nil_t,
-                   boost::recursive_wrapper<array_result_t>>;
+using redis_result_t = boost::variant<int_result_t, string_holder_t,
+                                      error_holder_t, nil_t, array_wrapper_t>;
 
 using command_callback_t = std::function<void(
     const boost::system::error_code &error_code, redis_result_t &&result)>;

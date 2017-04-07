@@ -58,8 +58,7 @@ template <typename S> class AsyncConnection {
   public:
     AsyncConnection(S &&socket)
         : socket_(std::move(socket)), tx_in_progress_(0), rx_in_progress_(0),
-          tx_queue_(std::make_unique<tx_queue_t::element_type>(
-              tx_queue_t::element_type({}))) {}
+          tx_queue_(std::make_unique<tx_queue_t::element_type>()) {}
 
     template <typename C = std::initializer_list<string_t>>
     void push_command(const std::string &cmd, C &&contaier,
