@@ -12,9 +12,6 @@ add_definitions(-DBOOST_ERROR_CODE_HEADER_ONLY)
 
 find_package(
     Boost
-#    COMPONENTS
-#        system
-#    REQUIRED
 )
 include_directories(${bredis_SOURCE_DIR} ${Boost_INCLUDE_DIRS})
 
