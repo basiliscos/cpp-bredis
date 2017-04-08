@@ -95,20 +95,29 @@ redis_connector.push_command("LLEN", "my-queue",
 
 ## API
 
-### `some_result_t`
+### `redis_result_t`
 
 The `some_result_t` is `boost::variant` of the following types: 
 - `string_holder_t`
 - `error_holder_t`
 - `nil_t`
-- recursive array wrapper of `some_result_t` (`boost::recursive_wrapper<array_holder_t>`)
+- recursive array wrapper of `redis_result_t` (`boost::recursive_wrapper<array_holder_t>`)
 
-`some_result_t` and `error_holder_t` just have `str` member, which is basically `boost::string_ref`.
+`redis_result_t` and `error_holder_t` just have `str` member, which is basically `boost::string_ref`.
 
 `nil_t` is obvious type to present `nil` redis result. 
 
 `array_holder_t` has `elements` member, which is `std::vector` of `some_result_t`.
 
+### `AsyncConnection<T>`
+
+Type `T` can be either TCP socket type or unix-domain sockets (e.g. `boost::asio::ip::tcp::socket` or `boost::asio::local::stream_protocol::socket`). 
+
+Method `cancel` cancels all pending I/O operations.
+
+Method `push_command(const std::string &cmd, C &&contaier, command_callback_t callback)` pushes new redis command with optional list of arguments. `callback` is invoked on error(socket write, socket read error, redis protocol error) or on successfull result parsing. 
+
+`command_callback_t` is `std::function<void(const boost::system::error_code &error_code, redis_result_t &&result)>`;
 
 # License 
 
