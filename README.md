@@ -42,6 +42,33 @@ auto &reply_str = boost::get<r::string_holder_t>(result).str;
 std::string str(reply_str.cbegin(), reply_str.cend());
 ```
 
+## Asyncronous TCP-connection example
+```cpp
+#include <bredis/SyncConnection.hpp>
+#include <boost/variant.hpp>
+#include <boost/utility/string_ref.hpp>
+...
+namespace r = bredis;
+namespace asio = boost::asio;
+...
+/* define used socket type */
+using socket_t = asio::ip::tcp::socket;
+...
+/* establishing connection to redis is outside of bredis */
+asio::ip::tcp::endpoint end_point(
+    asio::ip::address::from_string("127.0.0.1"), port);
+socket_t socket(io_service, end_point.protocol());
+socket.connect(end_point);
+
+r::AsyncConnection<socket_t> redis_connector(std::move(socket));
+redis_connector.push_command("LLEN", "my-queue", 
+                             [](const auto &error_code, r::some_result_t &&r) {
+    int my_queue_size = boost::get<r::int_result_t>(r);
+});
+
+```
+
+
 # License 
 
 MIT
