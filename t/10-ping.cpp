@@ -16,7 +16,7 @@ namespace ts = test_server;
 
 TEST_CASE("ping", "[connection]") {
     using socket_t = asio::ip::tcp::socket;
-    using result_t = r::some_result_t;
+    using result_t = r::redis_result_t;
     std::chrono::milliseconds sleep_delay(1);
 
     uint16_t port = ep::get_random<ep::Kind::TCP>();
@@ -35,7 +35,7 @@ TEST_CASE("ping", "[connection]") {
     std::future<result_t> completion_future = completion_promise.get_future();
 
     c.push_command("ping", [&completion_promise](const auto &error_code,
-                                                 r::some_result_t &&r) {
+                                                 r::redis_result_t &&r) {
         completion_promise.set_value(r);
     });
 

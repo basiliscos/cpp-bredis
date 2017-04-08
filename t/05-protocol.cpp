@@ -126,7 +126,7 @@ TEST_CASE("empty array", "[protocol]") {
     std::string ok = "*0\r\n";
     r::parse_result_t r = r::Protocol::parse(ok);
     REQUIRE(r.consumed);
-    auto &array = boost::get<r::array_result_t>(r.result);
+    auto &array = boost::get<r::array_holder_t>(r.result);
     REQUIRE(array.elements.size() == 0);
 };
 
@@ -156,7 +156,7 @@ TEST_CASE("array: string, int, nil", "[protocol]") {
     std::string ok = "*3\r\n$4\r\nsome\r\n:5\r\n$-1\r\n";
     r::parse_result_t r = r::Protocol::parse(ok);
     REQUIRE(r.consumed);
-    auto &array = boost::get<r::array_result_t>(r.result);
+    auto &array = boost::get<r::array_holder_t>(r.result);
     REQUIRE(array.elements.size() == 3);
 
     REQUIRE(boost::get<r::string_holder_t>(array.elements[0]) == "some");
@@ -169,7 +169,7 @@ TEST_CASE("array of arrays: [int, int, int,], [str,err] ", "[protocol]") {
     std::string ok = "*2\r\n*3\r\n:1\r\n:2\r\n:3\r\n*2\r\n+Foo\r\n-Bar\r\n";
     r::parse_result_t r = r::Protocol::parse(ok);
     REQUIRE(r.consumed);
-    auto &array = boost::get<r::array_result_t>(r.result);
+    auto &array = boost::get<r::array_holder_t>(r.result);
     REQUIRE(array.elements.size() == 2);
 
     auto &a1 = boost::get<r::array_holder_t>(array.elements[0]);

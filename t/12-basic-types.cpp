@@ -38,39 +38,39 @@ TEST_CASE("ping", "[connection]") {
     int order = 0;
 
     c.push_command("LLEN", {"x"},
-                   [&](const auto &error_code, r::some_result_t &&r) {
+                   [&](const auto &error_code, r::redis_result_t &&r) {
                        REQUIRE(boost::get<r::int_result_t>(r) == 0);
                        REQUIRE(order++ == 0);
                    });
 
     c.push_command("GET", {"x"},
-                   [&](const auto &error_code, r::some_result_t &&r) {
+                   [&](const auto &error_code, r::redis_result_t &&r) {
                        REQUIRE(boost::get<r::nil_t>(r) == r::nil_t{});
                        REQUIRE(order++ == 1);
                    });
 
     c.push_command("SET", {"x", "value"},
-                   [&](const auto &error_code, r::some_result_t &&r) {
+                   [&](const auto &error_code, r::redis_result_t &&r) {
                        REQUIRE(boost::get<r::string_holder_t>(r).str == "OK");
                        REQUIRE(order++ == 2);
                    });
 
     c.push_command(
-        "GET", {"x"}, [&](const auto &error_code, r::some_result_t &&r) {
+        "GET", {"x"}, [&](const auto &error_code, r::redis_result_t &&r) {
             REQUIRE(boost::get<r::string_holder_t>(r).str == "value");
             REQUIRE(order++ == 3);
             completion_promise.set_value();
         });
 
-    c.push_command("LLEN", [&](const auto &error_code, r::some_result_t &&r) {
+    c.push_command("LLEN", [&](const auto &error_code, r::redis_result_t &&r) {
         REQUIRE(boost::get<r::error_holder_t>(r).str ==
                 "ERR wrong number of arguments for 'llen' command");
         REQUIRE(order++ == 4);
     });
 
-    c.push_command("time", [&](const auto &error_code, r::some_result_t &&r) {
+    c.push_command("time", [&](const auto &error_code, r::redis_result_t &&r) {
         REQUIRE(order++ == 5);
-        auto arr = boost::get<r::array_result_t>(r);
+        auto arr = boost::get<r::array_holder_t>(r);
         REQUIRE(arr.elements.size() == 2);
         REQUIRE(boost::lexical_cast<r::int_result_t>(
                     boost::get<r::string_holder_t>(arr.elements[0]).str) >= 0);

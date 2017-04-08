@@ -59,7 +59,7 @@ TEST_CASE("protocol-error", "[connection]") {
     std::promise<result_t> completion_promise;
     std::future<result_t> completion_future = completion_promise.get_future();
 
-    c.push_command("ping", [&](const auto &error_code, r::some_result_t &&r) {
+    c.push_command("ping", [&](const auto &error_code, r::redis_result_t &&r) {
         REQUIRE(error_code);
         REQUIRE(error_code.message() == "protocol error");
         completion_promise.set_value();

@@ -11,7 +11,7 @@
 namespace bredis {
 
 using optional_string_t = boost::variant<boost::string_ref, nil_t>;
-using optional_array_t = boost::variant<array_result_t, nil_t>;
+using optional_array_t = boost::variant<array_holder_t, nil_t>;
 
 const std::string Protocol::terminator = "\r\n";
 
@@ -140,7 +140,7 @@ template <typename T> struct MovePolicy {
 };
 
 struct ArrayUnwrapPolicy {
-    using type_t = array_result_t;
+    using type_t = array_holder_t;
     static inline some_result_t value(type_t &v) { return some_result_t(v); }
 };
 

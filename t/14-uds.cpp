@@ -50,7 +50,7 @@ TEST_CASE("ping", "[connection]") {
     std::promise<result_t> completion_promise;
     std::future<result_t> completion_future = completion_promise.get_future();
 
-    auto callback = [&](const auto &error_code, r::some_result_t &&r) {
+    auto callback = [&](const auto &error_code, r::redis_result_t &&r) {
         if (error_code) {
             io_service.stop();
         }

@@ -23,8 +23,7 @@ using string_result_t = boost::string_ref;
 using args_container_t = std::vector<string_result_t>;
 
 struct array_holder_t;
-using array_result_t = array_holder_t;
-using array_wrapper_t = boost::recursive_wrapper<array_result_t>;
+using array_wrapper_t = boost::recursive_wrapper<array_holder_t>;
 
 struct protocol_error_t {
     std::string what;

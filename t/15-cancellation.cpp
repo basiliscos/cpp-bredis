@@ -53,7 +53,7 @@ TEST_CASE("cancel-on-read", "[cancellation]") {
     std::promise<result_t> completion_promise;
     std::future<result_t> completion_future = completion_promise.get_future();
 
-    c.push_command("ping", [&](const auto &error_code, r::some_result_t &&r) {
+    c.push_command("ping", [&](const auto &error_code, r::redis_result_t &&r) {
         BREDIS_LOG_DEBUG("callback invoked ");
         REQUIRE(error_code);
         REQUIRE(error_code.message() == "Operation canceled");
