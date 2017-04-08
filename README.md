@@ -129,7 +129,6 @@ Type `T` can be either TCP socket type or unix-domain sockets (e.g. `boost::asio
 Constructor takes socket instance (`T&&`).
 
 Method `command` returns `redis_result_t`. It's signarute is `command(const std::string &cmd, C &&container, boost::asio::streambuf &rx_buff)`. `rx_buff` is used to store incoming data from redis server.
-```
 
 # License 
 
