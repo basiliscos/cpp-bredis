@@ -91,8 +91,23 @@ redis_connector.push_command("LLEN", "my-queue",
                              [](const auto &error_code, r::some_result_t &&r) {
     int my_queue_size = boost::get<r::int_result_t>(r);
 });
-
 ```
+
+## API
+
+### `some_result_t`
+
+The `some_result_t` is `boost::variant` of the following types: 
+- `string_holder_t`
+- `error_holder_t`
+- `nil_t`
+- recursive array wrapper of `some_result_t` (`boost::recursive_wrapper<array_holder_t>`)
+
+`some_result_t` and `error_holder_t` just have `str` member, which is basically `boost::string_ref`.
+
+`nil_t` is obvious type to present `nil` redis result. 
+
+`array_holder_t` has `elements` member, which is `std::vector` of `some_result_t`.
 
 
 # License 
