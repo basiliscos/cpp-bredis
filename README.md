@@ -10,6 +10,7 @@ Boost::ASIO low-lever redis client (connector)
 - low-level controls (i.e. you can cancel, or do you manual DNS-resolving before connection)
 - unix domain sockets support
 - synchronous & asynchronous interface
+- inspired by beast
 
 ## Syncronous TCP-connection example
 
@@ -113,11 +114,22 @@ The `some_result_t` is `boost::variant` of the following types:
 
 Type `T` can be either TCP socket type or unix-domain sockets (e.g. `boost::asio::ip::tcp::socket` or `boost::asio::local::stream_protocol::socket`). 
 
+Constructor takes socket instance (`T&&`).
+
 Method `cancel` cancels all pending I/O operations.
 
 Method `push_command(const std::string &cmd, C &&contaier, command_callback_t callback)` pushes new redis command with optional list of arguments. `callback` is invoked on error(socket write, socket read error, redis protocol error) or on successfull result parsing. 
 
 `command_callback_t` is `std::function<void(const boost::system::error_code &error_code, redis_result_t &&result)>`;
+
+### `SyncConnection<T>`
+
+Type `T` can be either TCP socket type or unix-domain sockets (e.g. `boost::asio::ip::tcp::socket` or `boost::asio::local::stream_protocol::socket`). 
+
+Constructor takes socket instance (`T&&`).
+
+Method `command` returns `redis_result_t`. It's signarute is `command(const std::string &cmd, C &&container, boost::asio::streambuf &rx_buff)`. `rx_buff` is used to store incoming data from redis server.
+```
 
 # License 
 
