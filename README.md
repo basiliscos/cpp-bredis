@@ -149,6 +149,22 @@ Method `push_command(const std::string &cmd, C &&contaier, command_callback_t ca
 
 `command_callback_t` is `std::function<void(const boost::system::error_code &error_code, redis_result_t &&result)>`;
 
+### `Subscription<T>`
+
+Subscription is special mode, when redis server operates in `push` mode.
+
+Type `T` can be either TCP socket type or unix-domain sockets (e.g. `boost::asio::ip::tcp::socket` or `boost::asio::local::stream_protocol::socket`). 
+
+Constructor takes socket instance (`T&&`) and `command_callback_t callback`, which is executed on every incoming reply; the reply is not necessary `message`, e.g. it can be (un)subscription confirmation from redis.
+
+Method `cancel` cancels all pending I/O operations.
+
+Method `push_command(const std::string &cmd, C &&contaier)` pushes new redis command with optional list of arguments. By semantic the command can be either `subscribe`, `psubscribe`, `unsubscribe` and `punsubscribe`. 
+
+```cpp
+subscription.push_command("subscribe", {"some-channel-1", "some-channel-2"});
+```
+
 ### `SyncConnection<T>`
 
 Type `T` can be either TCP socket type or unix-domain sockets (e.g. `boost::asio::ip::tcp::socket` or `boost::asio::local::stream_protocol::socket`). 
