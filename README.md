@@ -1,5 +1,5 @@
 # bredis
-Boost::ASIO low-lever redis client (connector)
+Boost::ASIO low-level redis client (connector)
 
 [![Travis](https://img.shields.io/travis/basiliscos/cpp-bredis.svg)]()
 [![license](https://img.shields.io/github/license/basiliscos/cpp-bredis.svg)]()
