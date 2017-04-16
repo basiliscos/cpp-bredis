@@ -94,6 +94,33 @@ redis_connector.push_command("LLEN", "my-queue",
 });
 ```
 
+## Subscription with TCP-connection example
+```cpp
+#include "bredis/AsyncConnection.hpp"
+#include <boost/variant.hpp>
+#include <boost/utility/string_ref.hpp>
+...
+namespace r = bredis;
+namespace asio = boost::asio;
+...
+/* define used socket type */
+using socket_t = asio::ip::tcp::socket;
+...
+/* establishing connection to redis is outside of bredis */
+asio::ip::tcp::endpoint end_point(
+    asio::ip::address::from_string("127.0.0.1"), port);
+socket_t socket(io_service, end_point.protocol());
+socket.connect(end_point);
+
+r::AsyncConnection<socket_t> subscription(
+    std::move(socket), 
+    [&](const auto &error_code, r::redis_result_t &&r) {
+        ...
+    }
+);
+subscription.push_command("subscribe", {"some-channel1", "some-channel2"});
+```
+
 ## API
 
 ### `redis_result_t`
