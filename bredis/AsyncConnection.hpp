@@ -25,9 +25,11 @@
 
 namespace bredis {
 
+// Rename `S` to `NextLayer` or `AsyncStream` 
 template <typename S> class AsyncConnection {
     using protocol_type_t = typename S::protocol_type;
 
+    // What is the reason for constraining the type of S this way?
     static_assert(std::is_same<protocol_type_t, boost::asio::ip::tcp>::value ||
                       std::is_same<protocol_type_t,
                                    boost::asio::local::stream_protocol>::value,
@@ -51,24 +53,75 @@ template <typename S> class AsyncConnection {
     std::mutex tx_queue_mutex_;
     std::mutex rx_queue_mutex_;
 
+    // I think that queuing should be the responsibility
+    // of a higher level interface and not this class.
+    // Instead, this class should just allow for one
+    // active asynchronous Redis read and one active
+    // asynchronous Redis write, with undefined behavior
+    // if two concurrent reads or two concurrent writes
+    // happen.
+    //
+    // Rationale: TCP/IP provides application-level flow
+    // control to match the rate of the receiver and the
+    // sender. In this implementation, the reader attempts
+    // to read as quickly as possible no matter how fast
+    // the consumer (in this case the command_callback_t)
+    // can process the data. This not only circumvents
+    // TCP/IP's natural application level flow control,
+    // but allows the size of the respective queues to
+    // grow without bounds. Furthermore, the caller is
+    // given no opportunity to provide "back pressure",
+    // nor is the caller able to detect the unbounded
+    // growth and impose its own policies on it.
+    // 
     std::atomic_int tx_in_progress_;
     std::atomic_int rx_in_progress_;
     boost::asio::streambuf rx_buff_;
 
   public:
+    // Consider this signature instead:
+    //
+    // template<class... Args>
+    // AsyncConnection(Args&&... args)
+    //
+    // and use perfect forwarding to initiailze `socket_`
+    //
     AsyncConnection(S &&socket)
         : socket_(std::move(socket)), tx_in_progress_(0), rx_in_progress_(0),
           tx_queue_(std::make_unique<tx_queue_t::element_type>()) {}
 
+    // Perhaps add next_layer() and lowest_layer() member
+    // functions, so callers can access `socket_` and perform
+    // operations
+    //
+    // Example:
+    // https://github.com/vinniefalco/Beast/blob/b8e5a21bfd46d7e912c0e89bd6fcf0901b26ed0a/include/beast/websocket/stream.hpp#L274
+
+    // Consider `boost::string_ref` instead of `std::string`
     template <typename C = std::initializer_list<string_t>>
     void push_command(const std::string &cmd, C &&contaier,
                       command_callback_t callback);
 
+    // How does this callback work? It looks like it functions the
+    // same as an Asio completion handler. But command_callback_t
+    // is std::function, which performs type erasure. With some
+    // refactoring, we can make the callback a template type instead
+    // and thus allow asynchronous bredis calls to work with coroutines,
+    // std::future, and user defined completion handlers with custom
+    // hooks.
+    //
     void inline push_command(const std::string &cmd,
                              command_callback_t callback) {
         push_command(cmd, std::initializer_list<string_t>{}, callback);
     }
 
+    // `cancel` is not part of the requirements of `AsyncStream`; by
+    // providing this function callers are limited in the types they can
+    // provide for `S`. If instead you provide the `next_layer` and
+    // `lowest_layer` member functions, callers can use `next_layer().cancel()` or
+    // `lowest_layer().cancel()` instead, allowing more choices for
+    // the `S` template type here.
+    //
     void cancel();
 
   private:
@@ -87,4 +140,8 @@ template <typename S> class AsyncConnection {
 
 } // namespace bredis
 
+// This file can't be included by itself,
+// consider renaming it to have the .ipp extension
+// to make that clear to readers.
+//
 #include "impl/async_connection.hpp"
