@@ -89,6 +89,16 @@ void AsyncConnection<S>::write(tx_queue_t::element_type &queue) {
     asio::const_buffers_1 output_buf =
         asio::buffer(str_ptr->c_str(), str_ptr->size());
 
+    // The way the lambda captures and uses `this` makes me
+    // uncomfortable. I suspect that this implementation will have
+    // problems with crashes on shutdown, program exit, or when the
+    // connection object is destroyed. I see no clean way of solving
+    // this problem with the current interface. I suggest removing the
+    // built in read and write queues, and make it the responsibility
+    // of callers to implement their own buffering. This will also
+    // allow TCP/IP to perform its application level flow control
+    // correclty.
+    // 
     asio::async_write(
         socket_, output_buf,
         [ str_holder = str, callbacks_queue, this ](

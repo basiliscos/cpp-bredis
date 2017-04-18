@@ -53,6 +53,20 @@ template <typename S> class SyncConnection {
     redis_result_t command(const std::string &cmd, C &&container,
                            boost::asio::streambuf &rx_buff);
 
+    // Consider making the type of rx_buff a template type,
+    // meeting the requirements of DynamicBuffer. Like this:
+    //
+    //     template<class DynamicBuffer>
+    //     redis_result_t
+    //     command(boost::string_ref const& cmd, DynamicByffer& rx_buf);
+    //
+    // This allows the function to work with any type that meets the
+    // requirements, including the ones that come with Beast, and
+    // also any dynamic buffer types that are part of [Networking-TS].
+    //
+    // For more information on the DynamicBuffer concept, see:
+    //     http://vinniefalco.github.io/beast/beast/ref/DynamicBuffer.html
+    //
     redis_result_t inline command(const std::string &cmd,
                                   boost::asio::streambuf &rx_buff) {
         return command(cmd, std::initializer_list<string_t>{}, rx_buff);

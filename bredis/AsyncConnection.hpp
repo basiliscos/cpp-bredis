@@ -53,6 +53,27 @@ template <typename S> class AsyncConnection {
     std::mutex tx_queue_mutex_;
     std::mutex rx_queue_mutex_;
 
+    // I think that queuing should be the responsibility
+    // of a higher level interface and not this class.
+    // Instead, this class should just allow for one
+    // active asynchronous Redis read and one active
+    // asynchronous Redis write, with undefined behavior
+    // if two concurrent reads or two concurrent writes
+    // happen.
+    //
+    // Rationale: TCP/IP provides application-level flow
+    // control to match the rate of the receiver and the
+    // sender. In this implementation, the reader attempts
+    // to read as quickly as possible no matter how fast
+    // the consumer (in this case the command_callback_t)
+    // can process the data. This not only circumvents
+    // TCP/IP's natural application level flow control,
+    // but allows the size of the respective queues to
+    // grow without bounds. Furthermore, the caller is
+    // given no opportunity to provide "back pressure",
+    // nor is the caller able to detect the unbounded
+    // growth and impose its own policies on it.
+    // 
     std::atomic_int tx_in_progress_;
     std::atomic_int rx_in_progress_;
     boost::asio::streambuf rx_buff_;
