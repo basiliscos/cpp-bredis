@@ -44,4 +44,4 @@ template <typename AsyncStream> class SyncConnection {
 
 } // namespace bredis
 
-#include "impl/sync_connection.hpp"
+#include "impl/sync_connection.ipp"

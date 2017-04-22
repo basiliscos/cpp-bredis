@@ -10,7 +10,7 @@
 #include <cassert>
 #include <type_traits>
 
-#include "common.hpp"
+#include "common.ipp"
 
 namespace bredis {
 

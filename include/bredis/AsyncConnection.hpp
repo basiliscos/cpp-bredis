@@ -56,8 +56,10 @@ template <typename AsyncStream> class AsyncConnection {
     boost::asio::streambuf rx_buff_;
 
   public:
-    AsyncConnection(AsyncStream &&socket)
-        : socket_(std::move(socket)), tx_in_progress_(0), rx_in_progress_(0),
+    template <typename... Args>
+    AsyncConnection(Args &&... args)
+        : socket_(std::forward<Args>(args)...), tx_in_progress_(0),
+          rx_in_progress_(0),
           tx_queue_(std::make_unique<tx_queue_t::element_type>()) {}
 
     template <typename C = std::initializer_list<string_t>>
@@ -87,4 +89,4 @@ template <typename AsyncStream> class AsyncConnection {
 
 } // namespace bredis
 
-#include "impl/async_connection.hpp"
+#include "impl/async_connection.ipp"

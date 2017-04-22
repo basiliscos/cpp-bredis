@@ -23,4 +23,4 @@ class Protocol {
 };
 };
 
-#include "impl/protocol.hpp"
+#include "impl/protocol.ipp"

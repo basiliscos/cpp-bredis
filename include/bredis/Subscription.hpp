@@ -81,4 +81,4 @@ template <typename AsyncStream> class Subscription {
 
 } // namespace bredis
 
-#include "impl/subscription.hpp"
+#include "impl/subscription.ipp"

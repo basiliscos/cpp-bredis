@@ -6,7 +6,7 @@
 //
 #pragma once
 
-#include "common.hpp"
+#include "common.ipp"
 
 namespace bredis {
 
