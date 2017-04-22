@@ -45,46 +45,34 @@ template <typename AsyncStream> class AsyncConnection {
 
   private:
     AsyncStream socket_;
-    tx_queue_t tx_queue_;
-    rx_queue_t rx_queue_;
-
-    std::mutex tx_queue_mutex_;
-    std::mutex rx_queue_mutex_;
-
-    std::atomic_int tx_in_progress_;
-    std::atomic_int rx_in_progress_;
-    boost::asio::streambuf rx_buff_;
 
   public:
     template <typename... Args>
-    AsyncConnection(Args &&... args)
-        : socket_(std::forward<Args>(args)...), tx_in_progress_(0),
-          rx_in_progress_(0),
-          tx_queue_(std::make_unique<tx_queue_t::element_type>()) {}
-
-    template <typename C = std::initializer_list<string_t>>
-    void push_command(const std::string &cmd, C &&contaier,
-                      command_callback_t callback);
-
-    void inline push_command(const std::string &cmd,
-                             command_callback_t callback) {
-        push_command(cmd, std::initializer_list<string_t>{}, callback);
-    }
+    AsyncConnection(Args &&... args) : socket_(std::forward<Args>(args)...) {}
 
     AsyncStream &next_layer() { return socket_; }
 
-  private:
-    void try_write();
-    void try_read();
-    void write(tx_queue_t::element_type &queue);
-    void on_write(const boost::system::error_code &error_code,
-                  std::size_t bytes_transferred,
-                  std::shared_ptr<callbacks_vector_t> callbacks);
+    template <typename WriteCallback, typename... Args>
+    void async_write(const std::string &cmd, WriteCallback write_callback,
+                     Args &&... args);
 
-    void read();
-    void on_read(const boost::system::error_code &error_code,
-                 std::size_t bytes_transferred);
-    bool try_parse_rx();
+    template <typename ReadCallback, typename Buffer>
+    void async_read(Buffer &rx_buff, ReadCallback read_callback);
+
+  private:
+    /*
+        void try_write();
+        void try_read();
+        void write(tx_queue_t::element_type &queue);
+        void on_write(const boost::system::error_code &error_code,
+                      std::size_t bytes_transferred,
+                      std::shared_ptr<callbacks_vector_t> callbacks);
+
+        void read();
+        void on_read(const boost::system::error_code &error_code,
+                     std::size_t bytes_transferred);
+        bool try_parse_rx();
+    */
 };
 
 } // namespace bredis

@@ -34,9 +34,12 @@ TEST_CASE("ping", "[connection]") {
     std::promise<result_t> completion_promise;
     std::future<result_t> completion_future = completion_promise.get_future();
 
-    c.push_command("ping", [&completion_promise](const auto &error_code,
-                                                 r::redis_result_t &&r) {
-        completion_promise.set_value(r);
+    boost::asio::streambuf rx_buff;
+
+    c.async_write("ping", [&](const auto &error_code) {
+        c.async_read(rx_buff, [&](const auto &error_code, r::redis_result_t &&r, size_t consumed){
+            completion_promise.set_value(r);
+        });
     });
 
     while (completion_future.wait_for(sleep_delay) !=

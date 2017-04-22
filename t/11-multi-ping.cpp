@@ -18,9 +18,12 @@ namespace ts = test_server;
 TEST_CASE("ping", "[connection]") {
     using socket_t = asio::ip::tcp::socket;
     using result_t = void;
+    using write_callback_t = std::function<void(const boost::system::error_code &error_code)>;
+    using read_callback_t = std::function<void(const boost::system::error_code &error_code, r::redis_result_t &&r, size_t consumed)>;
+
     std::chrono::nanoseconds sleep_delay(1);
 
-    auto count = 1000;
+    auto count = 100000;
     uint16_t port = ep::get_random<ep::Kind::TCP>();
     auto port_str = boost::lexical_cast<std::string>(port);
     auto server = ts::make_server({"redis-server", "--port", port_str});
@@ -37,10 +40,13 @@ TEST_CASE("ping", "[connection]") {
     std::promise<result_t> completion_promise;
     std::future<result_t> completion_future = completion_promise.get_future();
 
-    auto callback = [&](const auto &error_code, r::redis_result_t &&r) {
+    boost::asio::streambuf rx_buff;
+    read_callback_t read_callback = [&](const boost::system::error_code &error_code, r::redis_result_t &&r, size_t consumed) {
         if (error_code) {
-            io_service.stop();
+            BREDIS_LOG_DEBUG("error: " << error_code.message());
+            REQUIRE(!error_code);
         }
+        //REQUIRE(!error_code);
         auto &reply_ref = boost::get<r::string_holder_t>(r).str;
         std::string reply_str(reply_ref.cbegin(), reply_ref.cend());
         results.emplace_back(reply_str);
@@ -48,10 +54,21 @@ TEST_CASE("ping", "[connection]") {
         if (results.size() == count) {
             completion_promise.set_value();
         }
+        rx_buff.consume(consumed);
+        c.async_read(rx_buff, read_callback);
     };
-    for (auto i = 0; i < count; ++i) {
-        c.push_command("ping", {}, callback);
-    }
+
+    auto writes_count = 0;
+    write_callback_t write_callback = [&](const boost::system::error_code &error_code){
+        //REQUIRE(!error_code);
+        c.async_write("ping", write_callback);
+        if (++writes_count == 1) {
+            BREDIS_LOG_DEBUG("pusing initial read callback");
+            c.async_read(rx_buff, read_callback);
+        }
+    };
+
+    c.async_write("ping", write_callback);
 
     while (completion_future.wait_for(sleep_delay) !=
            std::future_status::ready) {
