@@ -63,7 +63,8 @@ template <typename AsyncStream> class Subscription {
     void inline push_command(const std::string &cmd) {
         push_command(cmd, std::initializer_list<string_t>{});
     }
-    void cancel();
+
+    AsyncStream &next_layer() { return socket_; }
 
   private:
     void try_write();

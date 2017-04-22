@@ -173,9 +173,4 @@ template <typename AsyncStream> bool Subscription<AsyncStream>::try_parse_rx() {
     return true;
 }
 
-template <typename AsyncStream> void Subscription<AsyncStream>::cancel() {
-    BREDIS_LOG_DEBUG("cancelling");
-    socket_.cancel();
-}
-
 } // namespace bredis

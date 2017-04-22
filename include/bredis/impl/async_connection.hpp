@@ -205,9 +205,4 @@ bool AsyncConnection<AsyncStream>::try_parse_rx() {
     return true;
 }
 
-template <typename AsyncStream> void AsyncConnection<AsyncStream>::cancel() {
-    BREDIS_LOG_DEBUG("cancelling");
-    socket_.cancel();
-}
-
 } // namespace bredis

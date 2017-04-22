@@ -69,7 +69,7 @@ template <typename AsyncStream> class AsyncConnection {
         push_command(cmd, std::initializer_list<string_t>{}, callback);
     }
 
-    void cancel();
+    AsyncStream &next_layer() { return socket_; }
 
   private:
     void try_write();

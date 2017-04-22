@@ -46,7 +46,7 @@ TEST_CASE("cancel-on-read", "[cancellation]") {
                          [&](const sys::error_code &ec, std::size_t sz) {
                              BREDIS_LOG_DEBUG("async_read: " << sz << ", "
                                                              << ec.message());
-                             c.cancel();
+                             c.next_layer().cancel();
                          });
     });
 
