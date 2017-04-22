@@ -7,14 +7,14 @@
 #pragma once
 
 #include <cstdint>
-#include <vector>
-#include <memory>
 #include <functional>
+#include <memory>
+#include <vector>
 
+#include <boost/system/error_code.hpp>
+#include <boost/utility/string_ref.hpp>
 #include <boost/variant.hpp>
 #include <boost/variant/recursive_variant.hpp>
-#include <boost/utility/string_ref.hpp>
-#include <boost/system/error_code.hpp>
 
 namespace bredis {
 

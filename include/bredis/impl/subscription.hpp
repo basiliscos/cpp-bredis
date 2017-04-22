@@ -14,9 +14,10 @@
 
 namespace bredis {
 
-template <typename S>
+template <typename AsyncStream>
 template <typename C>
-void Subscription<S>::push_command(const std::string &cmd, C &&contaier) {
+void Subscription<AsyncStream>::push_command(const std::string &cmd,
+                                             C &&contaier) {
     args_container_t args{};
     std::copy(contaier.begin(), contaier.end(), std::back_inserter(args));
 
@@ -29,7 +30,7 @@ void Subscription<S>::push_command(const std::string &cmd, C &&contaier) {
     try_write();
 }
 
-template <typename S> void Subscription<S>::try_write() {
+template <typename AsyncStream> void Subscription<AsyncStream>::try_write() {
     if (tx_in_progress_.fetch_add(1) == 0) {
         std::lock_guard<std::mutex> guard(tx_queue_mutex_);
         if (!tx_queue_->empty()) {
@@ -46,7 +47,7 @@ template <typename S> void Subscription<S>::try_write() {
     }
 }
 
-template <typename S> void Subscription<S>::try_read() {
+template <typename AsyncStream> void Subscription<AsyncStream>::try_read() {
     BREDIS_LOG_DEBUG("try_read() rx_in_progress_ = " << rx_in_progress_);
     if (rx_in_progress_.fetch_add(1) == 0) {
         read();
@@ -55,8 +56,8 @@ template <typename S> void Subscription<S>::try_read() {
     }
 }
 
-template <typename S>
-void Subscription<S>::write(tx_queue_t::element_type &queue) {
+template <typename AsyncStream>
+void Subscription<AsyncStream>::write(tx_queue_t::element_type &queue) {
     namespace asio = boost::asio;
     namespace sys = boost::system;
 
@@ -80,7 +81,7 @@ void Subscription<S>::write(tx_queue_t::element_type &queue) {
     });
 }
 
-template <typename S> void Subscription<S>::read() {
+template <typename AsyncStream> void Subscription<AsyncStream>::read() {
     namespace asio = boost::asio;
     namespace sys = boost::system;
 
@@ -91,9 +92,10 @@ template <typename S> void Subscription<S>::read() {
                            });
 }
 
-template <typename S>
-void Subscription<S>::on_write(const boost::system::error_code &error_code,
-                               std::size_t bytes_transferred) {
+template <typename AsyncStream>
+void Subscription<AsyncStream>::on_write(
+    const boost::system::error_code &error_code,
+    std::size_t bytes_transferred) {
     --tx_in_progress_;
     if (error_code) {
         BREDIS_LOG_DEBUG(error_code.message());
@@ -106,9 +108,10 @@ void Subscription<S>::on_write(const boost::system::error_code &error_code,
     try_read();
 }
 
-template <typename S>
-void Subscription<S>::on_read(const boost::system::error_code &error_code,
-                              std::size_t bytes_transferred) {
+template <typename AsyncStream>
+void Subscription<AsyncStream>::on_read(
+    const boost::system::error_code &error_code,
+    std::size_t bytes_transferred) {
     if (error_code) {
         BREDIS_LOG_DEBUG(error_code.message());
         callback_(error_code, {});
@@ -132,7 +135,7 @@ void Subscription<S>::on_read(const boost::system::error_code &error_code,
 }
 
 /* returns false in case of redis protocol error */
-template <typename S> bool Subscription<S>::try_parse_rx() {
+template <typename AsyncStream> bool Subscription<AsyncStream>::try_parse_rx() {
     bool try_parse;
     boost::system::error_code ec;
     redis_result_t redis_result;
@@ -170,7 +173,7 @@ template <typename S> bool Subscription<S>::try_parse_rx() {
     return true;
 }
 
-template <typename S> void Subscription<S>::cancel() {
+template <typename AsyncStream> void Subscription<AsyncStream>::cancel() {
     BREDIS_LOG_DEBUG("cancelling");
     socket_.cancel();
 }

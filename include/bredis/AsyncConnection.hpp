@@ -7,26 +7,26 @@
 
 #pragma once
 
+#include <atomic>
+#include <initializer_list>
+#include <mutex>
+#include <queue>
+#include <sstream>
+#include <tuple>
 #include <utility>
 #include <vector>
-#include <tuple>
-#include <atomic>
-#include <queue>
-#include <mutex>
-#include <initializer_list>
-#include <sstream>
 
 #include <boost/asio.hpp>
 #include <boost/utility/string_ref.hpp>
 
-#include "Result.hpp"
-#include "Protocol.hpp"
 #include "Error.hpp"
+#include "Protocol.hpp"
+#include "Result.hpp"
 
 namespace bredis {
 
-template <typename S> class AsyncConnection {
-    using protocol_type_t = typename S::protocol_type;
+template <typename AsyncStream> class AsyncConnection {
+    using protocol_type_t = typename AsyncStream::protocol_type;
 
     static_assert(std::is_same<protocol_type_t, boost::asio::ip::tcp>::value ||
                       std::is_same<protocol_type_t,
@@ -44,7 +44,7 @@ template <typename S> class AsyncConnection {
     using callbacks_vector_t = std::vector<callback_ptr_t>;
 
   private:
-    S socket_;
+    AsyncStream socket_;
     tx_queue_t tx_queue_;
     rx_queue_t rx_queue_;
 
@@ -56,7 +56,7 @@ template <typename S> class AsyncConnection {
     boost::asio::streambuf rx_buff_;
 
   public:
-    AsyncConnection(S &&socket)
+    AsyncConnection(AsyncStream &&socket)
         : socket_(std::move(socket)), tx_in_progress_(0), rx_in_progress_(0),
           tx_queue_(std::make_unique<tx_queue_t::element_type>()) {}
 

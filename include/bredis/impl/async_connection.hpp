@@ -6,18 +6,19 @@
 //
 #pragma once
 
-#include <type_traits>
-#include <cassert>
 #include <algorithm>
+#include <cassert>
+#include <type_traits>
 
 #include "common.hpp"
 
 namespace bredis {
 
-template <typename S>
+template <typename AsyncStream>
 template <typename C>
-void AsyncConnection<S>::push_command(const std::string &cmd, C &&contaier,
-                                      command_callback_t callback) {
+void AsyncConnection<AsyncStream>::push_command(const std::string &cmd,
+                                                C &&contaier,
+                                                command_callback_t callback) {
     args_container_t args{};
     std::copy(contaier.begin(), contaier.end(), std::back_inserter(args));
 
@@ -32,7 +33,7 @@ void AsyncConnection<S>::push_command(const std::string &cmd, C &&contaier,
     try_write();
 }
 
-template <typename S> void AsyncConnection<S>::try_write() {
+template <typename AsyncStream> void AsyncConnection<AsyncStream>::try_write() {
     if (tx_in_progress_.fetch_add(1) == 0) {
         std::lock_guard<std::mutex> guard(tx_queue_mutex_);
         if (!tx_queue_->empty()) {
@@ -49,7 +50,7 @@ template <typename S> void AsyncConnection<S>::try_write() {
     }
 }
 
-template <typename S> void AsyncConnection<S>::try_read() {
+template <typename AsyncStream> void AsyncConnection<AsyncStream>::try_read() {
     BREDIS_LOG_DEBUG("try_read() rx_in_progress_ = " << rx_in_progress_);
     if (rx_in_progress_.fetch_add(1) == 0) {
 
@@ -69,8 +70,8 @@ template <typename S> void AsyncConnection<S>::try_read() {
     }
 }
 
-template <typename S>
-void AsyncConnection<S>::write(tx_queue_t::element_type &queue) {
+template <typename AsyncStream>
+void AsyncConnection<AsyncStream>::write(tx_queue_t::element_type &queue) {
     namespace asio = boost::asio;
     namespace sys = boost::system;
 
@@ -89,16 +90,15 @@ void AsyncConnection<S>::write(tx_queue_t::element_type &queue) {
     asio::const_buffers_1 output_buf =
         asio::buffer(str_ptr->c_str(), str_ptr->size());
 
-    asio::async_write(
-        socket_, output_buf,
-        [ str_holder = str, callbacks_queue, this ](
-            const sys::error_code &error_code, std::size_t bytes_transferred) {
-            on_write(error_code, bytes_transferred, callbacks_queue);
-        });
+    asio::async_write(socket_, output_buf, [
+        str_holder = str, callbacks_queue, this
+    ](const sys::error_code &error_code, std::size_t bytes_transferred) {
+        on_write(error_code, bytes_transferred, callbacks_queue);
+    });
 }
 
-template <typename S>
-void AsyncConnection<S>::on_write(
+template <typename AsyncStream>
+void AsyncConnection<AsyncStream>::on_write(
     const boost::system::error_code &error_code, std::size_t bytes_transferred,
     std::shared_ptr<callbacks_vector_t> callbacks) {
     --tx_in_progress_;
@@ -120,7 +120,7 @@ void AsyncConnection<S>::on_write(
     try_write();
 }
 
-template <typename S> void AsyncConnection<S>::read() {
+template <typename AsyncStream> void AsyncConnection<AsyncStream>::read() {
     namespace asio = boost::asio;
     namespace sys = boost::system;
 
@@ -133,9 +133,10 @@ template <typename S> void AsyncConnection<S>::read() {
                            });
 }
 
-template <typename S>
-void AsyncConnection<S>::on_read(const boost::system::error_code &error_code,
-                                 std::size_t bytes_transferred) {
+template <typename AsyncStream>
+void AsyncConnection<AsyncStream>::on_read(
+    const boost::system::error_code &error_code,
+    std::size_t bytes_transferred) {
     if (error_code) {
         BREDIS_LOG_DEBUG(error_code.message());
         // TODO: more precisely determine for which error error happen?
@@ -159,7 +160,8 @@ void AsyncConnection<S>::on_read(const boost::system::error_code &error_code,
 }
 
 /* returns false in case of redis protocol error */
-template <typename S> bool AsyncConnection<S>::try_parse_rx() {
+template <typename AsyncStream>
+bool AsyncConnection<AsyncStream>::try_parse_rx() {
     bool try_parse;
     boost::system::error_code ec;
     redis_result_t redis_result;
@@ -203,7 +205,7 @@ template <typename S> bool AsyncConnection<S>::try_parse_rx() {
     return true;
 }
 
-template <typename S> void AsyncConnection<S>::cancel() {
+template <typename AsyncStream> void AsyncConnection<AsyncStream>::cancel() {
     BREDIS_LOG_DEBUG("cancelling");
     socket_.cancel();
 }

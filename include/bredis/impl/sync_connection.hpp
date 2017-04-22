@@ -10,10 +10,11 @@
 
 namespace bredis {
 
-template <typename S>
+template <typename AsyncStream>
 template <typename C>
-redis_result_t SyncConnection<S>::command(const std::string &cmd, C &&container,
-                                          boost::asio::streambuf &rx_buff) {
+redis_result_t
+SyncConnection<AsyncStream>::command(const std::string &cmd, C &&container,
+                                     boost::asio::streambuf &rx_buff) {
     namespace asio = boost::asio;
 
     std::stringstream out;

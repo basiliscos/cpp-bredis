@@ -25,8 +25,8 @@
 
 namespace bredis {
 
-template <typename S> class Subscription {
-    using protocol_type_t = typename S::protocol_type;
+template <typename AsyncStream> class Subscription {
+    using protocol_type_t = typename AsyncStream::protocol_type;
 
     static_assert(std::is_same<protocol_type_t, boost::asio::ip::tcp>::value ||
                       std::is_same<protocol_type_t,
@@ -41,7 +41,7 @@ template <typename S> class Subscription {
     using tx_queue_t = std::unique_ptr<std::queue<item_t>>;
 
   private:
-    S socket_;
+    AsyncStream socket_;
     command_callback_t callback_;
     tx_queue_t tx_queue_;
     std::mutex tx_queue_mutex_;
@@ -52,7 +52,7 @@ template <typename S> class Subscription {
     boost::asio::streambuf rx_buff_;
 
   public:
-    Subscription(S &&socket, command_callback_t &&callback)
+    Subscription(AsyncStream &&socket, command_callback_t &&callback)
         : socket_(std::move(socket)), callback_(std::move(callback)),
           tx_in_progress_(0), rx_in_progress_(0),
           tx_queue_(std::make_unique<tx_queue_t::element_type>()) {}

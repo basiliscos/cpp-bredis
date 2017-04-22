@@ -6,18 +6,18 @@
 //
 #pragma once
 
-#include <initializer_list>
 #include <boost/asio.hpp>
 #include <boost/utility/string_ref.hpp>
+#include <initializer_list>
 
-#include "Result.hpp"
-#include "Protocol.hpp"
 #include "Error.hpp"
+#include "Protocol.hpp"
+#include "Result.hpp"
 
 namespace bredis {
 
-template <typename S> class SyncConnection {
-    using protocol_type_t = typename S::protocol_type;
+template <typename AsyncStream> class SyncConnection {
+    using protocol_type_t = typename AsyncStream::protocol_type;
     using string_t = boost::string_ref;
 
     static_assert(std::is_same<protocol_type_t, boost::asio::ip::tcp>::value ||
@@ -27,10 +27,10 @@ template <typename S> class SyncConnection {
                   "local::stream_protocol");
 
   private:
-    S socket_;
+    AsyncStream socket_;
 
   public:
-    SyncConnection(S &&socket) : socket_(std::move(socket)) {}
+    SyncConnection(AsyncStream &&socket) : socket_(std::move(socket)) {}
 
     template <typename C = std::initializer_list<string_t>>
     redis_result_t command(const std::string &cmd, C &&container,

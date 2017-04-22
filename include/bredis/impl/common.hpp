@@ -18,7 +18,8 @@
 namespace bredis {
 
 typedef boost::asio::buffers_iterator<
-    boost::asio::streambuf::const_buffers_type> asio_iterator;
+    boost::asio::streambuf::const_buffers_type>
+    asio_iterator;
 
 std::pair<asio_iterator, bool> match_result(asio_iterator begin,
                                             asio_iterator end) {

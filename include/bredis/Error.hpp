@@ -6,8 +6,8 @@
 //
 #pragma once
 
-#include <string>
 #include <boost/system/error_code.hpp>
+#include <string>
 
 namespace bredis {
 
