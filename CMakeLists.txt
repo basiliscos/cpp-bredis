@@ -13,7 +13,7 @@ add_definitions(-DBREDIS_DEBUG)
 find_package(
     Boost
 )
-include_directories(${bredis_SOURCE_DIR} ${Boost_INCLUDE_DIRS})
+include_directories(${bredis_SOURCE_DIR}/include ${Boost_INCLUDE_DIRS})
 
 set(LINK_DEPENDENCIES pthread ${Boost_LIBRARIES})
 
