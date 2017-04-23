@@ -19,6 +19,7 @@
 #include <boost/asio.hpp>
 #include <boost/utility/string_ref.hpp>
 
+#include "Command.hpp"
 #include "Error.hpp"
 #include "Protocol.hpp"
 #include "Result.hpp"
@@ -52,9 +53,9 @@ template <typename AsyncStream> class AsyncConnection {
 
     AsyncStream &next_layer() { return socket_; }
 
-    template <typename WriteCallback, typename... Args>
-    void async_write(const std::string &cmd, WriteCallback write_callback,
-                     Args &&... args);
+    template <typename WriteCallback>
+    void async_write(const command_wrapper_t &command,
+                     WriteCallback write_callback);
 
     template <typename ReadCallback, typename Buffer>
     void async_read(Buffer &rx_buff, ReadCallback read_callback);

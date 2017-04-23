@@ -15,18 +15,14 @@
 namespace bredis {
 
 template <typename AsyncStream>
-template <typename WriteCallback, typename... Args>
-void AsyncConnection<AsyncStream>::async_write(const std::string &cmd,
-                                               WriteCallback write_callback,
-                                               Args &&... args) {
+template <typename WriteCallback>
+void AsyncConnection<AsyncStream>::async_write(const command_wrapper_t &command,
+                                               WriteCallback write_callback) {
     namespace asio = boost::asio;
     namespace sys = boost::system;
 
-    std::stringstream out;
-    args_container_t command_args{args...};
-    Protocol::serialize(out, cmd, command_args);
-
-    auto str = std::make_shared<std::string>(std::move(out.str()));
+    auto str = std::make_shared<std::string>(
+        boost::apply_visitor(command_serializer_visitor(), command));
     auto str_ptr = str.get();
     BREDIS_LOG_DEBUG("async_write >> " << str_ptr->c_str());
     asio::const_buffers_1 output_buf =
@@ -63,7 +59,9 @@ void AsyncConnection<AsyncStream>::async_read(Buffer &rx_buff,
                 boost::asio::buffer_cast<const char *>(const_buff);
             auto size = rx_buff.size();
             string_t data(char_ptr, size);
-            BREDIS_LOG_DEBUG("incoming data(" << size << ") : " << char_ptr << ", tx bytes: " << bytes_transferred);
+            BREDIS_LOG_DEBUG("incoming data("
+                             << size << ") : " << char_ptr
+                             << ", tx bytes: " << bytes_transferred);
 
             auto parse_result = Protocol::parse(data);
             boost::system::error_code ec;

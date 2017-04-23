@@ -7,6 +7,7 @@
 #pragma once
 
 #include <iostream>
+#include <sstream>
 
 #ifdef BREDIS_DEBUG
 #define BREDIS_LOG_DEBUG(msg)                                                  \
@@ -44,6 +45,23 @@ class some_result_visitor : public boost::static_visitor<redis_result_t> {
     redis_result_t operator()(const protocol_error_t &v) const {
         assert(false &&
                "redis protocol error isn't convertable to redis_result_t");
+    }
+};
+
+class command_serializer_visitor : public boost::static_visitor<std::string> {
+  public:
+    std::string operator()(const single_command_t &value) const {
+        std::stringstream out;
+        Protocol::serialize(out, value);
+        return out.str();
+    }
+
+    std::string operator()(const command_container_t &value) const {
+        std::stringstream out;
+        for (const auto &cmd : value) {
+            Protocol::serialize(out, cmd);
+        }
+        return out.str();
     }
 };
 

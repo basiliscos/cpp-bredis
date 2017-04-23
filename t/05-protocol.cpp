@@ -248,9 +248,8 @@ TEST_CASE("overfilled buffer", "[protocol]") {
 
 TEST_CASE("serialize", "[protocol]") {
     std::stringstream buff;
-    std::string queue = "fmm.cheap-travles2";
-    std::vector<boost::string_ref> args({boost::string_ref(queue)});
-    r::Protocol::serialize(buff, "LLEN", args);
+    r::single_command_t cmd("LLEN", "fmm.cheap-travles2");
+    r::Protocol::serialize(buff, cmd);
     std::string expected("*2\r\n$4\r\nLLEN\r\n$18\r\nfmm.cheap-travles2\r\n");
     REQUIRE(buff.str() == expected);
 };

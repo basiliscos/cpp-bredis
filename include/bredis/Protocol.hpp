@@ -9,6 +9,7 @@
 #include <ostream>
 #include <string>
 
+#include "Command.hpp"
 #include "Result.hpp"
 
 namespace bredis {
@@ -18,8 +19,8 @@ class Protocol {
     static const std::string terminator;
     static inline parse_result_t parse(const std::string &buff) noexcept;
     static inline parse_result_t parse(const boost::string_ref &buff) noexcept;
-    static std::ostream &serialize(std::ostream &buff, const std::string &cmd,
-                                   const args_container_t &args);
+    static std::ostream &serialize(std::ostream &buff,
+                                   const single_command_t &cmd);
 };
 };
 

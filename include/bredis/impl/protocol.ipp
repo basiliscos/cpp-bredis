@@ -228,12 +228,11 @@ parse_result_t Protocol::parse(const boost::string_ref &buff) noexcept {
     }
 }
 
-std::ostream &Protocol::serialize(std::ostream &buff, const std::string &cmd,
-                                  const args_container_t &args) {
-    buff << '*' << (1 + args.size()) << Protocol::terminator << '$'
-         << cmd.size() << Protocol::terminator << cmd << Protocol::terminator;
+std::ostream &Protocol::serialize(std::ostream &buff,
+                                  const single_command_t &cmd) {
+    buff << '*' << (cmd.arguments.size()) << Protocol::terminator;
 
-    for (const auto &arg : args) {
+    for (const auto &arg : cmd.arguments) {
         buff << '$' << arg.size() << Protocol::terminator << arg
              << Protocol::terminator;
     }
