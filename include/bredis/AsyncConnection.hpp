@@ -53,6 +53,7 @@ template <typename AsyncStream> class AsyncConnection {
 
     AsyncStream &next_layer() { return socket_; }
 
+    /* asynchronous interface */
     template <typename WriteCallback>
     void async_write(const command_wrapper_t &command,
                      WriteCallback write_callback);
@@ -60,20 +61,16 @@ template <typename AsyncStream> class AsyncConnection {
     template <typename ReadCallback, typename Buffer>
     void async_read(Buffer &rx_buff, ReadCallback read_callback);
 
-  private:
-    /*
-        void try_write();
-        void try_read();
-        void write(tx_queue_t::element_type &queue);
-        void on_write(const boost::system::error_code &error_code,
-                      std::size_t bytes_transferred,
-                      std::shared_ptr<callbacks_vector_t> callbacks);
+    /* synchronous interface */
+    void write(const command_wrapper_t &command);
 
-        void read();
-        void on_read(const boost::system::error_code &error_code,
-                     std::size_t bytes_transferred);
-        bool try_parse_rx();
-    */
+    redis_result_t read(boost::asio::streambuf &rx_buff);
+
+    redis_result_t inline execute(const command_wrapper_t &command, boost::asio::streambuf &rx_buff) {
+        write(command);
+        return read(rx_buff);
+    }
+
 };
 
 } // namespace bredis

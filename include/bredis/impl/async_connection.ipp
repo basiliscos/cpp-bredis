@@ -14,6 +14,7 @@
 
 namespace bredis {
 
+
 template <typename AsyncStream>
 template <typename WriteCallback>
 void AsyncConnection<AsyncStream>::async_write(const command_wrapper_t &command,
@@ -34,6 +35,7 @@ void AsyncConnection<AsyncStream>::async_write(const command_wrapper_t &command,
                           write_callback(error_code);
                       });
 }
+
 
 template <typename AsyncStream>
 template <typename ReadCallback, typename Buffer>
@@ -81,5 +83,42 @@ void AsyncConnection<AsyncStream>::async_read(Buffer &rx_buff,
             read_callback(ec, std::move(redis_result), parse_result.consumed);
         });
 }
+
+
+template <typename AsyncStream>
+void AsyncConnection<AsyncStream>::write(const command_wrapper_t &command) {
+    namespace asio = boost::asio;
+    namespace sys = boost::system;
+
+    auto str = boost::apply_visitor(command_serializer_visitor(), command);
+    BREDIS_LOG_DEBUG("async_write >> " << str);
+    asio::const_buffers_1 output_buf = asio::buffer(str.c_str(), str.size());
+    asio::write(socket_, output_buf);
+}
+
+
+template <typename AsyncStream>
+redis_result_t AsyncConnection<AsyncStream>::read(boost::asio::streambuf &rx_buff) {
+    namespace asio = boost::asio;
+    namespace sys = boost::system;
+
+    auto rx_bytes = asio::read_until(socket_, rx_buff, match_result);
+
+    const char *char_ptr =
+        boost::asio::buffer_cast<const char *>(rx_buff.data());
+    auto size = rx_buff.size();
+    string_t data(char_ptr, size);
+    BREDIS_LOG_DEBUG("incoming data(" << size << ") : " << char_ptr);
+
+    auto parse_result = Protocol::parse(data);
+    if (parse_result.consumed == 0) {
+        auto protocol_error = boost::get<protocol_error_t>(parse_result.result);
+        BREDIS_LOG_DEBUG("protocol error: " << protocol_error.what);
+        throw Error::make_error_code(bredis_errors::protocol_error);
+    }
+    rx_buff.consume(parse_result.consumed);
+    return boost::apply_visitor(some_result_visitor(), parse_result.result);
+}
+
 
 } // namespace bredis

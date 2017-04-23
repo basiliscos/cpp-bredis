@@ -20,6 +20,10 @@ namespace ts = test_server;
 TEST_CASE("cancel-on-read", "[cancellation]") {
     using socket_t = asio::ip::tcp::socket;
     using result_t = void;
+    using read_callback_t =
+        std::function<void(const boost::system::error_code &error_code,
+                           r::redis_result_t &&r, size_t consumed)>;
+
     std::chrono::milliseconds sleep_delay(1);
 
     uint16_t port = ep::get_random<ep::Kind::TCP>();
@@ -38,11 +42,11 @@ TEST_CASE("cancel-on-read", "[cancellation]") {
     r::AsyncConnection<socket_t> c(std::move(socket));
 
     std::string end_marker = "ping\r\n";
-    boost::asio::streambuf rx_buff;
+    boost::asio::streambuf remote_rx_buff;
     acceptor.async_accept(peer_socket, [&](const sys::error_code &error_code) {
         BREDIS_LOG_DEBUG("async_accept: " << error_code.message() << ", "
                                           << peer_socket.local_endpoint());
-        async_read_until(peer_socket, rx_buff, end_marker,
+        async_read_until(peer_socket, remote_rx_buff, end_marker,
                          [&](const sys::error_code &ec, std::size_t sz) {
                              BREDIS_LOG_DEBUG("async_read: " << sz << ", "
                                                              << ec.message());
@@ -53,12 +57,16 @@ TEST_CASE("cancel-on-read", "[cancellation]") {
     std::promise<result_t> completion_promise;
     std::future<result_t> completion_future = completion_promise.get_future();
 
-    c.push_command("ping", [&](const auto &error_code, r::redis_result_t &&r) {
-        BREDIS_LOG_DEBUG("callback invoked ");
-        REQUIRE(error_code);
-        REQUIRE(error_code.message() == "Operation canceled");
-        completion_promise.set_value();
+    boost::asio::streambuf rx_buff;
+    c.async_write("ping", [&](const auto &error_code){
+        REQUIRE(!error_code);
+        c.async_read(rx_buff, [&](const auto &error_code, r::redis_result_t &&r, size_t consumed){
+            REQUIRE(error_code);
+            REQUIRE(error_code.message() == "Operation canceled");
+            completion_promise.set_value();
+        });
     });
+
     while (completion_future.wait_for(sleep_delay) !=
            std::future_status::ready) {
         io_service.run_one();

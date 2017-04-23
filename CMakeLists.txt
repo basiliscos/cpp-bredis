@@ -29,30 +29,30 @@ add_executable(t-11-multi-ping t/11-multi-ping.cpp)
 target_link_libraries(t-11-multi-ping ${LINK_DEPENDENCIES})
 add_test("t-11-multi-ping" t-11-multi-ping)
 
-#add_executable(t-12-basic-types t/12-basic-types.cpp)
-#target_link_libraries(t-12-basic-types ${LINK_DEPENDENCIES})
-#add_test("t-12-basic-types" t-12-basic-types)
-#
-#add_executable(t-13-protol-error t/13-protol-error.cpp)
-#target_link_libraries(t-13-protol-error ${LINK_DEPENDENCIES})
-#add_test("t-13-protol-error" t-13-protol-error)
-#
-#add_executable(t-14-uds t/14-uds.cpp)
-#target_link_libraries(t-14-uds ${LINK_DEPENDENCIES})
-#add_test("t-14-uds" t-14-uds)
-#
-#add_executable(t-15-cancellation t/15-cancellation.cpp)
-#target_link_libraries(t-15-cancellation ${LINK_DEPENDENCIES})
-#add_test("t-15-cancellation" t-15-cancellation)
-#
-#add_executable(t-16-close-connection t/16-close-connection.cpp)
-#target_link_libraries(t-16-close-connection ${LINK_DEPENDENCIES})
-#add_test("t-16-close-connection" t-16-close-connection)
-#
-#add_executable(t-17-sync t/17-sync.cpp)
-#target_link_libraries(t-17-sync ${LINK_DEPENDENCIES})
-#add_test("t-17-sync" t-17-sync)
-#
+add_executable(t-12-basic-types t/12-basic-types.cpp)
+target_link_libraries(t-12-basic-types ${LINK_DEPENDENCIES})
+add_test("t-12-basic-types" t-12-basic-types)
+
+add_executable(t-13-protol-error t/13-protol-error.cpp)
+target_link_libraries(t-13-protol-error ${LINK_DEPENDENCIES})
+add_test("t-13-protol-error" t-13-protol-error)
+
+add_executable(t-14-uds t/14-uds.cpp)
+target_link_libraries(t-14-uds ${LINK_DEPENDENCIES})
+add_test("t-14-uds" t-14-uds)
+
+add_executable(t-15-cancellation t/15-cancellation.cpp)
+target_link_libraries(t-15-cancellation ${LINK_DEPENDENCIES})
+add_test("t-15-cancellation" t-15-cancellation)
+
+add_executable(t-16-close-connection t/16-close-connection.cpp)
+target_link_libraries(t-16-close-connection ${LINK_DEPENDENCIES})
+add_test("t-16-close-connection" t-16-close-connection)
+
+add_executable(t-17-sync t/17-sync.cpp)
+target_link_libraries(t-17-sync ${LINK_DEPENDENCIES})
+add_test("t-17-sync" t-17-sync)
+
 #add_executable(t-18-subscription t/18-subscription.cpp)
 #target_link_libraries(t-18-subscription ${LINK_DEPENDENCIES})
 #add_test("t-18-subscription" t-18-subscription)

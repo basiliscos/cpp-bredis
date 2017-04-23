@@ -32,14 +32,14 @@ TEST_CASE("protocol-error", "[connection]") {
     auto peer_socket = socket_t(io_service);
     std::string data = "bla-bla";
     std::string end_marker = "ping\r\n";
-    boost::asio::streambuf rx_buff;
+    boost::asio::streambuf remote_rx_buff;
     asio::const_buffers_1 output_buf = asio::buffer(data.c_str(), data.size());
     acceptor.async_accept(peer_socket, [&](const sys::error_code &error_code) {
         BREDIS_LOG_DEBUG("async_accept: " << error_code.message() << ", "
                                           << peer_socket.local_endpoint());
 
         async_read_until(
-            peer_socket, rx_buff, end_marker,
+            peer_socket, remote_rx_buff, end_marker,
             [&](const sys::error_code &ec, std::size_t sz) {
                 BREDIS_LOG_DEBUG("async_read: " << sz << ", " << ec.message());
 
@@ -59,10 +59,15 @@ TEST_CASE("protocol-error", "[connection]") {
     std::promise<result_t> completion_promise;
     std::future<result_t> completion_future = completion_promise.get_future();
 
-    c.push_command("ping", [&](const auto &error_code, r::redis_result_t &&r) {
-        REQUIRE(error_code);
-        REQUIRE(error_code.message() == "protocol error");
-        completion_promise.set_value();
+    boost::asio::streambuf rx_buff;
+    c.async_write("ping", [&](const auto &error_code) {
+        REQUIRE(!error_code);
+        c.async_read(rx_buff, [&](const auto &error_code, r::redis_result_t &&r, size_t consumed){
+            REQUIRE(error_code);
+            REQUIRE(error_code.message() == "protocol error");
+            completion_promise.set_value();
+
+        });
     });
     while (completion_future.wait_for(sleep_delay) !=
            std::future_status::ready) {
