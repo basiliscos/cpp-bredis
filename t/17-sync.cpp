@@ -3,9 +3,9 @@
 #include <boost/asio.hpp>
 #include <future>
 
-#include "catch.hpp"
 #include "EmptyPort.hpp"
 #include "TestServer.hpp"
+#include "catch.hpp"
 
 #include "bredis/AsyncConnection.hpp"
 

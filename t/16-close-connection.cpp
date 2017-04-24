@@ -1,12 +1,12 @@
 #define CATCH_CONFIG_MAIN
 
 #include <boost/asio.hpp>
+#include <boost/lexical_cast.hpp>
 #include <future>
 #include <vector>
-#include <boost/lexical_cast.hpp>
 
-#include "catch.hpp"
 #include "EmptyPort.hpp"
+#include "catch.hpp"
 
 #include "bredis/AsyncConnection.hpp"
 
@@ -56,9 +56,10 @@ TEST_CASE("close-afrer-read", "[connection]") {
     std::future<result_t> completion_future = completion_promise.get_future();
 
     boost::asio::streambuf rx_buff;
-    c.async_write("ping", [&](const auto &error_code){
+    c.async_write("ping", [&](const auto &error_code) {
         REQUIRE(!error_code);
-        c.async_read(rx_buff, [&](const auto &error_code, r::redis_result_t &&r, size_t consumed){
+        c.async_read(rx_buff, [&](const auto &error_code, r::redis_result_t &&r,
+                                  size_t consumed) {
             REQUIRE(error_code);
             REQUIRE(error_code.message() == "End of file");
             completion_promise.set_value();
@@ -103,9 +104,10 @@ TEST_CASE("close-before-write", "[connection]") {
     std::future<result_t> completion_future = completion_promise.get_future();
 
     boost::asio::streambuf rx_buff;
-    c.async_write("ping", [&](const auto &error_code){
+    c.async_write("ping", [&](const auto &error_code) {
         REQUIRE(!error_code);
-        c.async_read(rx_buff, [&](const auto &error_code, r::redis_result_t &&r, size_t consumed){
+        c.async_read(rx_buff, [&](const auto &error_code, r::redis_result_t &&r,
+                                  size_t consumed) {
             REQUIRE(error_code);
             REQUIRE(error_code.message() == "Connection reset by peer");
             completion_promise.set_value();

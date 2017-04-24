@@ -3,9 +3,9 @@
 #include <boost/asio.hpp>
 #include <future>
 
-#include "catch.hpp"
 #include "EmptyPort.hpp"
 #include "TestServer.hpp"
+#include "catch.hpp"
 
 #include "bredis/AsyncConnection.hpp"
 
@@ -37,9 +37,9 @@ TEST_CASE("ping", "[connection]") {
     boost::asio::streambuf rx_buff;
 
     c.async_write("ping", [&](const auto &error_code) {
-        c.async_read(rx_buff, [&](const auto &error_code, r::redis_result_t &&r, size_t consumed){
-            completion_promise.set_value(r);
-        });
+        c.async_read(rx_buff,
+                     [&](const auto &error_code, r::redis_result_t &&r,
+                         size_t consumed) { completion_promise.set_value(r); });
     });
 
     while (completion_future.wait_for(sleep_delay) !=

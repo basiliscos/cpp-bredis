@@ -14,7 +14,6 @@
 
 namespace bredis {
 
-
 template <typename AsyncStream>
 template <typename WriteCallback>
 void AsyncConnection<AsyncStream>::async_write(const command_wrapper_t &command,
@@ -35,7 +34,6 @@ void AsyncConnection<AsyncStream>::async_write(const command_wrapper_t &command,
                           write_callback(error_code);
                       });
 }
-
 
 template <typename AsyncStream>
 template <typename ReadCallback, typename Buffer>
@@ -84,7 +82,6 @@ void AsyncConnection<AsyncStream>::async_read(Buffer &rx_buff,
         });
 }
 
-
 template <typename AsyncStream>
 void AsyncConnection<AsyncStream>::write(const command_wrapper_t &command) {
     namespace asio = boost::asio;
@@ -96,9 +93,9 @@ void AsyncConnection<AsyncStream>::write(const command_wrapper_t &command) {
     asio::write(socket_, output_buf);
 }
 
-
 template <typename AsyncStream>
-redis_result_t AsyncConnection<AsyncStream>::read(boost::asio::streambuf &rx_buff) {
+redis_result_t
+AsyncConnection<AsyncStream>::read(boost::asio::streambuf &rx_buff) {
     namespace asio = boost::asio;
     namespace sys = boost::system;
 
@@ -119,6 +116,5 @@ redis_result_t AsyncConnection<AsyncStream>::read(boost::asio::streambuf &rx_buf
     rx_buff.consume(parse_result.consumed);
     return boost::apply_visitor(some_result_visitor(), parse_result.result);
 }
-
 
 } // namespace bredis

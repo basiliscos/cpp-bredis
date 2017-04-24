@@ -1,13 +1,13 @@
 #define CATCH_CONFIG_MAIN
 
-#include <boost/asio.hpp>
-#include <future>
-#include <vector>
-#include <cstdio>
-#include <iostream>
-#include "catch.hpp"
-#include "TestServer.hpp"
 #include "EmptyPort.hpp"
+#include "TestServer.hpp"
+#include "catch.hpp"
+#include <boost/asio.hpp>
+#include <cstdio>
+#include <future>
+#include <iostream>
+#include <vector>
 
 #include "bredis/AsyncConnection.hpp"
 
@@ -28,7 +28,6 @@ TEST_CASE("ping", "[connection]") {
     using read_callback_t =
         std::function<void(const boost::system::error_code &error_code,
                            r::redis_result_t &&r, size_t consumed)>;
-
 
     std::chrono::nanoseconds sleep_delay(1);
 
@@ -63,20 +62,21 @@ TEST_CASE("ping", "[connection]") {
     std::future<result_t> completion_future = completion_promise.get_future();
     boost::asio::streambuf rx_buff;
 
-    read_callback_t read_callback = [&](const auto &error_code, r::redis_result_t &&r, size_t consumed) {
-        REQUIRE(!error_code);
-        auto &reply_ref = boost::get<r::string_holder_t>(r).str;
-        std::string reply_str(reply_ref.cbegin(), reply_ref.cend());
-        results.emplace_back(reply_str);
-        BREDIS_LOG_DEBUG("callback, size: " << results.size());
-        if (results.size() == count) {
-            completion_promise.set_value();
-        } else {
-            c.async_read(rx_buff, read_callback);
-        }
-    };
+    read_callback_t read_callback =
+        [&](const auto &error_code, r::redis_result_t &&r, size_t consumed) {
+            REQUIRE(!error_code);
+            auto &reply_ref = boost::get<r::string_holder_t>(r).str;
+            std::string reply_str(reply_ref.cbegin(), reply_ref.cend());
+            results.emplace_back(reply_str);
+            BREDIS_LOG_DEBUG("callback, size: " << results.size());
+            if (results.size() == count) {
+                completion_promise.set_value();
+            } else {
+                c.async_read(rx_buff, read_callback);
+            }
+        };
 
-    c.async_write(cmd, [&](const auto &error_code){
+    c.async_write(cmd, [&](const auto &error_code) {
         REQUIRE(!error_code);
         c.async_read(rx_buff, read_callback);
     });

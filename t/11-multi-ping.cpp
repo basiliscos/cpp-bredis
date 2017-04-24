@@ -74,9 +74,9 @@ TEST_CASE("ping", "[connection]") {
         [&](const boost::system::error_code &error_code) {
             BREDIS_LOG_DEBUG("write_callback");
             REQUIRE(!error_code);
-            c.async_read(rx_buff, read_callback);
         };
 
+    c.async_read(rx_buff, read_callback);
     c.async_write(cmd, write_callback);
 
     while (completion_future.wait_for(sleep_delay) !=

@@ -23,6 +23,7 @@
 #include "Error.hpp"
 #include "Protocol.hpp"
 #include "Result.hpp"
+#include "Subscription.hpp"
 
 namespace bredis {
 
@@ -51,7 +52,8 @@ template <typename AsyncStream> class AsyncConnection {
     template <typename... Args>
     AsyncConnection(Args &&... args) : socket_(std::forward<Args>(args)...) {}
 
-    AsyncStream &next_layer() { return socket_; }
+    inline AsyncStream &next_layer() { return socket_; }
+    inline AsyncStream &&move_layer() { return std::move(socket_); }
 
     /* asynchronous interface */
     template <typename WriteCallback>
@@ -66,11 +68,11 @@ template <typename AsyncStream> class AsyncConnection {
 
     redis_result_t read(boost::asio::streambuf &rx_buff);
 
-    redis_result_t inline execute(const command_wrapper_t &command, boost::asio::streambuf &rx_buff) {
+    redis_result_t inline execute(const command_wrapper_t &command,
+                                  boost::asio::streambuf &rx_buff) {
         write(command);
         return read(rx_buff);
     }
-
 };
 
 } // namespace bredis
