@@ -39,11 +39,6 @@ template <typename AsyncStream> class AsyncConnection {
   public:
     using string_t = boost::string_ref;
     using args_container_t = std::vector<string_t>;
-    using callback_ptr_t = std::shared_ptr<command_callback_t>;
-    using item_t = std::tuple<std::string, args_container_t, callback_ptr_t>;
-    using tx_queue_t = std::unique_ptr<std::queue<item_t>>;
-    using rx_queue_t = std::queue<callback_ptr_t>;
-    using callbacks_vector_t = std::vector<callback_ptr_t>;
 
   private:
     AsyncStream socket_;
@@ -68,7 +63,7 @@ template <typename AsyncStream> class AsyncConnection {
 
     redis_result_t read(boost::asio::streambuf &rx_buff);
 
-    redis_result_t inline execute(const command_wrapper_t &command,
+    inline redis_result_t execute(const command_wrapper_t &command,
                                   boost::asio::streambuf &rx_buff) {
         write(command);
         return read(rx_buff);

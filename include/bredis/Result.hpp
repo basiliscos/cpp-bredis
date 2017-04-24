@@ -61,6 +61,4 @@ struct parse_result_t {
 using redis_result_t = boost::variant<int_result_t, string_holder_t,
                                       error_holder_t, nil_t, array_wrapper_t>;
 
-using command_callback_t = std::function<void(
-    const boost::system::error_code &error_code, redis_result_t &&result)>;
 };
