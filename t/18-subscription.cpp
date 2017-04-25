@@ -121,16 +121,4 @@ TEST_CASE("subscription", "[connection]") {
            std::future_status::ready) {
         io_service.run_one();
     }
-
-#ifdef XXX
-    /* check point 3, let's see what we have received */
-    {
-        REQUIRE(results.size() == 5);
-        REQUIRE(messages.size() == 3);
-
-        REQUIRE(messages[0] == "some-channel1:message-a1");
-        REQUIRE(messages[1] == "some-channel1:message-a2");
-        REQUIRE(messages[2] == "some-channel2:last");
-    }
-#endif
 };

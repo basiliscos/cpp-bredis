@@ -56,3 +56,7 @@ add_test("t-17-sync" t-17-sync)
 add_executable(t-18-subscription t/18-subscription.cpp)
 target_link_libraries(t-18-subscription ${LINK_DEPENDENCIES})
 add_test("t-18-subscription" t-18-subscription)
+
+add_executable(t-19-transaction t/19-transaction.cpp)
+target_link_libraries(t-19-transaction ${LINK_DEPENDENCIES})
+add_test("t-19-transaction" t-19-transaction)

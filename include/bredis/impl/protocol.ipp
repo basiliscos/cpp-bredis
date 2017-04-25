@@ -20,7 +20,10 @@ template <typename T> struct extraction_result_t {
     size_t consumed;
 };
 
-static parse_result_t raw_parse(const boost::string_ref &outer_range);
+using some_parse_result_t =
+    boost::variant<no_enoght_data_t, positive_parse_result_t>;
+
+static some_parse_result_t raw_parse(const boost::string_ref &outer_range);
 
 template <typename T> struct extractor {};
 
@@ -101,13 +104,13 @@ template <> struct extractor<optional_array_t> {
                     boost::string_ref left_range(range.data() + consumed,
                                                  range.size() - consumed);
                     auto raw_result = raw_parse(left_range);
-                    if (!raw_result.consumed) {
-                        // no enough data in array
+                    if (boost::get<no_enoght_data_t>(&raw_result)) {
                         return r;
                     }
-                    consumed += raw_result.consumed;
-                    some_result_t &&something(std::move(raw_result.result));
-                    value.elements.emplace_back(std::move(something));
+                    positive_parse_result_t something(
+                        boost::get<positive_parse_result_t>(raw_result));
+                    consumed += something.consumed;
+                    value.elements.emplace_back(std::move(something.result));
                 }
                 r.value = std::move(value);
                 r.consumed = consumed;
@@ -118,55 +121,56 @@ template <> struct extractor<optional_array_t> {
 };
 
 template <typename T, typename P, bool = false> struct transform_t {
-    some_result_t operator()(extraction_result_t<T> &e) const {
+    some_parse_result_t operator()(extraction_result_t<T> &e) const {
         if (!e.consumed) {
-            return some_result_t{};
+            return no_enoght_data_t{};
         } else {
-            return P::value(e.value);
+            return positive_parse_result_t{P::value(e.value), e.consumed + 1};
         }
     }
 };
 
 template <typename T, typename W> struct WrapPolicy {
     using type_t = T;
-    static inline some_result_t value(T &v) {
-        return some_result_t(W{std::move(v)});
+    static inline redis_result_t value(T &v) {
+        return redis_result_t(W{std::move(v)});
     }
 };
 
 template <typename T> struct MovePolicy {
     using type_t = T;
-    static inline some_result_t value(T &v) { return some_result_t(T{v}); }
+    static inline redis_result_t value(T &v) { return redis_result_t(T{v}); }
 };
 
 struct ArrayUnwrapPolicy {
     using type_t = array_holder_t;
-    static inline some_result_t value(type_t &v) { return some_result_t(v); }
+    static inline redis_result_t value(type_t &v) { return redis_result_t(v); }
 };
 
 template <typename T, typename P>
-class unpack_visitor : public boost::static_visitor<some_result_t> {
+class unpack_visitor : public boost::static_visitor<redis_result_t> {
   public:
-    some_result_t operator()(nil_t &nil) const { return some_result_t(nil); }
+    redis_result_t operator()(nil_t &nil) const { return redis_result_t(nil); }
 
-    some_result_t operator()(T &v) const { return P::value(v); }
+    redis_result_t operator()(T &v) const { return P::value(v); }
 };
 
 template <typename T, typename P> struct transform_t<T, P, true> {
     using underlying_t = typename P::type_t;
-    some_result_t operator()(extraction_result_t<T> &e) const {
+    some_parse_result_t operator()(extraction_result_t<T> &e) const {
         if (!e.consumed) {
-            return some_result_t{};
+            return no_enoght_data_t{};
         } else {
-            return boost::apply_visitor(unpack_visitor<underlying_t, P>(),
-                                        e.value);
+            auto value = boost::apply_visitor(unpack_visitor<underlying_t, P>(),
+                                              e.value);
+            return positive_parse_result_t{std::move(value), e.consumed + 1};
         }
     }
 };
 
-static parse_result_t raw_parse(const boost::string_ref &outer_range) {
+static some_parse_result_t raw_parse(const boost::string_ref &outer_range) {
     if (outer_range.size() < 1) {
-        return parse_result_t{some_result_t{}, 0};
+        return no_enoght_data_t{};
     }
 
     auto marker = outer_range[0];
@@ -178,40 +182,37 @@ static parse_result_t raw_parse(const boost::string_ref &outer_range) {
         extractor<string_result_t> e;
         transform_t<string_result_t, policy_t> t;
         auto v = e(range);
-        return parse_result_t{std::move(t(v)), v.consumed ? v.consumed + 1 : 0};
+        return std::move(t(v));
     }
     case '-': {
         using policy_t = WrapPolicy<string_result_t, error_holder_t>;
         extractor<string_result_t> e;
         transform_t<string_result_t, policy_t> t;
         auto v = e(range);
-        return parse_result_t{std::move(t(v)), v.consumed ? v.consumed + 1 : 0};
+        return std::move(t(v));
     }
     case ':': {
         using policy_t = MovePolicy<int_result_t>;
         extractor<int_result_t> e;
         transform_t<int_result_t, policy_t> t;
         auto v = e(range);
-        return parse_result_t{std::move(t(v)), v.consumed ? v.consumed + 1 : 0};
+        return std::move(t(v));
     }
     case '$': {
         using policy_t = WrapPolicy<string_result_t, string_holder_t>;
         extractor<optional_string_t> e;
         transform_t<optional_string_t, policy_t, true> t;
         auto v = e(range);
-        return parse_result_t{std::move(t(v)), v.consumed ? v.consumed + 1 : 0};
+        return std::move(t(v));
     }
     case '*': {
         using policy_t = ArrayUnwrapPolicy;
         extractor<optional_array_t> e;
         transform_t<optional_array_t, policy_t, true> t;
         auto v = e(range);
-        return parse_result_t{std::move(t(v)), v.consumed ? v.consumed + 1 : 0};
+        return std::move(t(v));
     }
-    default: {
-        return parse_result_t{
-            some_result_t(protocol_error_t{"wrong introduction"}), 0};
-    }
+    default: { throw std::runtime_error("wrong introduction"); }
     }
 }
 
@@ -224,7 +225,7 @@ parse_result_t Protocol::parse(const boost::string_ref &buff) noexcept {
     try {
         return raw_parse(buff);
     } catch (std::exception &e) {
-        return parse_result_t{some_result_t(protocol_error_t{e.what()}), 0};
+        return protocol_error_t{e.what()};
     }
 }
 

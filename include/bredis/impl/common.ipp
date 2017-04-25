@@ -6,6 +6,8 @@
 //
 #pragma once
 
+#include <boost/asio/read_until.hpp>
+#include <boost/type_traits.hpp>
 #include <iostream>
 #include <sstream>
 
@@ -22,29 +24,47 @@ typedef boost::asio::buffers_iterator<
     boost::asio::streambuf::const_buffers_type>
     asio_iterator;
 
-std::pair<asio_iterator, bool> match_result(asio_iterator begin,
-                                            asio_iterator end) {
-    const char *char_ptr = &*begin;
-    auto size = std::distance(begin, end);
-    boost::string_ref data(char_ptr, size);
-    auto parse_result = Protocol::parse(data);
-    bool has_result =
-        (parse_result.consumed > 0) ||
-        (boost::get<protocol_error_t>(&parse_result.result) != nullptr);
-    BREDIS_LOG_DEBUG("will try to parse : " << data
-                                            << ", result : " << has_result);
-    return std::make_pair(begin, has_result);
-}
+class MatchResult {
+  private:
+    std::size_t matched_results_;
+    std::size_t expected_count_;
 
-class some_result_visitor : public boost::static_visitor<redis_result_t> {
   public:
-    template <typename T> redis_result_t operator()(const T &value) const {
-        return redis_result_t(value);
-    }
+    MatchResult(std::size_t expected_count)
+        : expected_count_(expected_count), matched_results_(0) {}
 
-    redis_result_t operator()(const protocol_error_t &v) const {
-        assert(false &&
-               "redis protocol error isn't convertable to redis_result_t");
+    std::pair<asio_iterator, bool> operator()(asio_iterator begin,
+                                              asio_iterator end) {
+        const char *char_ptr = &*begin;
+        auto size = std::distance(begin, end);
+
+        BREDIS_LOG_DEBUG("will try to parse : " << char_ptr);
+
+        auto parsing_complete = false;
+        size_t consumed = 0;
+        do {
+            boost::string_ref data(char_ptr + consumed, size - consumed);
+            auto parse_result = Protocol::parse(data);
+            auto *parse_error = boost::get<protocol_error_t>(&parse_result);
+            if (parse_error) {
+                BREDIS_LOG_DEBUG("parse error : " << parse_error->what);
+                consumed = 0;
+                parsing_complete = true;
+                break;
+            }
+
+            auto *no_enoght_data = boost::get<no_enoght_data_t>(&parse_result);
+            if (no_enoght_data) {
+                break;
+            }
+
+            auto &positive_result =
+                boost::get<positive_parse_result_t>(parse_result);
+            ++matched_results_;
+            consumed += positive_result.consumed;
+            parsing_complete = (matched_results_ == expected_count_);
+        } while (!parsing_complete);
+        return std::make_pair(begin + consumed, parsing_complete);
     }
 };
 
@@ -66,3 +86,10 @@ class command_serializer_visitor : public boost::static_visitor<std::string> {
 };
 
 } // namespace bredis
+
+namespace boost {
+namespace asio {
+template <>
+struct is_match_condition<bredis::MatchResult> : public boost::true_type {};
+}
+}

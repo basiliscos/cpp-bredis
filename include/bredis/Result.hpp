@@ -44,21 +44,21 @@ struct nil_t {
     bool operator==(const nil_t &rhs) { return true; }
 };
 
-using some_result_t =
-    boost::variant<int_result_t, string_holder_t, error_holder_t, nil_t,
-                   array_wrapper_t, protocol_error_t>;
-
-struct array_holder_t {
-    using recursive_array_t = std::vector<some_result_t>;
-    recursive_array_t elements;
-};
-
-struct parse_result_t {
-    some_result_t result;
-    size_t consumed;
-};
-
 using redis_result_t = boost::variant<int_result_t, string_holder_t,
                                       error_holder_t, nil_t, array_wrapper_t>;
 
+struct array_holder_t {
+    using recursive_array_t = std::vector<redis_result_t>;
+    recursive_array_t elements;
+};
+
+struct no_enoght_data_t {};
+
+struct positive_parse_result_t {
+    redis_result_t result;
+    size_t consumed;
+};
+
+using parse_result_t =
+    boost::variant<no_enoght_data_t, positive_parse_result_t, protocol_error_t>;
 };

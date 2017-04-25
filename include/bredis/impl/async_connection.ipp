@@ -38,7 +38,8 @@ void AsyncConnection<AsyncStream>::async_write(const command_wrapper_t &command,
 template <typename AsyncStream>
 template <typename ReadCallback, typename Buffer>
 void AsyncConnection<AsyncStream>::async_read(Buffer &rx_buff,
-                                              ReadCallback read_callback) {
+                                              ReadCallback read_callback,
+                                              std::size_t replies_count) {
 
     namespace asio = boost::asio;
     namespace sys = boost::system;
@@ -46,9 +47,9 @@ void AsyncConnection<AsyncStream>::async_read(Buffer &rx_buff,
     BREDIS_LOG_DEBUG("async_read");
 
     asio::async_read_until(
-        socket_, rx_buff, match_result,
-        [read_callback, &rx_buff](const sys::error_code &error_code,
-                                  std::size_t bytes_transferred) {
+        socket_, rx_buff, MatchResult(replies_count),
+        [read_callback, &rx_buff, replies_count](
+            const sys::error_code &error_code, std::size_t bytes_transferred) {
             if (error_code) {
                 read_callback(error_code, {}, 0);
                 return;
@@ -58,27 +59,43 @@ void AsyncConnection<AsyncStream>::async_read(Buffer &rx_buff,
             const char *char_ptr =
                 boost::asio::buffer_cast<const char *>(const_buff);
             auto size = rx_buff.size();
-            string_t data(char_ptr, size);
             BREDIS_LOG_DEBUG("incoming data("
                              << size << ") : " << char_ptr
                              << ", tx bytes: " << bytes_transferred);
 
-            auto parse_result = Protocol::parse(data);
+            array_holder_t results;
+            results.elements.reserve(replies_count);
+            size_t cumulative_consumption = 0;
             boost::system::error_code ec;
-            if (parse_result.consumed == 0) {
-                /* might happen only in case of protocol error */
-                protocol_error_t protocol_error =
-                    boost::get<protocol_error_t>(parse_result.result);
-                BREDIS_LOG_DEBUG("protocol error: " << protocol_error.what);
-                auto parse_error_code =
-                    Error::make_error_code(bredis_errors::protocol_error);
-                read_callback(parse_error_code, {}, 0);
-                return;
-            }
 
-            redis_result_t redis_result = boost::apply_visitor(
-                some_result_visitor(), parse_result.result);
-            read_callback(ec, std::move(redis_result), parse_result.consumed);
+            do {
+                string_t data(char_ptr + cumulative_consumption,
+                              size - cumulative_consumption);
+                BREDIS_LOG_DEBUG("trying to get response # "
+                                 << results.elements.size());
+                BREDIS_LOG_DEBUG("trying to get response from " << data);
+                auto parse_result = Protocol::parse(data);
+                auto *parse_error = boost::get<protocol_error_t>(&parse_result);
+                if (parse_error) {
+                    /* might happen only in case of protocol error */
+                    BREDIS_LOG_DEBUG("protocol error: " << parse_error->what);
+                    auto parse_error_code =
+                        Error::make_error_code(bredis_errors::protocol_error);
+                    read_callback(parse_error_code, {}, 0);
+                    return;
+                }
+                auto &positive_result =
+                    boost::get<positive_parse_result_t>(parse_result);
+                results.elements.emplace_back(positive_result.result);
+                cumulative_consumption += positive_result.consumed;
+            } while (results.elements.size() < replies_count);
+
+            if (replies_count == 1) {
+                read_callback(ec, std::move(results.elements[0]),
+                              cumulative_consumption);
+            } else {
+                read_callback(ec, std::move(results), cumulative_consumption);
+            }
         });
 }
 
@@ -99,7 +116,7 @@ AsyncConnection<AsyncStream>::read(boost::asio::streambuf &rx_buff) {
     namespace asio = boost::asio;
     namespace sys = boost::system;
 
-    auto rx_bytes = asio::read_until(socket_, rx_buff, match_result);
+    auto rx_bytes = asio::read_until(socket_, rx_buff, MatchResult(1));
 
     const char *char_ptr =
         boost::asio::buffer_cast<const char *>(rx_buff.data());
@@ -108,13 +125,14 @@ AsyncConnection<AsyncStream>::read(boost::asio::streambuf &rx_buff) {
     BREDIS_LOG_DEBUG("incoming data(" << size << ") : " << char_ptr);
 
     auto parse_result = Protocol::parse(data);
-    if (parse_result.consumed == 0) {
-        auto protocol_error = boost::get<protocol_error_t>(parse_result.result);
-        BREDIS_LOG_DEBUG("protocol error: " << protocol_error.what);
+    auto *parse_error = boost::get<protocol_error_t>(&parse_result);
+    if (parse_error) {
+        BREDIS_LOG_DEBUG("protocol error: " << parse_error->what);
         throw Error::make_error_code(bredis_errors::protocol_error);
     }
-    rx_buff.consume(parse_result.consumed);
-    return boost::apply_visitor(some_result_visitor(), parse_result.result);
+    auto &positive_result = boost::get<positive_parse_result_t>(parse_result);
+    rx_buff.consume(positive_result.consumed);
+    return positive_result.result;
 }
 
 } // namespace bredis

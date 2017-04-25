@@ -58,16 +58,12 @@ TEST_CASE("ping", "[connection]") {
                 BREDIS_LOG_DEBUG("error: " << error_code.message());
                 REQUIRE(!error_code);
             }
-            // REQUIRE(!error_code);
-            auto &reply_ref = boost::get<r::string_holder_t>(r).str;
-            std::string reply_str(reply_ref.cbegin(), reply_ref.cend());
-            results.emplace_back(reply_str);
-            BREDIS_LOG_DEBUG("callback, size: " << results.size());
-            if (results.size() == count) {
-                completion_promise.set_value();
-            }
+            REQUIRE(!error_code);
+            auto &replies = boost::get<r::array_holder_t>(r);
+            BREDIS_LOG_DEBUG("callback, size: " << replies.elements.size());
+            REQUIRE(replies.elements.size() == count);
+            completion_promise.set_value();
             rx_buff.consume(consumed);
-            c.async_read(rx_buff, read_callback);
         };
 
     write_callback_t write_callback =
@@ -76,12 +72,11 @@ TEST_CASE("ping", "[connection]") {
             REQUIRE(!error_code);
         };
 
-    c.async_read(rx_buff, read_callback);
+    c.async_read(rx_buff, read_callback, count);
     c.async_write(cmd, write_callback);
 
     while (completion_future.wait_for(sleep_delay) !=
            std::future_status::ready) {
         io_service.run_one();
     }
-    REQUIRE(results.size() == count);
 };

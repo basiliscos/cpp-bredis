@@ -43,7 +43,7 @@ void Subscription<AsyncStream, NotificationCallback>::async_read() {
     BREDIS_LOG_DEBUG("async_read");
 
     asio::async_read_until(
-        socket_, rx_buff_, match_result,
+        socket_, rx_buff_, MatchResult(1),
         [this](const sys::error_code &error_code,
                std::size_t bytes_transferred) {
             if (error_code) {
@@ -61,22 +61,21 @@ void Subscription<AsyncStream, NotificationCallback>::async_read() {
                              << ", tx bytes: " << bytes_transferred);
 
             auto parse_result = Protocol::parse(data);
-            boost::system::error_code ec;
-            if (parse_result.consumed == 0) {
-                /* might happen only in case of protocol error */
-                protocol_error_t protocol_error =
-                    boost::get<protocol_error_t>(parse_result.result);
-                BREDIS_LOG_DEBUG("protocol error: " << protocol_error.what);
+
+            auto *parse_error = boost::get<protocol_error_t>(&parse_result);
+            if (parse_error) {
+                BREDIS_LOG_DEBUG("protocol error: " << protocol_error->what);
                 auto parse_error_code =
                     Error::make_error_code(bredis_errors::protocol_error);
                 callback_(parse_error_code, {});
                 return;
             }
 
-            redis_result_t redis_result = boost::apply_visitor(
-                some_result_visitor(), parse_result.result);
-            callback_(ec, std::move(redis_result));
-            rx_buff_.consume(parse_result.consumed);
+            boost::system::error_code ec;
+            auto &positive_result =
+                boost::get<positive_parse_result_t>(parse_result);
+            callback_(ec, std::move(positive_result.result));
+            rx_buff_.consume(positive_result.consumed);
             async_read();
         });
 }

@@ -23,7 +23,6 @@
 #include "Error.hpp"
 #include "Protocol.hpp"
 #include "Result.hpp"
-#include "Subscription.hpp"
 
 namespace bredis {
 
@@ -56,7 +55,8 @@ template <typename AsyncStream> class AsyncConnection {
                      WriteCallback write_callback);
 
     template <typename ReadCallback, typename Buffer>
-    void async_read(Buffer &rx_buff, ReadCallback read_callback);
+    void async_read(Buffer &rx_buff, ReadCallback read_callback,
+                    std::size_t replies_count = 1);
 
     /* synchronous interface */
     void write(const command_wrapper_t &command);
