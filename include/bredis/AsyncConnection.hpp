@@ -61,13 +61,7 @@ template <typename AsyncStream> class AsyncConnection {
     /* synchronous interface */
     void write(const command_wrapper_t &command);
 
-    redis_result_t read(boost::asio::streambuf &rx_buff);
-
-    inline redis_result_t execute(const command_wrapper_t &command,
-                                  boost::asio::streambuf &rx_buff) {
-        write(command);
-        return read(rx_buff);
-    }
+    positive_parse_result_t read(boost::asio::streambuf &rx_buff);
 };
 
 } // namespace bredis

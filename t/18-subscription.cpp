@@ -50,21 +50,25 @@ TEST_CASE("subscription", "[connection]") {
     {
         boost::asio::streambuf rx_buff;
         consumer.write(subscribe_cmd);
-        auto reply1 = boost::get<r::array_holder_t>(consumer.read(rx_buff));
+        auto parse_result = consumer.read(rx_buff);
+        auto reply1 = boost::get<r::array_holder_t>(parse_result.result);
         REQUIRE(reply1.elements.size() == 3);
         REQUIRE(boost::get<r::string_holder_t>(reply1.elements[0]) ==
                 "subscribe");
         REQUIRE(boost::get<r::string_holder_t>(reply1.elements[1]) ==
                 "some-channel1");
         REQUIRE(boost::get<r::int_result_t>(reply1.elements[2]) == 1);
+        rx_buff.consume(parse_result.consumed);
 
-        auto reply2 = boost::get<r::array_holder_t>(consumer.read(rx_buff));
+        parse_result = consumer.read(rx_buff);
+        auto reply2 = boost::get<r::array_holder_t>(parse_result.result);
         REQUIRE(reply2.elements.size() == 3);
         REQUIRE(boost::get<r::string_holder_t>(reply2.elements[0]) ==
                 "subscribe");
         REQUIRE(boost::get<r::string_holder_t>(reply2.elements[1]) ==
                 "some-channel2");
         REQUIRE(boost::get<r::int_result_t>(reply2.elements[2]) == 2);
+        rx_buff.consume(parse_result.consumed);
     }
 
     /* check point 2: publish messages */
@@ -73,24 +77,26 @@ TEST_CASE("subscription", "[connection]") {
         socket_2.connect(end_point);
         r::AsyncConnection<socket_t> producer(std::move(socket_2));
         boost::asio::streambuf rx_buff;
-        auto s_result = producer.execute(
-            r::single_command_t("publish", "some-channel1", "message-a1"),
-            rx_buff);
-        REQUIRE(boost::get<r::int_result_t>(s_result) == 1);
 
-        s_result = producer.execute(
-            r::single_command_t("publish", "some-channel1", "message-a2"),
-            rx_buff);
-        REQUIRE(boost::get<r::int_result_t>(s_result) == 1);
+        producer.write(r::single_command_t("publish", "some-channel1", "message-a1"));
+        auto s_result = producer.read(rx_buff);
+        REQUIRE(boost::get<r::int_result_t>(s_result.result) == 1);
+        rx_buff.consume(s_result.consumed);
 
-        s_result = producer.execute(
-            r::single_command_t("publish", "some-channel3", "message-c"),
-            rx_buff);
-        REQUIRE(boost::get<r::int_result_t>(s_result) == 0);
+        producer.write(r::single_command_t("publish", "some-channel1", "message-a2"));
+        s_result = producer.read(rx_buff);
+        REQUIRE(boost::get<r::int_result_t>(s_result.result) == 1);
+        rx_buff.consume(s_result.consumed);
 
-        s_result = producer.execute(
-            r::single_command_t("publish", "some-channel2", "last"), rx_buff);
-        REQUIRE(boost::get<r::int_result_t>(s_result) == 1);
+        producer.write(r::single_command_t("publish", "some-channel3", "message-c"));
+        s_result = producer.read(rx_buff);
+        REQUIRE(boost::get<r::int_result_t>(s_result.result) == 0);
+        rx_buff.consume(s_result.consumed);
+
+        producer.write(r::single_command_t("publish", "some-channel2", "last"));
+        s_result = producer.read(rx_buff);
+        REQUIRE(boost::get<r::int_result_t>(s_result.result) == 1);
+        rx_buff.consume(s_result.consumed);
     }
 
     /* check point 3: examine received messages */

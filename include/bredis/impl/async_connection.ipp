@@ -111,7 +111,7 @@ void AsyncConnection<AsyncStream>::write(const command_wrapper_t &command) {
 }
 
 template <typename AsyncStream>
-redis_result_t
+positive_parse_result_t
 AsyncConnection<AsyncStream>::read(boost::asio::streambuf &rx_buff) {
     namespace asio = boost::asio;
     namespace sys = boost::system;
@@ -130,9 +130,7 @@ AsyncConnection<AsyncStream>::read(boost::asio::streambuf &rx_buff) {
         BREDIS_LOG_DEBUG("protocol error: " << parse_error->what);
         throw Error::make_error_code(bredis_errors::protocol_error);
     }
-    auto &positive_result = boost::get<positive_parse_result_t>(parse_result);
-    rx_buff.consume(positive_result.consumed);
-    return positive_result.result;
+    return boost::get<positive_parse_result_t>(parse_result);
 }
 
 } // namespace bredis
