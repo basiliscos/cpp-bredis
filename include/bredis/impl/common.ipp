@@ -10,6 +10,7 @@
 #include <boost/type_traits.hpp>
 #include <iostream>
 #include <sstream>
+#include <boost/lexical_cast.hpp>
 
 #ifdef BREDIS_DEBUG
 #define BREDIS_LOG_DEBUG(msg)                                                  \
@@ -82,6 +83,35 @@ class command_serializer_visitor : public boost::static_visitor<std::string> {
             Protocol::serialize(out, cmd);
         }
         return out.str();
+    }
+};
+
+struct result_stringizer: public boost::static_visitor<std::string> {
+    std::string operator()(const int_result_t &value) const {
+        return "[int] :: " +  boost::lexical_cast<std::string>(value);
+    }
+
+    std::string operator()(const string_holder_t &value) const {
+        std::string str(value.str.cbegin(), value.str.cend());
+        return "[string] :: " +  str;
+    }
+
+    std::string operator()(const error_holder_t &value) const {
+        std::string str(value.str.cbegin(), value.str.cend());
+        return "[error] :: " +  str;
+    }
+
+    std::string operator()(const nil_t &value) const {
+        return "[nil_t]";
+    }
+
+    std::string operator()(const array_holder_t &value) const {
+        std::string r = "{";
+        for (const auto &v: value.elements) {
+            r += boost::apply_visitor(result_stringizer(), v) ;
+            r += ", ";
+        }
+        return r + "}";
     }
 };
 

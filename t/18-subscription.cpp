@@ -9,7 +9,6 @@
 #include "catch.hpp"
 
 #include "bredis/AsyncConnection.hpp"
-#include "bredis/Subscription.hpp"
 
 namespace r = bredis;
 namespace asio = boost::asio;
@@ -19,8 +18,12 @@ namespace ts = test_server;
 TEST_CASE("subscription", "[connection]") {
     using socket_t = asio::ip::tcp::socket;
     using result_t = r::redis_result_t;
-    std::chrono::milliseconds sleep_delay(1);
 
+    using read_callback_t =
+        std::function<void(const boost::system::error_code &error_code,
+                           r::redis_result_t &&r, size_t consumed)>;
+
+    std::chrono::milliseconds sleep_delay(1);
     uint16_t port = ep::get_random<ep::Kind::TCP>();
     auto port_str = boost::lexical_cast<std::string>(port);
     auto server = ts::make_server({"redis-server", "--port", port_str});
@@ -63,32 +66,6 @@ TEST_CASE("subscription", "[connection]") {
                 "some-channel2");
         REQUIRE(boost::get<r::int_result_t>(reply2.elements[2]) == 2);
     }
-    auto notification_callback = [&](const boost::system::error_code,
-                                     r::redis_result_t &&r) {
-        BREDIS_LOG_DEBUG("subscription callback");
-
-        r::array_holder_t array_reply = boost::get<r::array_holder_t>(r);
-
-        r::string_holder_t *type_reply =
-            boost::get<r::string_holder_t>(&array_reply.elements[0]);
-        r::string_holder_t *string_reply =
-            boost::get<r::string_holder_t>(&array_reply.elements[2]);
-        BREDIS_LOG_DEBUG("examining for completion. String: "
-                         << (string_reply ? string_reply->str : ""));
-
-        if (type_reply && type_reply->str == "message" && string_reply) {
-            if (string_reply->str == "last") {
-                completion_promise.set_value();
-            }
-            std::string channel(
-                boost::get<r::string_holder_t>(&array_reply.elements[1])->str);
-            std::string payload(string_reply->str);
-            messages.emplace_back(channel + ":" + payload);
-        }
-    };
-
-    r::Subscription<socket_t, decltype(notification_callback)> subscription(
-        std::move(consumer.move_layer()), std::move(notification_callback));
 
     /* check point 2: publish messages */
     {
@@ -116,9 +93,44 @@ TEST_CASE("subscription", "[connection]") {
         REQUIRE(boost::get<r::int_result_t>(s_result) == 1);
     }
 
+    /* check point 3: examine received messages */
+    boost::asio::streambuf rx_buff;
+    r::AsyncConnection<socket_t> c(std::move(consumer.move_layer()));
+
+    read_callback_t notification_callback = [&](const boost::system::error_code,
+                                     r::redis_result_t &&r, size_t consumed) {
+#ifdef BREDIS_DEBUG
+        BREDIS_LOG_DEBUG("subscription callback " << boost::apply_visitor(r::result_stringizer(), r));
+#endif
+
+        r::array_holder_t array_reply = boost::get<r::array_holder_t>(r);
+
+        r::string_holder_t *type_reply =
+            boost::get<r::string_holder_t>(&array_reply.elements[0]);
+        r::string_holder_t *string_reply =
+            boost::get<r::string_holder_t>(&array_reply.elements[2]);
+        BREDIS_LOG_DEBUG("examining for completion. String: "
+                         << (string_reply ? string_reply->str : ""));
+
+        if (type_reply && type_reply->str == "message" && string_reply) {
+            if (string_reply->str == "last") {
+                completion_promise.set_value();
+            } else {
+                c.async_read(rx_buff, notification_callback);
+            }
+            std::string channel(
+                boost::get<r::string_holder_t>(&array_reply.elements[1])->str);
+            std::string payload(string_reply->str);
+            messages.emplace_back(channel + ":" + payload);
+        }
+        rx_buff.consume(consumed);
+    };
+    c.async_read(rx_buff, notification_callback);
+
     /* gather enough info */
     while (completion_future.wait_for(sleep_delay) !=
            std::future_status::ready) {
         io_service.run_one();
     }
+
 };
