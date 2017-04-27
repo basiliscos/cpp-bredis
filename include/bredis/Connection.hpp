@@ -41,6 +41,8 @@ template <typename NextLayer> class Connection {
     Connection(Args &&... args) : socket_(std::forward<Args>(args)...) {}
 
     inline NextLayer &next_layer() { return socket_; }
+    inline const NextLayer &next_layer() const { return socket_; }
+
     inline NextLayer &&move_layer() { return std::move(socket_); }
 
     /* asynchronous interface */
