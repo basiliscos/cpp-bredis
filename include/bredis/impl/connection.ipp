@@ -134,7 +134,8 @@ Connection<NextLayer>::read(DynamicBuffer &rx_buff,
         return positive_parse_result_t{{}, 0};
     }
 
-    const auto char_ptr = boost::asio::buffer_cast<const char *>(rx_buff.data());
+    const auto char_ptr =
+        boost::asio::buffer_cast<const char *>(rx_buff.data());
     auto size = rx_buff.size();
     string_t data(char_ptr, size);
     BREDIS_LOG_DEBUG("incoming data(" << size << ") : " << char_ptr);
@@ -159,7 +160,7 @@ Connection<NextLayer>::read(DynamicBuffer &rx_buff) {
     boost::system::error_code ec;
     auto result = read(rx_buff, ec);
     if (ec) {
-        throw ec;
+        throw boost::system::system_error{ec};
     }
     return result;
 }
