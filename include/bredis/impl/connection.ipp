@@ -111,8 +111,9 @@ void Connection<NextLayer>::write(const command_wrapper_t &command) {
 }
 
 template <typename NextLayer>
+template <typename DynamicBuffer>
 positive_parse_result_t
-Connection<NextLayer>::read(boost::asio::streambuf &rx_buff) {
+Connection<NextLayer>::read(DynamicBuffer &rx_buff) {
     namespace asio = boost::asio;
     namespace sys = boost::system;
 
