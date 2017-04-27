@@ -17,7 +17,7 @@ namespace bredis {
 template <typename NextLayer>
 template <typename WriteCallback>
 void Connection<NextLayer>::async_write(const command_wrapper_t &command,
-                                               WriteCallback write_callback) {
+                                        WriteCallback write_callback) {
     namespace asio = boost::asio;
     namespace sys = boost::system;
 
@@ -38,8 +38,8 @@ void Connection<NextLayer>::async_write(const command_wrapper_t &command,
 template <typename NextLayer>
 template <typename ReadCallback, typename DynamicBuffer>
 void Connection<NextLayer>::async_read(DynamicBuffer &rx_buff,
-                                              ReadCallback read_callback,
-                                              std::size_t replies_count) {
+                                       ReadCallback read_callback,
+                                       std::size_t replies_count) {
 
     namespace asio = boost::asio;
     namespace sys = boost::system;
@@ -111,9 +111,20 @@ void Connection<NextLayer>::write(const command_wrapper_t &command) {
 }
 
 template <typename NextLayer>
+void Connection<NextLayer>::write(const command_wrapper_t &command,
+                                  boost::system::error_code &ec) {
+    namespace asio = boost::asio;
+    namespace sys = boost::system;
+
+    auto str = boost::apply_visitor(command_serializer_visitor(), command);
+    BREDIS_LOG_DEBUG("async_write >> " << str);
+    asio::const_buffers_1 output_buf = asio::buffer(str.c_str(), str.size());
+    asio::write(stream_, output_buf, ec);
+}
+
+template <typename NextLayer>
 template <typename DynamicBuffer>
-positive_parse_result_t
-Connection<NextLayer>::read(DynamicBuffer &rx_buff) {
+positive_parse_result_t Connection<NextLayer>::read(DynamicBuffer &rx_buff) {
     namespace asio = boost::asio;
     namespace sys = boost::system;
 
@@ -130,6 +141,32 @@ Connection<NextLayer>::read(DynamicBuffer &rx_buff) {
     if (parse_error) {
         BREDIS_LOG_DEBUG("protocol error: " << parse_error->what);
         throw Error::make_error_code(bredis_errors::protocol_error);
+    }
+    return boost::get<positive_parse_result_t>(parse_result);
+}
+
+template <typename NextLayer>
+template <typename DynamicBuffer>
+positive_parse_result_t
+Connection<NextLayer>::read(DynamicBuffer &rx_buff,
+                            boost::system::error_code &ec) {
+    namespace asio = boost::asio;
+    namespace sys = boost::system;
+
+    auto rx_bytes = asio::read_until(stream_, rx_buff, MatchResult(1), ec);
+
+    const char *char_ptr =
+        boost::asio::buffer_cast<const char *>(rx_buff.data());
+    auto size = rx_buff.size();
+    string_t data(char_ptr, size);
+    BREDIS_LOG_DEBUG("incoming data(" << size << ") : " << char_ptr);
+
+    auto parse_result = Protocol::parse(data);
+    auto *parse_error = boost::get<protocol_error_t>(&parse_result);
+    if (parse_error) {
+        BREDIS_LOG_DEBUG("protocol error: " << parse_error->what);
+        ec = Error::make_error_code(bredis_errors::protocol_error);
+        return positive_parse_result_t{{}, 0};
     }
     return boost::get<positive_parse_result_t>(parse_result);
 }

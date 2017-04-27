@@ -56,9 +56,13 @@ template <typename NextLayer> class Connection {
 
     /* synchronous interface */
     void write(const command_wrapper_t &command);
+    void write(const command_wrapper_t &command, boost::system::error_code &ec);
 
     template <typename DynamicBuffer>
     positive_parse_result_t read(DynamicBuffer &rx_buff);
+    template <typename DynamicBuffer>
+    positive_parse_result_t read(DynamicBuffer &rx_buff,
+                                 boost::system::error_code &ec);
 };
 
 } // namespace bredis
