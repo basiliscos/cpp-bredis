@@ -29,12 +29,6 @@ namespace bredis {
 template <typename AsyncStream> class AsyncConnection {
     using protocol_type_t = typename AsyncStream::protocol_type;
 
-    static_assert(std::is_same<protocol_type_t, boost::asio::ip::tcp>::value ||
-                      std::is_same<protocol_type_t,
-                                   boost::asio::local::stream_protocol>::value,
-                  "AsyncConnection can be specialized either for ip::tcp or "
-                  "local::stream_protocol");
-
   public:
     using string_t = boost::string_ref;
     using args_container_t = std::vector<string_t>;
