@@ -36,8 +36,8 @@ void Connection<NextLayer>::async_write(const command_wrapper_t &command,
 }
 
 template <typename NextLayer>
-template <typename ReadCallback, typename Buffer>
-void Connection<NextLayer>::async_read(Buffer &rx_buff,
+template <typename ReadCallback, typename DynamicBuffer>
+void Connection<NextLayer>::async_read(DynamicBuffer &rx_buff,
                                               ReadCallback read_callback,
                                               std::size_t replies_count) {
 

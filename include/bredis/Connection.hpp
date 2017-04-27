@@ -50,8 +50,8 @@ template <typename NextLayer> class Connection {
     void async_write(const command_wrapper_t &command,
                      WriteCallback write_callback);
 
-    template <typename ReadCallback, typename Buffer>
-    void async_read(Buffer &rx_buff, ReadCallback read_callback,
+    template <typename ReadCallback, typename DynamicBuffer>
+    void async_read(DynamicBuffer &rx_buff, ReadCallback read_callback,
                     std::size_t replies_count = 1);
 
     /* synchronous interface */
