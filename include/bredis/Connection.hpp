@@ -27,7 +27,6 @@
 namespace bredis {
 
 template <typename NextLayer> class Connection {
-    using protocol_type_t = typename NextLayer::protocol_type;
 
   public:
     using string_t = boost::string_ref;
@@ -42,8 +41,6 @@ template <typename NextLayer> class Connection {
 
     inline NextLayer &next_layer() { return stream_; }
     inline const NextLayer &next_layer() const { return stream_; }
-
-    inline NextLayer &&move_layer() { return std::move(stream_); }
 
     /* asynchronous interface */
     template <typename WriteCallback>
