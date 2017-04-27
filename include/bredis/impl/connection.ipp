@@ -25,7 +25,7 @@ void Connection<NextLayer>::async_write(const command_wrapper_t &command,
         boost::apply_visitor(command_serializer_visitor(), command));
     auto str_ptr = str.get();
     BREDIS_LOG_DEBUG("async_write >> " << str_ptr->c_str());
-    asio::const_buffers_1 output_buf =
+    auto const output_buf =
         asio::buffer(str_ptr->c_str(), str_ptr->size());
 
     asio::async_write(stream_, output_buf,
@@ -106,7 +106,7 @@ void Connection<NextLayer>::write(const command_wrapper_t &command) {
 
     auto str = boost::apply_visitor(command_serializer_visitor(), command);
     BREDIS_LOG_DEBUG("async_write >> " << str);
-    asio::const_buffers_1 output_buf = asio::buffer(str.c_str(), str.size());
+    auto const output_buf = asio::buffer(str.c_str(), str.size());
     asio::write(stream_, output_buf);
 }
 
@@ -118,7 +118,7 @@ void Connection<NextLayer>::write(const command_wrapper_t &command,
 
     auto str = boost::apply_visitor(command_serializer_visitor(), command);
     BREDIS_LOG_DEBUG("async_write >> " << str);
-    asio::const_buffers_1 output_buf = asio::buffer(str.c_str(), str.size());
+    auto const output_buf = asio::buffer(str.c_str(), str.size());
     asio::write(stream_, output_buf, ec);
 }
 
