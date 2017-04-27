@@ -7,7 +7,7 @@
 #include "TestServer.hpp"
 #include "catch.hpp"
 
-#include "bredis/AsyncConnection.hpp"
+#include "bredis/Connection.hpp"
 
 namespace r = bredis;
 namespace asio = boost::asio;
@@ -42,7 +42,7 @@ TEST_CASE("transaction", "[connection]") {
         asio::ip::address::from_string("127.0.0.1"), port);
     socket_t socket(io_service, end_point.protocol());
     socket.connect(end_point);
-    r::AsyncConnection<socket_t> c(std::move(socket));
+    r::Connection<socket_t> c(std::move(socket));
 
     boost::asio::streambuf rx_buff;
     read_callback_t read_callback = [&](

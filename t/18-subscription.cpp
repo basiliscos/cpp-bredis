@@ -8,7 +8,7 @@
 #include "TestServer.hpp"
 #include "catch.hpp"
 
-#include "bredis/AsyncConnection.hpp"
+#include "bredis/Connection.hpp"
 
 namespace r = bredis;
 namespace asio = boost::asio;
@@ -42,7 +42,7 @@ TEST_CASE("subscription", "[connection]") {
     std::promise<void> completion_promise;
     std::future<void> completion_future = completion_promise.get_future();
 
-    r::AsyncConnection<socket_t> consumer(std::move(socket));
+    r::Connection<socket_t> consumer(std::move(socket));
     r::command_wrapper_t subscribe_cmd(
         r::single_command_t("subscribe", "some-channel1", "some-channel2"));
 
@@ -75,7 +75,7 @@ TEST_CASE("subscription", "[connection]") {
     {
         socket_t socket_2(io_service, end_point.protocol());
         socket_2.connect(end_point);
-        r::AsyncConnection<socket_t> producer(std::move(socket_2));
+        r::Connection<socket_t> producer(std::move(socket_2));
         boost::asio::streambuf rx_buff;
 
         producer.write(r::single_command_t("publish", "some-channel1", "message-a1"));
@@ -101,7 +101,7 @@ TEST_CASE("subscription", "[connection]") {
 
     /* check point 3: examine received messages */
     boost::asio::streambuf rx_buff;
-    r::AsyncConnection<socket_t> c(std::move(consumer.move_layer()));
+    r::Connection<socket_t> c(std::move(consumer.move_layer()));
 
     read_callback_t notification_callback = [&](const boost::system::error_code,
                                      r::redis_result_t &&r, size_t consumed) {

@@ -16,7 +16,7 @@ namespace bredis {
 
 template <typename NextLayer>
 template <typename WriteCallback>
-void AsyncConnection<NextLayer>::async_write(const command_wrapper_t &command,
+void Connection<NextLayer>::async_write(const command_wrapper_t &command,
                                                WriteCallback write_callback) {
     namespace asio = boost::asio;
     namespace sys = boost::system;
@@ -37,7 +37,7 @@ void AsyncConnection<NextLayer>::async_write(const command_wrapper_t &command,
 
 template <typename NextLayer>
 template <typename ReadCallback, typename Buffer>
-void AsyncConnection<NextLayer>::async_read(Buffer &rx_buff,
+void Connection<NextLayer>::async_read(Buffer &rx_buff,
                                               ReadCallback read_callback,
                                               std::size_t replies_count) {
 
@@ -100,7 +100,7 @@ void AsyncConnection<NextLayer>::async_read(Buffer &rx_buff,
 }
 
 template <typename NextLayer>
-void AsyncConnection<NextLayer>::write(const command_wrapper_t &command) {
+void Connection<NextLayer>::write(const command_wrapper_t &command) {
     namespace asio = boost::asio;
     namespace sys = boost::system;
 
@@ -112,7 +112,7 @@ void AsyncConnection<NextLayer>::write(const command_wrapper_t &command) {
 
 template <typename NextLayer>
 positive_parse_result_t
-AsyncConnection<NextLayer>::read(boost::asio::streambuf &rx_buff) {
+Connection<NextLayer>::read(boost::asio::streambuf &rx_buff) {
     namespace asio = boost::asio;
     namespace sys = boost::system;
 

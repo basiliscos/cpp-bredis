@@ -9,7 +9,7 @@
 #include "TestServer.hpp"
 #include "catch.hpp"
 
-#include "bredis/AsyncConnection.hpp"
+#include "bredis/Connection.hpp"
 
 namespace r = bredis;
 namespace asio = boost::asio;
@@ -39,7 +39,7 @@ TEST_CASE("cancel-on-read", "[cancellation]") {
     socket_t socket(io_service, end_point.protocol());
     socket.connect(end_point);
 
-    r::AsyncConnection<socket_t> c(std::move(socket));
+    r::Connection<socket_t> c(std::move(socket));
 
     std::string end_marker = "ping\r\n";
     boost::asio::streambuf remote_rx_buff;

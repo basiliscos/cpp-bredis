@@ -26,7 +26,7 @@
 
 namespace bredis {
 
-template <typename NextLayer> class AsyncConnection {
+template <typename NextLayer> class Connection {
     using protocol_type_t = typename NextLayer::protocol_type;
 
   public:
@@ -38,7 +38,7 @@ template <typename NextLayer> class AsyncConnection {
 
   public:
     template <typename... Args>
-    AsyncConnection(Args &&... args) : socket_(std::forward<Args>(args)...) {}
+    Connection(Args &&... args) : socket_(std::forward<Args>(args)...) {}
 
     inline NextLayer &next_layer() { return socket_; }
     inline NextLayer &&move_layer() { return std::move(socket_); }
@@ -60,4 +60,4 @@ template <typename NextLayer> class AsyncConnection {
 
 } // namespace bredis
 
-#include "impl/async_connection.ipp"
+#include "impl/connection.ipp"

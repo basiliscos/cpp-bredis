@@ -8,7 +8,7 @@
 #include "EmptyPort.hpp"
 #include "catch.hpp"
 
-#include "bredis/AsyncConnection.hpp"
+#include "bredis/Connection.hpp"
 
 namespace r = bredis;
 namespace asio = boost::asio;
@@ -55,7 +55,7 @@ TEST_CASE("protocol-error", "[connection]") {
     socket_t socket(io_service, end_point.protocol());
     socket.connect(end_point);
 
-    r::AsyncConnection<socket_t> c(std::move(socket));
+    r::Connection<socket_t> c(std::move(socket));
     std::promise<result_t> completion_promise;
     std::future<result_t> completion_future = completion_promise.get_future();
 

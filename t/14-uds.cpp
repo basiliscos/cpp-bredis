@@ -9,7 +9,7 @@
 #include <iostream>
 #include <vector>
 
-#include "bredis/AsyncConnection.hpp"
+#include "bredis/Connection.hpp"
 
 namespace r = bredis;
 namespace asio = boost::asio;
@@ -57,7 +57,7 @@ TEST_CASE("ping", "[connection]") {
     socket.connect(end_point);
 
     std::vector<std::string> results;
-    r::AsyncConnection<socket_t> c(std::move(socket));
+    r::Connection<socket_t> c(std::move(socket));
     std::promise<result_t> completion_promise;
     std::future<result_t> completion_future = completion_promise.get_future();
     boost::asio::streambuf rx_buff;
