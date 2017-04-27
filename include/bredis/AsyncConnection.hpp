@@ -26,22 +26,22 @@
 
 namespace bredis {
 
-template <typename AsyncStream> class AsyncConnection {
-    using protocol_type_t = typename AsyncStream::protocol_type;
+template <typename NextLayer> class AsyncConnection {
+    using protocol_type_t = typename NextLayer::protocol_type;
 
   public:
     using string_t = boost::string_ref;
     using args_container_t = std::vector<string_t>;
 
   private:
-    AsyncStream socket_;
+    NextLayer socket_;
 
   public:
     template <typename... Args>
     AsyncConnection(Args &&... args) : socket_(std::forward<Args>(args)...) {}
 
-    inline AsyncStream &next_layer() { return socket_; }
-    inline AsyncStream &&move_layer() { return std::move(socket_); }
+    inline NextLayer &next_layer() { return socket_; }
+    inline NextLayer &&move_layer() { return std::move(socket_); }
 
     /* asynchronous interface */
     template <typename WriteCallback>
