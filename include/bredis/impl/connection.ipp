@@ -154,6 +154,9 @@ Connection<NextLayer>::read(DynamicBuffer &rx_buff,
     namespace sys = boost::system;
 
     auto rx_bytes = asio::read_until(stream_, rx_buff, MatchResult(1), ec);
+    if (ec) {
+        return positive_parse_result_t{{}, 0};
+    }
 
     const char *char_ptr =
         boost::asio::buffer_cast<const char *>(rx_buff.data());
