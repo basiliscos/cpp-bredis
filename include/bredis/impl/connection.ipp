@@ -28,7 +28,7 @@ void Connection<NextLayer>::async_write(const command_wrapper_t &command,
     asio::const_buffers_1 output_buf =
         asio::buffer(str_ptr->c_str(), str_ptr->size());
 
-    asio::async_write(socket_, output_buf,
+    asio::async_write(stream_, output_buf,
                       [str, write_callback](const sys::error_code &error_code,
                                             std::size_t bytes_transferred) {
                           write_callback(error_code);
@@ -47,7 +47,7 @@ void Connection<NextLayer>::async_read(Buffer &rx_buff,
     BREDIS_LOG_DEBUG("async_read");
 
     asio::async_read_until(
-        socket_, rx_buff, MatchResult(replies_count),
+        stream_, rx_buff, MatchResult(replies_count),
         [read_callback, &rx_buff, replies_count](
             const sys::error_code &error_code, std::size_t bytes_transferred) {
             if (error_code) {
@@ -107,7 +107,7 @@ void Connection<NextLayer>::write(const command_wrapper_t &command) {
     auto str = boost::apply_visitor(command_serializer_visitor(), command);
     BREDIS_LOG_DEBUG("async_write >> " << str);
     asio::const_buffers_1 output_buf = asio::buffer(str.c_str(), str.size());
-    asio::write(socket_, output_buf);
+    asio::write(stream_, output_buf);
 }
 
 template <typename NextLayer>
@@ -116,7 +116,7 @@ Connection<NextLayer>::read(boost::asio::streambuf &rx_buff) {
     namespace asio = boost::asio;
     namespace sys = boost::system;
 
-    auto rx_bytes = asio::read_until(socket_, rx_buff, MatchResult(1));
+    auto rx_bytes = asio::read_until(stream_, rx_buff, MatchResult(1));
 
     const char *char_ptr =
         boost::asio::buffer_cast<const char *>(rx_buff.data());

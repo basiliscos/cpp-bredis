@@ -34,16 +34,16 @@ template <typename NextLayer> class Connection {
     using args_container_t = std::vector<string_t>;
 
   private:
-    NextLayer socket_;
+    NextLayer stream_;
 
   public:
     template <typename... Args>
-    Connection(Args &&... args) : socket_(std::forward<Args>(args)...) {}
+    Connection(Args &&... args) : stream_(std::forward<Args>(args)...) {}
 
-    inline NextLayer &next_layer() { return socket_; }
-    inline const NextLayer &next_layer() const { return socket_; }
+    inline NextLayer &next_layer() { return stream_; }
+    inline const NextLayer &next_layer() const { return stream_; }
 
-    inline NextLayer &&move_layer() { return std::move(socket_); }
+    inline NextLayer &&move_layer() { return std::move(stream_); }
 
     /* asynchronous interface */
     template <typename WriteCallback>
