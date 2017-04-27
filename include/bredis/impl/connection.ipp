@@ -25,8 +25,7 @@ void Connection<NextLayer>::async_write(const command_wrapper_t &command,
         boost::apply_visitor(command_serializer_visitor(), command));
     auto str_ptr = str.get();
     BREDIS_LOG_DEBUG("async_write >> " << str_ptr->c_str());
-    auto const output_buf =
-        asio::buffer(str_ptr->c_str(), str_ptr->size());
+    auto const output_buf = asio::buffer(str_ptr->c_str(), str_ptr->size());
 
     asio::async_write(stream_, output_buf,
                       [str, write_callback](const sys::error_code &error_code,
@@ -124,29 +123,6 @@ void Connection<NextLayer>::write(const command_wrapper_t &command,
 
 template <typename NextLayer>
 template <typename DynamicBuffer>
-positive_parse_result_t Connection<NextLayer>::read(DynamicBuffer &rx_buff) {
-    namespace asio = boost::asio;
-    namespace sys = boost::system;
-
-    auto rx_bytes = asio::read_until(stream_, rx_buff, MatchResult(1));
-
-    const char *char_ptr =
-        boost::asio::buffer_cast<const char *>(rx_buff.data());
-    auto size = rx_buff.size();
-    string_t data(char_ptr, size);
-    BREDIS_LOG_DEBUG("incoming data(" << size << ") : " << char_ptr);
-
-    auto parse_result = Protocol::parse(data);
-    auto *parse_error = boost::get<protocol_error_t>(&parse_result);
-    if (parse_error) {
-        BREDIS_LOG_DEBUG("protocol error: " << parse_error->what);
-        throw Error::make_error_code(bredis_errors::protocol_error);
-    }
-    return boost::get<positive_parse_result_t>(parse_result);
-}
-
-template <typename NextLayer>
-template <typename DynamicBuffer>
 positive_parse_result_t
 Connection<NextLayer>::read(DynamicBuffer &rx_buff,
                             boost::system::error_code &ec) {
@@ -172,6 +148,21 @@ Connection<NextLayer>::read(DynamicBuffer &rx_buff,
         return positive_parse_result_t{{}, 0};
     }
     return boost::get<positive_parse_result_t>(parse_result);
+}
+
+template <typename NextLayer>
+template <typename DynamicBuffer>
+inline positive_parse_result_t
+Connection<NextLayer>::read(DynamicBuffer &rx_buff) {
+    namespace asio = boost::asio;
+    namespace sys = boost::system;
+
+    boost::system::error_code ec;
+    auto result = read(rx_buff, ec);
+    if (ec) {
+        throw ec;
+    }
+    return result;
 }
 
 } // namespace bredis
