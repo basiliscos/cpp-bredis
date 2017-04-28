@@ -101,27 +101,22 @@ void Connection<NextLayer>::async_read(DynamicBuffer &rx_buff,
 }
 
 template <typename NextLayer>
-void Connection<NextLayer>::write(const command_wrapper_t &command) {
-    namespace asio = boost::asio;
-    namespace sys = boost::system;
-    using boost::asio::write;
-
-    auto str = boost::apply_visitor(command_serializer_visitor(), command);
-    BREDIS_LOG_DEBUG("async_write >> " << str);
-    auto const output_buf = asio::buffer(str.c_str(), str.size());
-    write(stream_, output_buf);
-}
-
-template <typename NextLayer>
 void Connection<NextLayer>::write(const command_wrapper_t &command,
                                   boost::system::error_code &ec) {
     namespace asio = boost::asio;
-    namespace sys = boost::system;
-
     auto str = boost::apply_visitor(command_serializer_visitor(), command);
     BREDIS_LOG_DEBUG("async_write >> " << str);
     auto const output_buf = asio::buffer(str.c_str(), str.size());
     asio::write(stream_, output_buf, ec);
+}
+
+template <typename NextLayer>
+inline void Connection<NextLayer>::write(const command_wrapper_t &command) {
+    boost::system::error_code ec;
+    this->write(command, ec);
+    if (ec) {
+        throw boost::system::system_error{ec};
+    }
 }
 
 template <typename NextLayer>
@@ -130,7 +125,6 @@ positive_parse_result_t
 Connection<NextLayer>::read(DynamicBuffer &rx_buff,
                             boost::system::error_code &ec) {
     namespace asio = boost::asio;
-    namespace sys = boost::system;
     using boost::asio::read_until;
 
     auto rx_bytes = read_until(stream_, rx_buff, MatchResult(1), ec);
@@ -159,10 +153,9 @@ template <typename DynamicBuffer>
 inline positive_parse_result_t
 Connection<NextLayer>::read(DynamicBuffer &rx_buff) {
     namespace asio = boost::asio;
-    namespace sys = boost::system;
 
     boost::system::error_code ec;
-    auto result = read(rx_buff, ec);
+    auto result = this->read(rx_buff, ec);
     if (ec) {
         throw boost::system::system_error{ec};
     }
