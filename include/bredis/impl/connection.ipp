@@ -106,7 +106,7 @@ void Connection<NextLayer>::write(const command_wrapper_t &command,
 }
 
 template <typename NextLayer>
-inline void Connection<NextLayer>::write(const command_wrapper_t &command) {
+void Connection<NextLayer>::write(const command_wrapper_t &command) {
     boost::system::error_code ec;
     this->write(command, ec);
     if (ec) {
@@ -144,7 +144,7 @@ Connection<NextLayer>::read(DynamicBuffer &rx_buff,
 
 template <typename NextLayer>
 template <typename DynamicBuffer>
-inline positive_parse_result_t
+positive_parse_result_t
 Connection<NextLayer>::read(DynamicBuffer &rx_buff) {
     namespace asio = boost::asio;
 
