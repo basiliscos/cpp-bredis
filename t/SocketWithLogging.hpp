@@ -15,11 +15,6 @@ template <typename NextLayer> class SocketWithLogging {
     template <typename... Args>
     SocketWithLogging(Args &&... args) : stream_(std::forward<Args>(args)...) {}
 
-    void cancel() {
-        std::cout << "{cancel}" << std::endl;
-        stream_.cancel();
-    }
-
     template <typename BufferSequence>
     void dump(const char *prefix, const BufferSequence &buffers) {
         using Iterator = boost::asio::buffers_iterator<BufferSequence, char>;

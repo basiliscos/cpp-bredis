@@ -21,9 +21,9 @@ namespace ts = test_server;
 TEST_CASE("cancel-on-read", "[cancellation]") {
     using socket_t = asio::ip::tcp::socket;
 #ifdef BREDIS_DEBUG
-    using next_layer_t = r::test::SocketWithLogging<socket_t>;
+    using next_layer_t = r::test::SocketWithLogging<socket_t&>;
 #else
-    using next_layer_t = socket_t;
+    using next_layer_t = socket_t&;
 #endif
     using result_t = void;
     using read_callback_t =
@@ -45,7 +45,7 @@ TEST_CASE("cancel-on-read", "[cancellation]") {
     socket_t socket(io_service, end_point.protocol());
     socket.connect(end_point);
 
-    r::Connection<next_layer_t> c(std::move(socket));
+    r::Connection<next_layer_t> c(socket);
 
     std::string end_marker = "ping\r\n";
     boost::asio::streambuf remote_rx_buff;
@@ -56,7 +56,7 @@ TEST_CASE("cancel-on-read", "[cancellation]") {
                          [&](const sys::error_code &ec, std::size_t sz) {
                              BREDIS_LOG_DEBUG("async_read: " << sz << ", "
                                                              << ec.message());
-                             c.next_layer().cancel();
+                             socket.cancel();
                          });
     });
 
