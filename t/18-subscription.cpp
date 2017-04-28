@@ -19,9 +19,9 @@ namespace ts = test_server;
 TEST_CASE("subscription", "[connection]") {
     using socket_t = asio::ip::tcp::socket;
 #ifdef BREDIS_DEBUG
-    using next_layer_t = r::test::SocketWithLogging<socket_t>;
+    using next_layer_t = r::test::SocketWithLogging<socket_t&>;
 #else
-    using next_layer_t = socket_t;
+    using next_layer_t = socket_t&;
 #endif
     using result_t = r::redis_result_t;
 
@@ -48,7 +48,7 @@ TEST_CASE("subscription", "[connection]") {
     std::promise<void> completion_promise;
     std::future<void> completion_future = completion_promise.get_future();
 
-    r::Connection<socket_t&> consumer(socket);
+    r::Connection<next_layer_t> consumer(socket);
     r::command_wrapper_t subscribe_cmd(
         r::single_command_t("subscribe", "some-channel1", "some-channel2"));
 
@@ -107,7 +107,7 @@ TEST_CASE("subscription", "[connection]") {
 
     /* check point 3: examine received messages */
     boost::asio::streambuf rx_buff;
-    r::Connection<socket_t&> c(socket);
+    r::Connection<next_layer_t> c(socket);
 
     read_callback_t notification_callback = [&](const boost::system::error_code,
                                      r::redis_result_t &&r, size_t consumed) {
