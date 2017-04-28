@@ -8,6 +8,7 @@
 #include "EmptyPort.hpp"
 #include "TestServer.hpp"
 #include "catch.hpp"
+#include "SocketWithLogging.hpp"
 
 #include "bredis/Connection.hpp"
 
@@ -19,6 +20,11 @@ namespace ts = test_server;
 
 TEST_CASE("cancel-on-read", "[cancellation]") {
     using socket_t = asio::ip::tcp::socket;
+#ifdef BREDIS_DEBUG
+    using next_layer_t = r::test::SocketWithLogging<socket_t>;
+#else
+    using next_layer_t = socket_t;
+#endif
     using result_t = void;
     using read_callback_t =
         std::function<void(const boost::system::error_code &error_code,
@@ -39,7 +45,7 @@ TEST_CASE("cancel-on-read", "[cancellation]") {
     socket_t socket(io_service, end_point.protocol());
     socket.connect(end_point);
 
-    r::Connection<socket_t> c(std::move(socket));
+    r::Connection<next_layer_t> c(std::move(socket));
 
     std::string end_marker = "ping\r\n";
     boost::asio::streambuf remote_rx_buff;

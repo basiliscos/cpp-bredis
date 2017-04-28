@@ -7,6 +7,7 @@
 
 #include "EmptyPort.hpp"
 #include "catch.hpp"
+#include "SocketWithLogging.hpp"
 
 #include "bredis/Connection.hpp"
 
@@ -17,6 +18,11 @@ namespace ep = empty_port;
 
 TEST_CASE("close-afrer-read", "[connection]") {
     using socket_t = asio::ip::tcp::socket;
+#ifdef BREDIS_DEBUG
+    using next_layer_t = r::test::SocketWithLogging<socket_t>;
+#else
+    using next_layer_t = socket_t;
+#endif
     using result_t = void;
     std::chrono::milliseconds sleep_delay(1);
 
@@ -51,7 +57,7 @@ TEST_CASE("close-afrer-read", "[connection]") {
     socket_t socket(io_service, end_point.protocol());
     socket.connect(end_point);
 
-    r::Connection<socket_t> c(std::move(socket));
+    r::Connection<next_layer_t> c(std::move(socket));
     std::promise<result_t> completion_promise;
     std::future<result_t> completion_future = completion_promise.get_future();
 
@@ -74,6 +80,12 @@ TEST_CASE("close-afrer-read", "[connection]") {
 
 TEST_CASE("close-before-write", "[connection]") {
     using socket_t = asio::ip::tcp::socket;
+#ifdef BREDIS_DEBUG
+    using next_layer_t = r::test::SocketWithLogging<socket_t>;
+#else
+    using next_layer_t = socket_t;
+#endif
+
     using result_t = void;
     std::chrono::milliseconds sleep_delay(1);
 
@@ -99,7 +111,7 @@ TEST_CASE("close-before-write", "[connection]") {
     socket_t socket(io_service, end_point.protocol());
     socket.connect(end_point);
 
-    r::Connection<socket_t> c(std::move(socket));
+    r::Connection<next_layer_t> c(std::move(socket));
     std::promise<result_t> completion_promise;
     std::future<result_t> completion_future = completion_promise.get_future();
 

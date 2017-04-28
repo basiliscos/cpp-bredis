@@ -7,6 +7,7 @@
 #include "EmptyPort.hpp"
 #include "TestServer.hpp"
 #include "catch.hpp"
+#include "SocketWithLogging.hpp"
 
 #include "bredis/Connection.hpp"
 
@@ -17,6 +18,11 @@ namespace ts = test_server;
 
 TEST_CASE("subscription", "[connection]") {
     using socket_t = asio::ip::tcp::socket;
+#ifdef BREDIS_DEBUG
+    using next_layer_t = r::test::SocketWithLogging<socket_t>;
+#else
+    using next_layer_t = socket_t;
+#endif
     using result_t = r::redis_result_t;
 
     using read_callback_t =

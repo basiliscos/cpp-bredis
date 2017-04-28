@@ -39,7 +39,7 @@ class MatchResult {
         const char *char_ptr = &*begin;
         auto size = std::distance(begin, end);
 
-        BREDIS_LOG_DEBUG("will try to parse : " << char_ptr);
+        //BREDIS_LOG_DEBUG("will try to parse : " << char_ptr);
 
         auto parsing_complete = false;
         size_t consumed = 0;
@@ -48,7 +48,7 @@ class MatchResult {
             auto parse_result = Protocol::parse(data);
             auto *parse_error = boost::get<protocol_error_t>(&parse_result);
             if (parse_error) {
-                BREDIS_LOG_DEBUG("parse error : " << parse_error->what);
+                //BREDIS_LOG_DEBUG("parse error : " << parse_error->what);
                 consumed = 0;
                 parsing_complete = true;
                 break;

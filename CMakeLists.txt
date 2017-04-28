@@ -8,7 +8,7 @@ include (CTest)
 enable_testing()
 
 add_definitions(-DBOOST_ERROR_CODE_HEADER_ONLY)
-#add_definitions(-DBREDIS_DEBUG)
+add_definitions(-DBREDIS_DEBUG)
 
 find_package(
     Boost

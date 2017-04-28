@@ -25,7 +25,6 @@ void Connection<NextLayer>::async_write(const command_wrapper_t &command,
     auto str = std::make_shared<std::string>(
         boost::apply_visitor(command_serializer_visitor(), command));
     auto str_ptr = str.get();
-    BREDIS_LOG_DEBUG("async_write >> " << str_ptr->c_str());
     auto const output_buf = asio::buffer(str_ptr->c_str(), str_ptr->size());
 
     async_write(stream_, output_buf,
@@ -45,8 +44,6 @@ void Connection<NextLayer>::async_read(DynamicBuffer &rx_buff,
     namespace sys = boost::system;
     using boost::asio::async_read_until;
 
-    BREDIS_LOG_DEBUG("async_read");
-
     async_read_until(
         stream_, rx_buff, MatchResult(replies_count),
         [read_callback, &rx_buff, replies_count](
@@ -60,9 +57,6 @@ void Connection<NextLayer>::async_read(DynamicBuffer &rx_buff,
             const char *char_ptr =
                 boost::asio::buffer_cast<const char *>(const_buff);
             auto size = rx_buff.size();
-            BREDIS_LOG_DEBUG("incoming data("
-                             << size << ") : " << char_ptr
-                             << ", tx bytes: " << bytes_transferred);
 
             array_holder_t results;
             results.elements.reserve(replies_count);
@@ -72,14 +66,16 @@ void Connection<NextLayer>::async_read(DynamicBuffer &rx_buff,
             do {
                 string_t data(char_ptr + cumulative_consumption,
                               size - cumulative_consumption);
+                /*
                 BREDIS_LOG_DEBUG("trying to get response # "
                                  << results.elements.size());
                 BREDIS_LOG_DEBUG("trying to get response from " << data);
+                */
                 auto parse_result = Protocol::parse(data);
                 auto *parse_error = boost::get<protocol_error_t>(&parse_result);
                 if (parse_error) {
                     /* might happen only in case of protocol error */
-                    BREDIS_LOG_DEBUG("protocol error: " << parse_error->what);
+                    // BREDIS_LOG_DEBUG("protocol error: " << parse_error->what);
                     auto parse_error_code =
                         Error::make_error_code(bredis_errors::protocol_error);
                     read_callback(parse_error_code, {}, 0);
@@ -105,7 +101,6 @@ void Connection<NextLayer>::write(const command_wrapper_t &command,
                                   boost::system::error_code &ec) {
     namespace asio = boost::asio;
     auto str = boost::apply_visitor(command_serializer_visitor(), command);
-    BREDIS_LOG_DEBUG("async_write >> " << str);
     auto const output_buf = asio::buffer(str.c_str(), str.size());
     asio::write(stream_, output_buf, ec);
 }
@@ -136,12 +131,11 @@ Connection<NextLayer>::read(DynamicBuffer &rx_buff,
         boost::asio::buffer_cast<const char *>(rx_buff.data());
     auto size = rx_buff.size();
     string_t data(char_ptr, size);
-    BREDIS_LOG_DEBUG("incoming data(" << size << ") : " << char_ptr);
 
     auto parse_result = Protocol::parse(data);
     auto *parse_error = boost::get<protocol_error_t>(&parse_result);
     if (parse_error) {
-        BREDIS_LOG_DEBUG("protocol error: " << parse_error->what);
+        // BREDIS_LOG_DEBUG("protocol error: " << parse_error->what);
         ec = Error::make_error_code(bredis_errors::protocol_error);
         return positive_parse_result_t{{}, 0};
     }
