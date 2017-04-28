@@ -36,14 +36,14 @@ template <typename NextLayer> class SocketWithLogging {
     }
 
     template <typename MutableBufferSequence, typename ReadHandler>
-    inline void async_read_some(const MutableBufferSequence &buffers,
+    void async_read_some(const MutableBufferSequence &buffers,
                                 ReadHandler handler) {
         stream_.async_read_some(buffers, handler);
         dump("async_read_some", buffers);
     }
 
     template <typename ConstBufferSequence, typename WriteHandler>
-    inline void async_write_some(const ConstBufferSequence &buffers,
+    void async_write_some(const ConstBufferSequence &buffers,
                                  WriteHandler handler) {
         dump("async_write_some", buffers);
         stream_.async_write_some(buffers, handler);
