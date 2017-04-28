@@ -4,12 +4,14 @@
 #include <boost/system/error_code.hpp>
 #include <iostream>
 #include <utility>
+#include <mutex>
 
 namespace bredis {
 namespace test {
 
 template <typename NextLayer> class SocketWithLogging {
     NextLayer stream_;
+    std::mutex cout_mutex_;
 
   public:
     template <typename... Args>
@@ -23,6 +25,7 @@ template <typename NextLayer> class SocketWithLogging {
         Iterator end = Iterator::end(buffers);
         auto size = std::distance(it, end);
 
+        std::lock_guard<std::mutex> session_lock(cout_mutex_);
         std::cout << "{" << prefix << " " << size << " bytes}[";
         for (; it != end; it++) {
             std::cout << *it;
