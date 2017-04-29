@@ -9,7 +9,16 @@
 namespace bredis {
 namespace test {
 
-template <typename NextLayer> class SocketWithLogging {
+class DefaultLogPolicy {
+  public:
+    static void log(const char *prefix, const std::string &content) {
+        std::cout << "{" << prefix << " " << content.size() << " bytes}["
+                  << content << "]" << std::endl;
+    }
+};
+
+template <typename NextLayer, typename LogPolicy = DefaultLogPolicy>
+class SocketWithLogging {
     NextLayer stream_;
 
     template <typename BufferSequence, typename Handler>
@@ -44,8 +53,7 @@ template <typename NextLayer> class SocketWithLogging {
         for (auto const &buffer : buffers) {
             content.append(buffer_cast<char const *>(buffer), size);
         }
-        std::cout << "{" << prefix << " " << size << " bytes}[" << content
-                  << "]" << std::endl;
+        LogPolicy::log(prefix, content);
     }
 
     template <typename MutableBufferSequence, typename ReadHandler>
