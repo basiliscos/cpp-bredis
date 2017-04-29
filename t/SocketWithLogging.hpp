@@ -51,7 +51,8 @@ class SocketWithLogging {
         std::string content;
         content.reserve(size);
         for (auto const &buffer : buffers) {
-            content.append(buffer_cast<char const *>(buffer), size);
+            content.append(buffer_cast<char const *>(buffer),
+                           buffer_size(buffer));
         }
         LogPolicy::log(prefix, content);
     }
