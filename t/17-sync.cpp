@@ -44,6 +44,7 @@ TEST_CASE("ping", "[connection]") {
     auto &reply_str = boost::get<r::string_holder_t>(parse_result.result).str;
     std::string str(reply_str.cbegin(), reply_str.cend());
     REQUIRE(str == "PONG");
+    rx_buff.consume(parse_result.consumed);
 
     /* overloads */
     boost::system::error_code ec;
@@ -55,6 +56,4 @@ TEST_CASE("ping", "[connection]") {
     reply_str = boost::get<r::string_holder_t>(parse_result.result).str;
     str = std::string(reply_str.cbegin(), reply_str.cend());
     REQUIRE(str == "PONG");
-
-
 };
