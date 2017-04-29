@@ -216,11 +216,6 @@ static some_parse_result_t raw_parse(const boost::string_ref &outer_range) {
     }
 }
 
-parse_result_t Protocol::parse(const std::string &buff) noexcept {
-    boost::string_ref range(buff.c_str(), buff.size());
-    return parse(range);
-}
-
 parse_result_t Protocol::parse(const boost::string_ref &buff) noexcept {
     try {
         return raw_parse(buff);

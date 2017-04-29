@@ -17,7 +17,6 @@ namespace bredis {
 class Protocol {
   public:
     static const std::string terminator;
-    static inline parse_result_t parse(const std::string &buff) noexcept;
     static inline parse_result_t parse(const boost::string_ref &buff) noexcept;
     static std::ostream &serialize(std::ostream &buff,
                                    const single_command_t &cmd);
