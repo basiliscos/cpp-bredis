@@ -45,7 +45,7 @@ template <> struct Extractor<extractor_tags::e_string> {
             int32_t consumed = already_consumed +
                                std::distance(from, found_terminator) +
                                Protocol::terminator.size();
-            return positive_parse_result_t<Iterator>{
+            return optional_parse_result_t<Iterator>{
                 positive_parse_result_t<Iterator>{
                     markers::redis_result_t<Iterator>{
                         markers::string_t<Iterator>{from, found_terminator}},
@@ -68,7 +68,7 @@ template <> struct Extractor<extractor_tags::e_error> {
         } else {
             auto &string_result = boost::get<markers::string_t<Iterator>>(
                 positive_result->result);
-            return positive_parse_result_t<Iterator>{
+            return optional_parse_result_t<Iterator>{
                 positive_parse_result_t<Iterator>{
                     markers::redis_result_t<Iterator>{
                         markers::error_t<Iterator>{string_result}},
@@ -91,7 +91,7 @@ template <> struct Extractor<extractor_tags::e_int> {
         } else {
             auto &string_result = boost::get<markers::string_t<Iterator>>(
                 positive_result->result);
-            return positive_parse_result_t<Iterator>{
+            return optional_parse_result_t<Iterator>{
                 positive_parse_result_t<Iterator>{
                     markers::redis_result_t<Iterator>{
                         markers::int_t<Iterator>{string_result}},
@@ -119,7 +119,7 @@ template <> struct Extractor<extractor_tags::e_bulk_string> {
         s.append(count_string.from, count_string.to);
         int count = boost::lexical_cast<std::size_t>(s);
         if (count == -1) {
-            return positive_parse_result_t<Iterator>{
+            return optional_parse_result_t<Iterator>{
                 positive_parse_result_t<Iterator>{
                     markers::redis_result_t<Iterator>{
                         markers::nil_t<Iterator>{count_string}},
@@ -147,7 +147,7 @@ template <> struct Extractor<extractor_tags::e_bulk_string> {
             }
             int32_t consumed = positive_result->consumed + count +
                                Protocol::terminator.size() + already_consumed;
-            return positive_parse_result_t<Iterator>{
+            return optional_parse_result_t<Iterator>{
                 positive_parse_result_t<Iterator>{
                     markers::redis_result_t<Iterator>{
                         markers::string_t<Iterator>{head, tail}},
@@ -175,7 +175,7 @@ template <> struct Extractor<extractor_tags::e_array> {
         s.append(count_string.from, count_string.to);
         int count = boost::lexical_cast<std::size_t>(s);
         if (count == -1) {
-            return positive_parse_result_t<Iterator>{
+            return optional_parse_result_t<Iterator>{
                 positive_parse_result_t<Iterator>{
                     markers::redis_result_t<Iterator>{
                         markers::nil_t<Iterator>{count_string}},
@@ -201,7 +201,7 @@ template <> struct Extractor<extractor_tags::e_array> {
                 result.elements.emplace_back(parsed_data.result);
                 consumed += parsed_data.consumed;
             }
-            return positive_parse_result_t<Iterator>{
+            return optional_parse_result_t<Iterator>{
                 positive_parse_result_t<Iterator>{
                     markers::redis_result_t<Iterator>{result},
                     consumed + already_consumed}};

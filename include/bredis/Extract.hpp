@@ -6,14 +6,14 @@
 //
 #pragma once
 
-#include <string>
-#include <vector>
 #include <iterator>
 #include <stdint.h>
+#include <string>
+#include <vector>
 
+#include <boost/lexical_cast.hpp>
 #include <boost/variant.hpp>
 #include <boost/variant/recursive_variant.hpp>
-#include <boost/lexical_cast.hpp>
 
 #include "bredis/Result.hpp"
 
@@ -31,7 +31,7 @@ struct error_t {
 
 using int_t = int64_t;
 
-struct nil_t{};
+struct nil_t {};
 
 // forward declaration
 struct array_holder_t;
@@ -47,46 +47,50 @@ struct array_holder_t {
 
 } // namespace extracts
 
-template<typename Iterator>
+template <typename Iterator>
 struct extractor : public boost::static_visitor<extracts::extraction_result_t> {
 
-    extracts::extraction_result_t operator()(const markers::string_t<Iterator> &value) const {
+    extracts::extraction_result_t
+    operator()(const markers::string_t<Iterator> &value) const {
         extracts::string_t r;
-        auto size = std::distance( value.from, value.to );
+        auto size = std::distance(value.from, value.to);
         r.str.reserve(size);
         r.str.append(value.from, value.to);
         return r;
     }
 
-    extracts::extraction_result_t operator()(const markers::error_t<Iterator> &value) const {
+    extracts::extraction_result_t
+    operator()(const markers::error_t<Iterator> &value) const {
         extracts::error_t r;
-        auto size = std::distance( value.string.from, value.string.to );
+        auto size = std::distance(value.string.from, value.string.to);
         r.str.reserve(size);
         r.str.append(value.string.from, value.string.to);
         return r;
     }
 
-    extracts::extraction_result_t operator()(const markers::int_t<Iterator> &value) const {
+    extracts::extraction_result_t
+    operator()(const markers::int_t<Iterator> &value) const {
         std::string str;
-        auto size = std::distance( value.string.from, value.string.to );
+        auto size = std::distance(value.string.from, value.string.to);
         str.reserve(size);
         str.append(value.string.from, value.string.to);
-        return extracts::int_t { boost::lexical_cast<extracts::int_t>(str) };
+        return extracts::int_t{boost::lexical_cast<extracts::int_t>(str)};
     }
 
-    extracts::extraction_result_t operator()(const markers::nil_t<Iterator> &value) const {
-        return extracts::nil_t {};
+    extracts::extraction_result_t
+    operator()(const markers::nil_t<Iterator> &value) const {
+        return extracts::nil_t{};
     }
 
-    extracts::extraction_result_t operator()(const markers::array_holder_t<Iterator> &value) const {
+    extracts::extraction_result_t
+    operator()(const markers::array_holder_t<Iterator> &value) const {
         extracts::array_holder_t r;
         r.elements.reserve(value.elements.size());
-        for(const auto& v: value.elements) {
-            r.elements.emplace_back( boost::apply_visitor(*this, v) );
+        for (const auto &v : value.elements) {
+            r.elements.emplace_back(boost::apply_visitor(*this, v));
         }
         return r;
     }
 };
-
 
 } // namespace bredis
