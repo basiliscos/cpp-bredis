@@ -75,7 +75,8 @@ void Connection<NextLayer>::async_read(DynamicBuffer &rx_buff,
                 auto *parse_error = boost::get<protocol_error_t>(&parse_result);
                 if (parse_error) {
                     /* might happen only in case of protocol error */
-                    // BREDIS_LOG_DEBUG("protocol error: " << parse_error->what);
+                    // BREDIS_LOG_DEBUG("protocol error: " <<
+                    // parse_error->what);
                     auto parse_error_code =
                         Error::make_error_code(bredis_errors::protocol_error);
                     read_callback(parse_error_code, {}, 0);
@@ -144,8 +145,7 @@ Connection<NextLayer>::read(DynamicBuffer &rx_buff,
 
 template <typename NextLayer>
 template <typename DynamicBuffer>
-positive_parse_result_t
-Connection<NextLayer>::read(DynamicBuffer &rx_buff) {
+positive_parse_result_t Connection<NextLayer>::read(DynamicBuffer &rx_buff) {
     namespace asio = boost::asio;
 
     boost::system::error_code ec;

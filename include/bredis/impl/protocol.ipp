@@ -6,219 +6,253 @@
 //
 #pragma once
 
+#include <algorithm>
+#include <boost/asio/buffers_iterator.hpp>
 #include <boost/lexical_cast.hpp>
 
 namespace bredis {
 
-using optional_string_t = boost::variant<boost::string_ref, nil_t>;
-using optional_array_t = boost::variant<array_holder_t, nil_t>;
-
 const std::string Protocol::terminator = "\r\n";
 
-template <typename T> struct extraction_result_t {
-    T value;
-    size_t consumed;
-};
+template <typename Iterator>
+static optional_parse_result_t<Iterator> raw_parse(Iterator &from,
+                                                   Iterator &to);
 
-using some_parse_result_t =
-    boost::variant<no_enoght_data_t, positive_parse_result_t>;
+namespace extractor_tags {
+struct e_string;
+struct e_error;
+struct e_int;
+struct e_bulk_string;
+struct e_array;
+}; // extractors
 
-static some_parse_result_t raw_parse(const boost::string_ref &outer_range);
+template <typename T> struct Extractor {};
 
-template <typename T> struct extractor {};
+template <> struct Extractor<extractor_tags::e_string> {
 
-template <> struct extractor<string_result_t> {
-    extraction_result_t<string_result_t>
-    operator()(const boost::string_ref &range) const {
-        auto location = range.find(Protocol::terminator);
-        extraction_result_t<string_result_t> r{boost::string_ref(), 0};
-        if (location != std::string::npos) {
-            r.consumed = location + Protocol::terminator.size();
-            r.value = boost::string_ref(range.data(), location);
+    template <typename Iterator>
+    optional_parse_result_t<Iterator>
+    operator()(Iterator &from, Iterator &to, int32_t already_consumed) const {
+
+        auto from_t(Protocol::terminator.cbegin()),
+            to_t(Protocol::terminator.cend());
+        ;
+        auto found_terminator = std::search(from, to, from_t, to_t);
+
+        if (found_terminator == to) {
+            return no_enogh_data_t{};
+        } else {
+            int32_t consumed = already_consumed +
+                               std::distance(from, found_terminator) +
+                               Protocol::terminator.size();
+            return positive_parse_result_t<Iterator>{
+                positive_parse_result_t<Iterator>{
+                    markers::redis_result_t<Iterator>{
+                        markers::string_t<Iterator>{from, found_terminator}},
+                    consumed}};
         }
-        return r;
     }
 };
 
-template <> struct extractor<int_result_t> {
-    extraction_result_t<int_result_t>
-    operator()(const boost::string_ref &range) const {
-        extraction_result_t<int_result_t> r{0, 0};
-        auto string_e = extractor<string_result_t>()(range);
-        if (string_e.consumed) {
-            r.consumed = string_e.consumed;
-            r.value = boost::lexical_cast<int_result_t>(string_e.value);
+template <> struct Extractor<extractor_tags::e_error> {
+    template <typename Iterator>
+    optional_parse_result_t<Iterator>
+    operator()(Iterator &from, Iterator &to, int32_t already_consumed) const {
+
+        Extractor<extractor_tags::e_string> e;
+        auto parse_result = e(from, to, already_consumed);
+        auto *positive_result =
+            boost::get<positive_parse_result_t<Iterator>>(&parse_result);
+        if (!positive_result) {
+            return no_enogh_data_t{};
+        } else {
+            auto &string_result = boost::get<markers::string_t<Iterator>>(
+                positive_result->result);
+            return positive_parse_result_t<Iterator>{
+                positive_parse_result_t<Iterator>{
+                    markers::redis_result_t<Iterator>{
+                        markers::error_t<Iterator>{string_result}},
+                    positive_result->consumed}};
         }
-        return r;
     }
 };
 
-template <> struct extractor<optional_string_t> {
-    extraction_result_t<optional_string_t>
-    operator()(const boost::string_ref &range) const {
-        extraction_result_t<optional_string_t> r{optional_string_t(), 0};
-        auto int_e = extractor<int_result_t>()(range);
-        if (int_e.consumed) {
-            auto prefix = int_e.value;
-            if (prefix == -1) {
-                r.value = optional_string_t(nil_t{});
-                r.consumed = int_e.consumed;
-            } else if (prefix < -1) {
-                throw std::runtime_error(
-                    std::string("Value ") +
-                    boost::lexical_cast<std::string>(prefix) +
-                    " in unacceptable for bulk strings");
-            } else if (int_e.consumed + prefix + Protocol::terminator.size() <=
-                       range.size()) {
-                boost::string_ref str_range(range.data() + int_e.consumed,
-                                            prefix);
-                r.value = optional_string_t{str_range};
-                r.consumed =
-                    int_e.consumed + prefix + Protocol::terminator.size();
+template <> struct Extractor<extractor_tags::e_int> {
+    template <typename Iterator>
+    optional_parse_result_t<Iterator>
+    operator()(Iterator &from, Iterator &to, int32_t already_consumed) const {
+
+        Extractor<extractor_tags::e_string> e;
+        auto parse_result = e(from, to, already_consumed);
+        auto *positive_result =
+            boost::get<positive_parse_result_t<Iterator>>(&parse_result);
+        if (!positive_result) {
+            return no_enogh_data_t{};
+        } else {
+            auto &string_result = boost::get<markers::string_t<Iterator>>(
+                positive_result->result);
+            return positive_parse_result_t<Iterator>{
+                positive_parse_result_t<Iterator>{
+                    markers::redis_result_t<Iterator>{
+                        markers::int_t<Iterator>{string_result}},
+                    positive_result->consumed}};
+        }
+    }
+};
+
+template <> struct Extractor<extractor_tags::e_bulk_string> {
+    template <typename Iterator>
+    optional_parse_result_t<Iterator>
+    operator()(Iterator &from, Iterator &to, int32_t already_consumed) const {
+        Extractor<extractor_tags::e_string> e;
+        auto parse_result = e(from, to, 0);
+        auto *positive_result =
+            boost::get<positive_parse_result_t<Iterator>>(&parse_result);
+        if (!positive_result) {
+            return no_enogh_data_t{};
+        }
+
+        auto &count_string =
+            boost::get<markers::string_t<Iterator>>(positive_result->result);
+        std::string s;
+        s.reserve(positive_result->consumed);
+        s.append(count_string.from, count_string.to);
+        int count = boost::lexical_cast<std::size_t>(s);
+        if (count == -1) {
+            return positive_parse_result_t<Iterator>{
+                positive_parse_result_t<Iterator>{
+                    markers::redis_result_t<Iterator>{
+                        markers::nil_t<Iterator>{count_string}},
+                    positive_result->consumed + already_consumed}};
+        } else if (count < -1) {
+            throw std::runtime_error(std::string("Value ") + s +
+                                     " in unacceptable for bulk strings");
+        } else {
+            auto head = from + positive_result->consumed;
+            auto left = std::distance(head, to);
+            if (left < count + Protocol::terminator.size()) {
+                return no_enogh_data_t{};
             }
+            auto tail = head + count;
+            std::string debug_str;
+            debug_str.append(head, tail);
+            const char *ds = debug_str.c_str();
+
+            auto from_t(Protocol::terminator.cbegin()),
+                to_t(Protocol::terminator.cend());
+            auto found_terminator = std::search(tail, to, from_t, to_t);
+            if (found_terminator != tail) {
+                throw std::runtime_error(
+                    "Terminator not found for bulk string");
+            }
+            int32_t consumed = positive_result->consumed + count +
+                               Protocol::terminator.size() + already_consumed;
+            return positive_parse_result_t<Iterator>{
+                positive_parse_result_t<Iterator>{
+                    markers::redis_result_t<Iterator>{
+                        markers::string_t<Iterator>{head, tail}},
+                    consumed}};
         }
-        return r;
     }
 };
 
-template <> struct extractor<optional_array_t> {
-    extraction_result_t<optional_array_t>
-    operator()(const boost::string_ref &range) const {
-        extraction_result_t<optional_array_t> r{optional_array_t(), 0};
-        auto int_e = extractor<int_result_t>()(range);
-        if (int_e.consumed) {
-            auto prefix = int_e.value;
-            if (prefix == -1) {
-                r.value = optional_array_t(nil_t{});
-                r.consumed = int_e.consumed;
-            } else if (prefix < -1) {
-                throw std::runtime_error(
-                    std::string("Value ") +
-                    boost::lexical_cast<std::string>(prefix) +
-                    " in unacceptable for arrays");
-            } else {
-                auto value = array_holder_t{};
-                auto consumed = int_e.consumed;
-                ;
-                for (auto i = 0; i < prefix; ++i) {
-                    boost::string_ref left_range(range.data() + consumed,
-                                                 range.size() - consumed);
-                    auto raw_result = raw_parse(left_range);
-                    if (boost::get<no_enoght_data_t>(&raw_result)) {
-                        return r;
-                    }
-                    positive_parse_result_t something(
-                        boost::get<positive_parse_result_t>(raw_result));
-                    consumed += something.consumed;
-                    value.elements.emplace_back(std::move(something.result));
+template <> struct Extractor<extractor_tags::e_array> {
+    template <typename Iterator>
+    optional_parse_result_t<Iterator>
+    operator()(Iterator &from, Iterator &to, int32_t already_consumed) const {
+        Extractor<extractor_tags::e_string> e;
+        auto parse_result = e(from, to, 0);
+        auto *positive_result =
+            boost::get<positive_parse_result_t<Iterator>>(&parse_result);
+        if (!positive_result) {
+            return no_enogh_data_t{};
+        }
+
+        auto &count_string =
+            boost::get<markers::string_t<Iterator>>(positive_result->result);
+        std::string s;
+        s.reserve(positive_result->consumed);
+        s.append(count_string.from, count_string.to);
+        int count = boost::lexical_cast<std::size_t>(s);
+        if (count == -1) {
+            return positive_parse_result_t<Iterator>{
+                positive_parse_result_t<Iterator>{
+                    markers::redis_result_t<Iterator>{
+                        markers::nil_t<Iterator>{count_string}},
+                    positive_result->consumed + already_consumed}};
+        } else if (count < -1) {
+            throw std::runtime_error(std::string("Value ") + s +
+                                     " in unacceptable for arrays");
+        } else {
+            auto result = markers::array_holder_t<Iterator>{};
+            result.elements.reserve(count);
+            int32_t consumed = positive_result->consumed;
+            for (auto i = 0; i < count; ++i) {
+                Iterator left = from + consumed;
+                auto optional_parse_result = raw_parse(left, to);
+                auto *no_enogh_data =
+                    boost::get<no_enogh_data_t>(&optional_parse_result);
+                if (no_enogh_data) {
+                    return *no_enogh_data;
                 }
-                r.value = std::move(value);
-                r.consumed = consumed;
+                auto &parsed_data =
+                    boost::get<positive_parse_result_t<Iterator>>(
+                        optional_parse_result);
+                result.elements.emplace_back(parsed_data.result);
+                consumed += parsed_data.consumed;
             }
-        }
-        return r;
-    }
-};
-
-template <typename T, typename P, bool = false> struct transform_t {
-    some_parse_result_t operator()(extraction_result_t<T> &e) const {
-        if (!e.consumed) {
-            return no_enoght_data_t{};
-        } else {
-            return positive_parse_result_t{P::value(e.value), e.consumed + 1};
+            return positive_parse_result_t<Iterator>{
+                positive_parse_result_t<Iterator>{
+                    markers::redis_result_t<Iterator>{result},
+                    consumed + already_consumed}};
         }
     }
 };
 
-template <typename T, typename W> struct WrapPolicy {
-    using type_t = T;
-    static inline redis_result_t value(T &v) {
-        return redis_result_t(W{std::move(v)});
-    }
-};
-
-template <typename T> struct MovePolicy {
-    using type_t = T;
-    static inline redis_result_t value(T &v) { return redis_result_t(T{v}); }
-};
-
-struct ArrayUnwrapPolicy {
-    using type_t = array_holder_t;
-    static inline redis_result_t value(type_t &v) { return redis_result_t(v); }
-};
-
-template <typename T, typename P>
-class unpack_visitor : public boost::static_visitor<redis_result_t> {
-  public:
-    redis_result_t operator()(nil_t &nil) const { return redis_result_t(nil); }
-
-    redis_result_t operator()(T &v) const { return P::value(v); }
-};
-
-template <typename T, typename P> struct transform_t<T, P, true> {
-    using underlying_t = typename P::type_t;
-    some_parse_result_t operator()(extraction_result_t<T> &e) const {
-        if (!e.consumed) {
-            return no_enoght_data_t{};
-        } else {
-            auto value = boost::apply_visitor(unpack_visitor<underlying_t, P>(),
-                                              e.value);
-            return positive_parse_result_t{std::move(value), e.consumed + 1};
-        }
-    }
-};
-
-static some_parse_result_t raw_parse(const boost::string_ref &outer_range) {
-    if (outer_range.size() < 1) {
-        return no_enoght_data_t{};
+template <typename Iterator>
+static optional_parse_result_t<Iterator> raw_parse(Iterator &from,
+                                                   Iterator &to) {
+    if (from == to) {
+        return no_enogh_data_t{};
     }
 
-    auto marker = outer_range[0];
-    boost::string_ref range(outer_range.data() + 1, outer_range.size() - 1);
+    auto marker = *from++;
 
     switch (marker) {
     case '+': {
-        using policy_t = WrapPolicy<string_result_t, string_holder_t>;
-        extractor<string_result_t> e;
-        transform_t<string_result_t, policy_t> t;
-        auto v = e(range);
-        return std::move(t(v));
+        Extractor<extractor_tags::e_string> e;
+        return e(from, to, 1);
     }
     case '-': {
-        using policy_t = WrapPolicy<string_result_t, error_holder_t>;
-        extractor<string_result_t> e;
-        transform_t<string_result_t, policy_t> t;
-        auto v = e(range);
-        return std::move(t(v));
+        Extractor<extractor_tags::e_error> e;
+        return e(from, to, 1);
     }
     case ':': {
-        using policy_t = MovePolicy<int_result_t>;
-        extractor<int_result_t> e;
-        transform_t<int_result_t, policy_t> t;
-        auto v = e(range);
-        return std::move(t(v));
+        Extractor<extractor_tags::e_int> e;
+        return e(from, to, 1);
     }
     case '$': {
-        using policy_t = WrapPolicy<string_result_t, string_holder_t>;
-        extractor<optional_string_t> e;
-        transform_t<optional_string_t, policy_t, true> t;
-        auto v = e(range);
-        return std::move(t(v));
+        Extractor<extractor_tags::e_bulk_string> e;
+        return e(from, to, 1);
     }
     case '*': {
-        using policy_t = ArrayUnwrapPolicy;
-        extractor<optional_array_t> e;
-        transform_t<optional_array_t, policy_t, true> t;
-        auto v = e(range);
-        return std::move(t(v));
+        Extractor<extractor_tags::e_array> e;
+        return e(from, to, 1);
     }
     default: { throw std::runtime_error("wrong introduction"); }
     }
 }
 
-parse_result_t Protocol::parse(const boost::string_ref &buff) noexcept {
+template <typename ConstBufferSequence>
+parse_result_t<boost::asio::buffers_iterator<ConstBufferSequence, char>>
+Protocol::parse(const ConstBufferSequence &buff) noexcept {
+
+    using Iterator = boost::asio::buffers_iterator<ConstBufferSequence, char>;
+
     try {
-        return raw_parse(buff);
+        auto begin = Iterator::begin(buff);
+        auto end = Iterator::end(buff);
+        return raw_parse(begin, end);
     } catch (std::exception &e) {
         return protocol_error_t{e.what()};
     }

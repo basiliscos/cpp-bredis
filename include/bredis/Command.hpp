@@ -14,6 +14,8 @@
 
 namespace bredis {
 
+using args_container_t = std::vector<boost::string_ref>;
+
 struct single_command_t {
     args_container_t arguments;
 
