@@ -36,7 +36,6 @@ template <> struct Extractor<extractor_tags::e_string> {
 
         auto from_t(Protocol::terminator.cbegin()),
             to_t(Protocol::terminator.cend());
-        ;
         auto found_terminator = std::search(from, to, from_t, to_t);
 
         if (found_terminator == to) {
@@ -243,16 +242,12 @@ static optional_parse_result_t<Iterator> raw_parse(Iterator &from,
     }
 }
 
-template <typename ConstBufferSequence>
-parse_result_t<boost::asio::buffers_iterator<ConstBufferSequence, char>>
-Protocol::parse(const ConstBufferSequence &buff) noexcept {
-
-    using Iterator = boost::asio::buffers_iterator<ConstBufferSequence, char>;
-
+template <typename Iterator>
+parse_result_t<Iterator> Protocol::parse(Iterator &from,
+                                         Iterator &to) noexcept {
     try {
-        auto begin = Iterator::begin(buff);
-        auto end = Iterator::end(buff);
-        return raw_parse(begin, end);
+        auto result = raw_parse(from, to);
+        return parse_result_t<Iterator>{result};
     } catch (std::exception &e) {
         return protocol_error_t{e.what()};
     }

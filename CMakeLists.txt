@@ -29,10 +29,10 @@ add_executable(t-07-extract t/07-extract.cpp)
 target_link_libraries(t-07-extract ${LINK_DEPENDENCIES})
 add_test("t-07-extract" t-07-extract)
 
-#add_executable(t-10-ping t/10-ping.cpp)
-#target_link_libraries(t-10-ping ${LINK_DEPENDENCIES})
-#add_test("t-10-ping" t-10-ping)
-#
+add_executable(t-10-ping t/10-ping.cpp)
+target_link_libraries(t-10-ping ${LINK_DEPENDENCIES})
+add_test("t-10-ping" t-10-ping)
+
 #add_executable(t-11-multi-ping t/11-multi-ping.cpp)
 #target_link_libraries(t-11-multi-ping ${LINK_DEPENDENCIES})
 #add_test("t-11-multi-ping" t-11-multi-ping)

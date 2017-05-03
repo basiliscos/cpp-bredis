@@ -5,10 +5,12 @@
 
 #include "EmptyPort.hpp"
 #include "TestServer.hpp"
-#include "catch.hpp"
+
+#include "bredis/Extract.hpp"
+#include "bredis/Connection.hpp"
 #include "SocketWithLogging.hpp"
 
-#include "bredis/Connection.hpp"
+#include "catch.hpp"
 
 namespace r = bredis;
 namespace asio = boost::asio;
@@ -16,7 +18,6 @@ namespace ep = empty_port;
 namespace ts = test_server;
 
 TEST_CASE("ping", "[connection]") {
-    //using socket_t = asio::ip::tcp::socket;
     using socket_t = asio::ip::tcp::socket;
 
 #ifdef BREDIS_DEBUG
@@ -24,8 +25,10 @@ TEST_CASE("ping", "[connection]") {
 #else
     using next_layer_t = socket_t;
 #endif
+    using Buffer = boost::asio::streambuf;
+    using Iterator = boost::asio::buffers_iterator<typename Buffer::const_buffers_type, char>;
+    using result_t = r::markers::redis_result_t<Iterator>;
 
-    using result_t = r::redis_result_t;
     std::chrono::milliseconds sleep_delay(1);
 
     uint16_t port = ep::get_random<ep::Kind::TCP>();
@@ -43,11 +46,11 @@ TEST_CASE("ping", "[connection]") {
     std::promise<result_t> completion_promise;
     std::future<result_t> completion_future = completion_promise.get_future();
 
-    boost::asio::streambuf rx_buff;
+    Buffer rx_buff;
 
     c.async_write("ping", [&](const auto &error_code) {
         c.async_read(rx_buff,
-                     [&](const auto &error_code, r::redis_result_t &&r,
+                     [&](const auto &error_code, auto &&r,
                          size_t consumed) { completion_promise.set_value(r); });
     });
 
@@ -55,8 +58,9 @@ TEST_CASE("ping", "[connection]") {
            std::future_status::ready) {
         io_service.run_one();
     }
-    auto &reply_str =
-        boost::get<r::string_holder_t>(completion_future.get()).str;
-    std::string str(reply_str.cbegin(), reply_str.cend());
-    REQUIRE(str == "PONG");
+
+    auto result = completion_future.get();
+    auto extract = boost::apply_visitor(r::extractor<Iterator>(), result);
+    auto &reply_str = boost::get<r::extracts::string_t>(extract);
+    REQUIRE(reply_str.str == "PONG");
 };

@@ -19,10 +19,9 @@ class Protocol {
   public:
     static const std::string terminator;
 
-    template <typename ConstBufferSequence>
-    static parse_result_t<
-        boost::asio::buffers_iterator<ConstBufferSequence, char>>
-    parse(const ConstBufferSequence &buff) noexcept;
+    template <typename Iterator>
+    static parse_result_t<Iterator> parse(Iterator &from,
+                                          Iterator &to) noexcept;
 
     static std::ostream &serialize(std::ostream &buff,
                                    const single_command_t &cmd);

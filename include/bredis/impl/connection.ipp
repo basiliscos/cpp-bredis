@@ -43,47 +43,40 @@ void Connection<NextLayer>::async_read(DynamicBuffer &rx_buff,
     namespace asio = boost::asio;
     namespace sys = boost::system;
     using boost::asio::async_read_until;
+    using Iterator = boost::asio::buffers_iterator<
+        typename DynamicBuffer::const_buffers_type, char>;
 
     async_read_until(
-        stream_, rx_buff, MatchResult(replies_count),
+        stream_, rx_buff, MatchResult<Iterator>(replies_count),
         [read_callback, &rx_buff, replies_count](
             const sys::error_code &error_code, std::size_t bytes_transferred) {
+            markers::redis_result_t<Iterator> result;
             if (error_code) {
-                read_callback(error_code, {}, 0);
+                read_callback(error_code, std::move(result), 0);
                 return;
             }
-
             auto const_buff = rx_buff.data();
-            const char *char_ptr =
-                boost::asio::buffer_cast<const char *>(const_buff);
-            auto size = rx_buff.size();
+            auto begin = Iterator::begin(const_buff);
+            auto end = Iterator::end(const_buff);
 
-            array_holder_t results;
+            markers::array_holder_t<Iterator> results;
             results.elements.reserve(replies_count);
             size_t cumulative_consumption = 0;
             boost::system::error_code ec;
 
             do {
-                string_t data(char_ptr + cumulative_consumption,
-                              size - cumulative_consumption);
-                /*
-                BREDIS_LOG_DEBUG("trying to get response # "
-                                 << results.elements.size());
-                BREDIS_LOG_DEBUG("trying to get response from " << data);
-                */
-                auto parse_result = Protocol::parse(data);
+                auto from = begin + cumulative_consumption;
+                auto parse_result = Protocol::parse(from, end);
                 auto *parse_error = boost::get<protocol_error_t>(&parse_result);
                 if (parse_error) {
-                    /* might happen only in case of protocol error */
-                    // BREDIS_LOG_DEBUG("protocol error: " <<
-                    // parse_error->what);
                     auto parse_error_code =
                         Error::make_error_code(bredis_errors::protocol_error);
-                    read_callback(parse_error_code, {}, 0);
+                    read_callback(parse_error_code, std::move(result), 0);
                     return;
                 }
+                auto *nod = boost::get<no_enogh_data_t>(&parse_result);
                 auto &positive_result =
-                    boost::get<positive_parse_result_t>(parse_result);
+                    boost::get<positive_parse_result_t<Iterator>>(parse_result);
                 results.elements.emplace_back(positive_result.result);
                 cumulative_consumption += positive_result.consumed;
             } while (results.elements.size() < replies_count);
@@ -97,6 +90,7 @@ void Connection<NextLayer>::async_read(DynamicBuffer &rx_buff,
         });
 }
 
+#if 0
 template <typename NextLayer>
 void Connection<NextLayer>::write(const command_wrapper_t &command,
                                   boost::system::error_code &ec) {
@@ -155,5 +149,6 @@ positive_parse_result_t Connection<NextLayer>::read(DynamicBuffer &rx_buff) {
     }
     return result;
 }
+#endif
 
 } // namespace bredis

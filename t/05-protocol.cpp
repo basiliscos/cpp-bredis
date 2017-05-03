@@ -16,7 +16,8 @@ using Iterator = boost::asio::buffers_iterator<Buffer, char>;
 TEST_CASE("simple string", "[protocol]") {
     std::string ok = "+OK\r\n";
     Buffer buff(ok.c_str(), ok.size());
-    auto parsed_result = r::Protocol::parse(buff);
+    auto from = Iterator::begin(buff), to = Iterator::end(buff);
+    auto parsed_result = r::Protocol::parse(from , to);
     auto positive_parse_result =
         boost::get<r::positive_parse_result_t<Iterator>>(parsed_result);
     REQUIRE(positive_parse_result.consumed == ok.size());
@@ -27,7 +28,8 @@ TEST_CASE("simple string", "[protocol]") {
 TEST_CASE("empty string", "[protocol]") {
     std::string ok = "";
     Buffer buff(ok.c_str(), ok.size());
-    auto parsed_result = r::Protocol::parse(buff);
+    auto from = Iterator::begin(buff), to = Iterator::end(buff);
+    auto parsed_result = r::Protocol::parse(from , to);
     r::no_enogh_data_t *r = boost::get<r::no_enogh_data_t>(&parsed_result);
     REQUIRE(r != nullptr);
 };
@@ -35,7 +37,8 @@ TEST_CASE("empty string", "[protocol]") {
 TEST_CASE("non-finished ", "[protocol]") {
     std::string ok = "+OK";
     Buffer buff(ok.c_str(), ok.size());
-    auto parsed_result = r::Protocol::parse(buff);
+    auto from = Iterator::begin(buff), to = Iterator::end(buff);
+    auto parsed_result = r::Protocol::parse(from , to);
     r::no_enogh_data_t *r = boost::get<r::no_enogh_data_t>(&parsed_result);
     REQUIRE(r != nullptr);
 };
@@ -43,7 +46,8 @@ TEST_CASE("non-finished ", "[protocol]") {
 TEST_CASE("wrong start marker", "[protocol]") {
     std::string ok = "!OK";
     Buffer buff(ok.c_str(), ok.size());
-    auto parsed_result = r::Protocol::parse(buff);
+    auto from = Iterator::begin(buff), to = Iterator::end(buff);
+    auto parsed_result = r::Protocol::parse(from , to);
     r::protocol_error_t *r = boost::get<r::protocol_error_t>(&parsed_result);
     REQUIRE(r->what == "wrong introduction");
 };
@@ -51,7 +55,8 @@ TEST_CASE("wrong start marker", "[protocol]") {
 TEST_CASE("number-like", "[protocol]") {
     std::string ok = ":-55abc\r\n";
     Buffer buff(ok.c_str(), ok.size());
-    auto parsed_result = r::Protocol::parse(buff);
+    auto from = Iterator::begin(buff), to = Iterator::end(buff);
+    auto parsed_result = r::Protocol::parse(from , to);
     auto positive_parse_result =
         boost::get<r::positive_parse_result_t<Iterator>>(parsed_result);
     REQUIRE(positive_parse_result.consumed);
@@ -66,7 +71,8 @@ TEST_CASE("number-like", "[protocol]") {
 TEST_CASE("simple error", "[protocol]") {
     std::string ok = "-Ooops\r\n";
     Buffer buff(ok.c_str(), ok.size());
-    auto parsed_result = r::Protocol::parse(buff);
+    auto from = Iterator::begin(buff), to = Iterator::end(buff);
+    auto parsed_result = r::Protocol::parse(from , to);
     auto positive_parse_result =
         boost::get<r::positive_parse_result_t<Iterator>>(parsed_result);
     REQUIRE(positive_parse_result.consumed);
@@ -80,7 +86,8 @@ TEST_CASE("simple error", "[protocol]") {
 TEST_CASE("nil", "[protocol]") {
     std::string ok = "$-1\r\n";
     Buffer buff(ok.c_str(), ok.size());
-    auto parsed_result = r::Protocol::parse(buff);
+    auto from = Iterator::begin(buff), to = Iterator::end(buff);
+    auto parsed_result = r::Protocol::parse(from , to);
     auto positive_parse_result =
         boost::get<r::positive_parse_result_t<Iterator>>(parsed_result);
     REQUIRE(positive_parse_result.consumed);
@@ -96,7 +103,8 @@ TEST_CASE("nil", "[protocol]") {
 TEST_CASE("malformed bulk string", "[protocol]") {
     std::string ok = "$-5\r\nsome\r\n";
     Buffer buff(ok.c_str(), ok.size());
-    auto parsed_result = r::Protocol::parse(buff);
+    auto from = Iterator::begin(buff), to = Iterator::end(buff);
+    auto parsed_result = r::Protocol::parse(from , to);
     r::protocol_error_t *r = boost::get<r::protocol_error_t>(&parsed_result);
     REQUIRE(r->what == "Value -5 in unacceptable for bulk strings");
 };
@@ -104,7 +112,8 @@ TEST_CASE("malformed bulk string", "[protocol]") {
 TEST_CASE("some bulk string", "[protocol]") {
     std::string ok = "$4\r\nsome\r\n";
     Buffer buff(ok.c_str(), ok.size());
-    auto parsed_result = r::Protocol::parse(buff);
+    auto from = Iterator::begin(buff), to = Iterator::end(buff);
+    auto parsed_result = r::Protocol::parse(from , to);
     auto positive_parse_result =
         boost::get<r::positive_parse_result_t<Iterator>>(parsed_result);
     REQUIRE(positive_parse_result.consumed);
@@ -118,7 +127,8 @@ TEST_CASE("some bulk string", "[protocol]") {
 TEST_CASE("empty bulk string", "[protocol]") {
     std::string ok = "$0\r\n\r\n";
     Buffer buff(ok.c_str(), ok.size());
-    auto parsed_result = r::Protocol::parse(buff);
+    auto from = Iterator::begin(buff), to = Iterator::end(buff);
+    auto parsed_result = r::Protocol::parse(from , to);
     auto positive_parse_result =
         boost::get<r::positive_parse_result_t<Iterator>>(parsed_result);
     REQUIRE(positive_parse_result.consumed);
@@ -132,21 +142,24 @@ TEST_CASE("empty bulk string", "[protocol]") {
 TEST_CASE("patrial bulk string(1)", "[protocol]") {
     std::string ok = "$10\r\nsome\r\n";
     Buffer buff(ok.c_str(), ok.size());
-    auto parsed_result = r::Protocol::parse(buff);
+    auto from = Iterator::begin(buff), to = Iterator::end(buff);
+    auto parsed_result = r::Protocol::parse(from , to);
     REQUIRE(boost::get<r::no_enogh_data_t>(&parsed_result) != nullptr);
 };
 
 TEST_CASE("patrial bulk string(2)", "[protocol]") {
     std::string ok = "$4\r\nsome\r";
     Buffer buff(ok.c_str(), ok.size());
-    auto parsed_result = r::Protocol::parse(buff);
+    auto from = Iterator::begin(buff), to = Iterator::end(buff);
+    auto parsed_result = r::Protocol::parse(from , to);
     REQUIRE(boost::get<r::no_enogh_data_t>(&parsed_result) != nullptr);
 };
 
 TEST_CASE("malformed bulk string(2)", "[protocol]") {
     std::string ok = "$1\r\nsome\r\n";
     Buffer buff(ok.c_str(), ok.size());
-    auto parsed_result = r::Protocol::parse(buff);
+    auto from = Iterator::begin(buff), to = Iterator::end(buff);
+    auto parsed_result = r::Protocol::parse(from , to);
     r::protocol_error_t *r = boost::get<r::protocol_error_t>(&parsed_result);
     REQUIRE(r->what == "Terminator not found for bulk string");
 };
@@ -154,7 +167,8 @@ TEST_CASE("malformed bulk string(2)", "[protocol]") {
 TEST_CASE("empty array", "[protocol]") {
     std::string ok = "*0\r\n";
     Buffer buff(ok.c_str(), ok.size());
-    auto parsed_result = r::Protocol::parse(buff);
+    auto from = Iterator::begin(buff), to = Iterator::end(buff);
+    auto parsed_result = r::Protocol::parse(from , to);
     auto positive_parse_result =
         boost::get<r::positive_parse_result_t<Iterator>>(parsed_result);
     REQUIRE(positive_parse_result.consumed);
@@ -168,7 +182,8 @@ TEST_CASE("empty array", "[protocol]") {
 TEST_CASE("null array", "[protocol]") {
     std::string ok = "*-1\r\n";
     Buffer buff(ok.c_str(), ok.size());
-    auto parsed_result = r::Protocol::parse(buff);
+    auto from = Iterator::begin(buff), to = Iterator::end(buff);
+    auto parsed_result = r::Protocol::parse(from , to);
     auto positive_parse_result =
         boost::get<r::positive_parse_result_t<Iterator>>(parsed_result);
     REQUIRE(positive_parse_result.consumed);
@@ -183,7 +198,8 @@ TEST_CASE("null array", "[protocol]") {
 TEST_CASE("malformed array", "[protocol]") {
     std::string ok = "*-4\r\nsome\r\n";
     Buffer buff(ok.c_str(), ok.size());
-    auto parsed_result = r::Protocol::parse(buff);
+    auto from = Iterator::begin(buff), to = Iterator::end(buff);
+    auto parsed_result = r::Protocol::parse(from , to);
     r::protocol_error_t *r = boost::get<r::protocol_error_t>(&parsed_result);
     REQUIRE(r->what == "Value -4 in unacceptable for arrays");
 };
@@ -191,14 +207,16 @@ TEST_CASE("malformed array", "[protocol]") {
 TEST_CASE("patrial array", "[protocol]") {
     std::string ok = "*1\r\n";
     Buffer buff(ok.c_str(), ok.size());
-    auto parsed_result = r::Protocol::parse(buff);
+    auto from = Iterator::begin(buff), to = Iterator::end(buff);
+    auto parsed_result = r::Protocol::parse(from , to);
     REQUIRE(boost::get<r::no_enogh_data_t>(&parsed_result) != nullptr);
 };
 
 TEST_CASE("array: string, int, nil", "[protocol]") {
     std::string ok = "*3\r\n$4\r\nsome\r\n:5\r\n$-1\r\n";
     Buffer buff(ok.c_str(), ok.size());
-    auto parsed_result = r::Protocol::parse(buff);
+    auto from = Iterator::begin(buff), to = Iterator::end(buff);
+    auto parsed_result = r::Protocol::parse(from , to);
     auto positive_parse_result =
         boost::get<r::positive_parse_result_t<Iterator>>(parsed_result);
     REQUIRE(positive_parse_result.consumed);
@@ -222,7 +240,8 @@ TEST_CASE("array: string, int, nil", "[protocol]") {
 TEST_CASE("array of arrays: [int, int, int,], [str,err] ", "[protocol]") {
     std::string ok = "*2\r\n*3\r\n:1\r\n:2\r\n:3\r\n*2\r\n+Foo\r\n-Bar\r\n";
     Buffer buff(ok.c_str(), ok.size());
-    auto parsed_result = r::Protocol::parse(buff);
+    auto from = Iterator::begin(buff), to = Iterator::end(buff);
+    auto parsed_result = r::Protocol::parse(from , to);
     auto positive_parse_result =
         boost::get<r::positive_parse_result_t<Iterator>>(parsed_result);
     REQUIRE(positive_parse_result.consumed);
@@ -267,7 +286,8 @@ TEST_CASE("right consumption", "[protocol]") {
         "*3\r\n$7\r\nmessage\r\n$13\r\nsome-channel1\r\n$10\r\nmessage-a1\r\n";
     ok = ok + ok;
     Buffer buff(ok.c_str(), ok.size());
-    auto parsed_result = r::Protocol::parse(buff);
+    auto from = Iterator::begin(buff), to = Iterator::end(buff);
+    auto parsed_result = r::Protocol::parse(from , to);
     auto positive_parse_result =
         boost::get<r::positive_parse_result_t<Iterator>>(parsed_result);
     REQUIRE(positive_parse_result.consumed);
@@ -280,7 +300,8 @@ TEST_CASE("overfilled buffer", "[protocol]") {
                      "channel1\r\n$10\r\nmessage-a2\r\n*3\r\n$7\r\nmessage\r\n$"
                      "13\r\nsome-channel2\r\n$4\r\nlast\r\n";
     Buffer buff(ok.c_str(), ok.size());
-    auto parsed_result = r::Protocol::parse(buff);
+    auto from = Iterator::begin(buff), to = Iterator::end(buff);
+    auto parsed_result = r::Protocol::parse(from , to);
     auto positive_parse_result =
         boost::get<r::positive_parse_result_t<Iterator>>(parsed_result);
     REQUIRE(positive_parse_result.consumed);
@@ -304,7 +325,8 @@ TEST_CASE("overfilled buffer", "[protocol]") {
             nullptr);
 
     buff = Buffer(ok.c_str() + 54, ok.size() - 54);
-    parsed_result = r::Protocol::parse(buff);
+    from = Iterator::begin(buff), to = Iterator::end(buff);
+    parsed_result = r::Protocol::parse(from , to);
     positive_parse_result =
         boost::get<r::positive_parse_result_t<Iterator>>(parsed_result);
     REQUIRE(positive_parse_result.consumed);
@@ -328,7 +350,8 @@ TEST_CASE("overfilled buffer", "[protocol]") {
             nullptr);
 
     buff = Buffer(ok.c_str() + 54 * 2, ok.size() - 54 * 2);
-    parsed_result = r::Protocol::parse(buff);
+    from = Iterator::begin(buff), to = Iterator::end(buff);
+    parsed_result = r::Protocol::parse(from , to);
     positive_parse_result =
         boost::get<r::positive_parse_result_t<Iterator>>(parsed_result);
     REQUIRE(positive_parse_result.consumed);
