@@ -7,9 +7,12 @@
 #include "EmptyPort.hpp"
 #include "TestServer.hpp"
 #include "catch.hpp"
-#include "SocketWithLogging.hpp"
 
 #include "bredis/Connection.hpp"
+#include "bredis/Extract.hpp"
+#include "bredis/MarkerHelpers.hpp"
+
+#include "SocketWithLogging.hpp"
 
 namespace r = bredis;
 namespace asio = boost::asio;
@@ -19,15 +22,20 @@ namespace ts = test_server;
 TEST_CASE("subscription", "[connection]") {
     using socket_t = asio::ip::tcp::socket;
 #ifdef BREDIS_DEBUG
-    using next_layer_t = r::test::SocketWithLogging<socket_t&>;
+    using next_layer_t = r::test::SocketWithLogging<socket_t &>;
 #else
-    using next_layer_t = socket_t&;
+    using next_layer_t = socket_t &;
 #endif
-    using result_t = r::redis_result_t;
+    using Buffer = boost::asio::streambuf;
+    using Iterator =
+        boost::asio::buffers_iterator<typename Buffer::const_buffers_type,
+                                      char>;
+    using Marker = r::markers::redis_result_t<Iterator>;
+    using Extractor = r::extractor<Iterator>;
 
     using read_callback_t =
         std::function<void(const boost::system::error_code &error_code,
-                           r::redis_result_t &&r, size_t consumed)>;
+                           Marker &&r, size_t consumed)>;
 
     std::chrono::milliseconds sleep_delay(1);
     uint16_t port = ep::get_random<ep::Kind::TCP>();
@@ -41,8 +49,6 @@ TEST_CASE("subscription", "[connection]") {
     socket_t socket(io_service, end_point.protocol());
     socket.connect(end_point);
 
-    std::vector<r::redis_result_t> results;
-    std::vector<std::string> messages;
     std::promise<void> subscription_promise;
     std::future<void> subscription_future = subscription_promise.get_future();
     std::promise<void> completion_promise;
@@ -54,26 +60,36 @@ TEST_CASE("subscription", "[connection]") {
 
     /* check point 1, got 2 subscription confirmations */
     {
-        boost::asio::streambuf rx_buff;
+        Buffer rx_buff;
         consumer.write(subscribe_cmd);
         auto parse_result = consumer.read(rx_buff);
-        auto reply1 = boost::get<r::array_holder_t>(parse_result.result);
+        auto &reply1 = boost::get<r::markers::array_holder_t<Iterator>>(
+            parse_result.result);
         REQUIRE(reply1.elements.size() == 3);
-        REQUIRE(boost::get<r::string_holder_t>(reply1.elements[0]) ==
-                "subscribe");
-        REQUIRE(boost::get<r::string_holder_t>(reply1.elements[1]) ==
-                "some-channel1");
-        REQUIRE(boost::get<r::int_result_t>(reply1.elements[2]) == 1);
+
+        REQUIRE(boost::apply_visitor(
+            r::marker_helpers::equality<Iterator>("subscribe"),
+            reply1.elements[0]));
+        REQUIRE(boost::apply_visitor(
+            r::marker_helpers::equality<Iterator>("some-channel1"),
+            reply1.elements[1]));
+        REQUIRE(boost::apply_visitor(r::marker_helpers::equality<Iterator>("1"),
+                                     reply1.elements[2]));
+
         rx_buff.consume(parse_result.consumed);
 
         parse_result = consumer.read(rx_buff);
-        auto reply2 = boost::get<r::array_holder_t>(parse_result.result);
+        auto &reply2 = boost::get<r::markers::array_holder_t<Iterator>>(
+            parse_result.result);
         REQUIRE(reply2.elements.size() == 3);
-        REQUIRE(boost::get<r::string_holder_t>(reply2.elements[0]) ==
-                "subscribe");
-        REQUIRE(boost::get<r::string_holder_t>(reply2.elements[1]) ==
-                "some-channel2");
-        REQUIRE(boost::get<r::int_result_t>(reply2.elements[2]) == 2);
+        REQUIRE(boost::apply_visitor(
+            r::marker_helpers::equality<Iterator>("subscribe"),
+            reply2.elements[0]));
+        REQUIRE(boost::apply_visitor(
+            r::marker_helpers::equality<Iterator>("some-channel2"),
+            reply2.elements[1]));
+        REQUIRE(boost::apply_visitor(r::marker_helpers::equality<Iterator>("2"),
+                                     reply2.elements[2]));
         rx_buff.consume(parse_result.consumed);
     }
 
@@ -82,45 +98,55 @@ TEST_CASE("subscription", "[connection]") {
         socket_t socket_2(io_service, end_point.protocol());
         socket_2.connect(end_point);
         r::Connection<socket_t> producer(std::move(socket_2));
-        boost::asio::streambuf rx_buff;
+        Buffer rx_buff;
 
-        producer.write(r::single_command_t("publish", "some-channel1", "message-a1"));
+        producer.write(
+            r::single_command_t("publish", "some-channel1", "message-a1"));
         auto s_result = producer.read(rx_buff);
-        REQUIRE(boost::get<r::int_result_t>(s_result.result) == 1);
+        REQUIRE(boost::apply_visitor(r::marker_helpers::equality<Iterator>("1"),
+                                     s_result.result));
         rx_buff.consume(s_result.consumed);
 
-        producer.write(r::single_command_t("publish", "some-channel1", "message-a2"));
+        producer.write(
+            r::single_command_t("publish", "some-channel1", "message-a2"));
         s_result = producer.read(rx_buff);
-        REQUIRE(boost::get<r::int_result_t>(s_result.result) == 1);
+        REQUIRE(boost::apply_visitor(r::marker_helpers::equality<Iterator>("1"),
+                                     s_result.result));
         rx_buff.consume(s_result.consumed);
 
-        producer.write(r::single_command_t("publish", "some-channel3", "message-c"));
+        producer.write(
+            r::single_command_t("publish", "some-channel3", "message-c"));
         s_result = producer.read(rx_buff);
-        REQUIRE(boost::get<r::int_result_t>(s_result.result) == 0);
+        REQUIRE(boost::apply_visitor(r::marker_helpers::equality<Iterator>("0"),
+                                     s_result.result));
         rx_buff.consume(s_result.consumed);
 
         producer.write(r::single_command_t("publish", "some-channel2", "last"));
         s_result = producer.read(rx_buff);
-        REQUIRE(boost::get<r::int_result_t>(s_result.result) == 1);
+        REQUIRE(boost::apply_visitor(r::marker_helpers::equality<Iterator>("1"),
+                                     s_result.result));
         rx_buff.consume(s_result.consumed);
     }
 
     /* check point 3: examine received messages */
-    boost::asio::streambuf rx_buff;
+    std::vector<std::string> messages;
+    Buffer rx_buff;
     r::Connection<next_layer_t> c(socket);
 
     read_callback_t notification_callback = [&](const boost::system::error_code,
-                                     r::redis_result_t &&r, size_t consumed) {
+                                                Marker &&r, size_t consumed) {
 #ifdef BREDIS_DEBUG
-        BREDIS_LOG_DEBUG("subscription callback " << boost::apply_visitor(r::result_stringizer(), r));
+        BREDIS_LOG_DEBUG("subscription callback " << boost::apply_visitor(
+                             r::marker_helpers::stringizer<Iterator>(), r));
 #endif
 
-        r::array_holder_t array_reply = boost::get<r::array_holder_t>(r);
-
-        r::string_holder_t *type_reply =
-            boost::get<r::string_holder_t>(&array_reply.elements[0]);
-        r::string_holder_t *string_reply =
-            boost::get<r::string_holder_t>(&array_reply.elements[2]);
+        auto extract = boost::apply_visitor(Extractor(), r);
+        r::extracts::array_holder_t array_reply =
+            boost::get<r::extracts::array_holder_t>(extract);
+        auto *type_reply =
+            boost::get<r::extracts::string_t>(&array_reply.elements[0]);
+        auto *string_reply =
+            boost::get<r::extracts::string_t>(&array_reply.elements[2]);
         BREDIS_LOG_DEBUG("examining for completion. String: "
                          << (string_reply ? string_reply->str : ""));
 
@@ -130,8 +156,9 @@ TEST_CASE("subscription", "[connection]") {
             } else {
                 c.async_read(rx_buff, notification_callback);
             }
-            std::string channel(
-                boost::get<r::string_holder_t>(&array_reply.elements[1])->str);
+            std::string channel =
+                boost::get<r::extracts::string_t>(&array_reply.elements[1])
+                    ->str;
             std::string payload(string_reply->str);
             messages.emplace_back(channel + ":" + payload);
         }
@@ -145,4 +172,8 @@ TEST_CASE("subscription", "[connection]") {
         io_service.run_one();
     }
 
+    REQUIRE(messages.size() == 3);
+    REQUIRE(messages[0] == "some-channel1:message-a1");
+    REQUIRE(messages[1] == "some-channel1:message-a2");
+    REQUIRE(messages[2] == "some-channel2:last");
 };

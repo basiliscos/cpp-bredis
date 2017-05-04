@@ -6,9 +6,11 @@
 #include "EmptyPort.hpp"
 #include "TestServer.hpp"
 #include "catch.hpp"
-#include "SocketWithLogging.hpp"
 
 #include "bredis/Connection.hpp"
+#include "bredis/MarkerHelpers.hpp"
+
+#include "SocketWithLogging.hpp"
 
 namespace r = bredis;
 namespace asio = boost::asio;
@@ -22,10 +24,16 @@ TEST_CASE("transaction", "[connection]") {
 #else
     using next_layer_t = socket_t;
 #endif
+    using Buffer = boost::asio::streambuf;
+    using Iterator =
+        boost::asio::buffers_iterator<typename Buffer::const_buffers_type,
+                                      char>;
+    using Marker = r::markers::redis_result_t<Iterator>;
+
     using result_t = void;
     using read_callback_t =
         std::function<void(const boost::system::error_code &error_code,
-                           r::redis_result_t &&r, size_t consumed)>;
+                           Marker &&r, size_t consumed)>;
 
     std::chrono::milliseconds sleep_delay(1);
 
@@ -50,32 +58,35 @@ TEST_CASE("transaction", "[connection]") {
     socket.connect(end_point);
     r::Connection<next_layer_t> c(std::move(socket));
 
-    boost::asio::streambuf rx_buff;
+    Buffer rx_buff;
     read_callback_t read_callback = [&](
-        const boost::system::error_code &error_code, r::redis_result_t &&r,
+        const boost::system::error_code &error_code, Marker &&r,
         size_t consumed) {
         REQUIRE(!error_code);
-        auto &replies = boost::get<r::array_holder_t>(r);
+
+        auto &replies = boost::get<r::markers::array_holder_t<Iterator>>(r);
         REQUIRE(replies.elements.size() == tx_commands.size());
 
-        REQUIRE(boost::get<r::string_holder_t>(&replies.elements[0])->str ==
-                "OK");
-        REQUIRE(boost::get<r::string_holder_t>(&replies.elements[1])->str ==
-                "QUEUED");
-        REQUIRE(boost::get<r::string_holder_t>(&replies.elements[2])->str ==
-                "QUEUED");
+        auto eq_OK = r::marker_helpers::equality<Iterator>("OK");
+        auto eq_QUEUED = r::marker_helpers::equality<Iterator>("QUEUED");
+        REQUIRE(replies.elements.size() == 4);
+        REQUIRE(boost::apply_visitor(eq_OK, replies.elements[0]));
+        REQUIRE(boost::apply_visitor(eq_QUEUED, replies.elements[1]));
+        REQUIRE(boost::apply_visitor(eq_QUEUED, replies.elements[2]));
 
-        auto &tx_replies = boost::get<r::array_holder_t>(replies.elements[3]);
+        auto &tx_replies = boost::get<r::markers::array_holder_t<Iterator>>(
+            replies.elements[3]);
         REQUIRE(tx_replies.elements.size() == 2);
-        REQUIRE(boost::get<r::int_result_t>(tx_replies.elements[0]) == 1);
-        REQUIRE(boost::get<r::int_result_t>(tx_replies.elements[1]) == 1);
+        REQUIRE(boost::apply_visitor(r::marker_helpers::equality<Iterator>("1"),
+                                     tx_replies.elements[0]));
+        REQUIRE(boost::apply_visitor(r::marker_helpers::equality<Iterator>("1"),
+                                     tx_replies.elements[1]));
 
         completion_promise.set_value();
         rx_buff.consume(consumed);
     };
 
     c.async_read(rx_buff, read_callback, tx_commands.size());
-
     c.async_write(cmd, [&](const auto &error_code) { REQUIRE(!error_code); });
 
     while (completion_future.wait_for(sleep_delay) !=

@@ -6,9 +6,9 @@
 #include "EmptyPort.hpp"
 #include "TestServer.hpp"
 
-#include "bredis/Extract.hpp"
-#include "bredis/Connection.hpp"
 #include "SocketWithLogging.hpp"
+#include "bredis/Connection.hpp"
+#include "bredis/Extract.hpp"
 
 #include "catch.hpp"
 
@@ -26,7 +26,7 @@ TEST_CASE("ping", "[connection]") {
     using next_layer_t = socket_t;
 #endif
     using Buffer = boost::asio::streambuf;
-    using Iterator = boost::asio::buffers_iterator<typename Buffer::const_buffers_type, char>;
+    using Iterator = typename r::to_iterator<Buffer>::iterator_t;
     using result_t = r::markers::redis_result_t<Iterator>;
 
     std::chrono::milliseconds sleep_delay(1);
@@ -50,8 +50,9 @@ TEST_CASE("ping", "[connection]") {
 
     c.async_write("ping", [&](const auto &error_code) {
         c.async_read(rx_buff,
-                     [&](const auto &error_code, auto &&r,
-                         size_t consumed) { completion_promise.set_value(r); });
+                     [&](const auto &error_code, auto &&r, size_t consumed) {
+                         completion_promise.set_value(r);
+                     });
     });
 
     while (completion_future.wait_for(sleep_delay) !=

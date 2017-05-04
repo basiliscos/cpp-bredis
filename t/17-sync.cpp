@@ -6,9 +6,11 @@
 #include "EmptyPort.hpp"
 #include "TestServer.hpp"
 #include "catch.hpp"
-#include "SocketWithLogging.hpp"
 
 #include "bredis/Connection.hpp"
+#include "bredis/MarkerHelpers.hpp"
+
+#include "SocketWithLogging.hpp"
 
 namespace r = bredis;
 namespace asio = boost::asio;
@@ -22,7 +24,10 @@ TEST_CASE("ping", "[connection]") {
 #else
     using next_layer_t = socket_t;
 #endif
-    using result_t = r::redis_result_t;
+    using Buffer = boost::asio::streambuf;
+    using Iterator = typename r::to_iterator<Buffer>::iterator_t;
+    using Marker = r::markers::redis_result_t<Iterator>;
+
     std::chrono::milliseconds sleep_delay(1);
 
     uint16_t port = ep::get_random<ep::Kind::TCP>();
@@ -38,12 +43,11 @@ TEST_CASE("ping", "[connection]") {
 
     r::Connection<next_layer_t> c(std::move(socket));
 
-    boost::asio::streambuf rx_buff;
+    Buffer rx_buff;
+    auto equality = r::marker_helpers::equality<Iterator>("PONG");
     c.write("ping");
     auto parse_result = c.read(rx_buff);
-    auto &reply_str = boost::get<r::string_holder_t>(parse_result.result).str;
-    std::string str(reply_str.cbegin(), reply_str.cend());
-    REQUIRE(str == "PONG");
+    REQUIRE(boost::apply_visitor(equality, parse_result.result));
     rx_buff.consume(parse_result.consumed);
 
     /* overloads */
@@ -53,7 +57,6 @@ TEST_CASE("ping", "[connection]") {
 
     parse_result = c.read(rx_buff, ec);
     REQUIRE(!ec);
-    reply_str = boost::get<r::string_holder_t>(parse_result.result).str;
-    str = std::string(reply_str.cbegin(), reply_str.cend());
-    REQUIRE(str == "PONG");
+    REQUIRE(boost::apply_visitor(equality, parse_result.result));
+    rx_buff.consume(parse_result.consumed);
 };

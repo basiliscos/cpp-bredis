@@ -6,8 +6,8 @@
 #include <vector>
 
 #include "EmptyPort.hpp"
-#include "catch.hpp"
 #include "SocketWithLogging.hpp"
+#include "catch.hpp"
 
 #include "bredis/Connection.hpp"
 
@@ -24,6 +24,12 @@ TEST_CASE("close-afrer-read", "[connection]") {
     using next_layer_t = socket_t;
 #endif
     using result_t = void;
+    using Buffer = boost::asio::streambuf;
+    using Iterator =
+        boost::asio::buffers_iterator<typename Buffer::const_buffers_type,
+                                      char>;
+    using Marker = r::markers::redis_result_t<Iterator>;
+
     std::chrono::milliseconds sleep_delay(1);
 
     uint16_t port = ep::get_random<ep::Kind::TCP>();
@@ -38,7 +44,7 @@ TEST_CASE("close-afrer-read", "[connection]") {
     auto peer_socket = socket_t(io_service);
     std::string data = "bla-bla";
     std::string end_marker = "ping\r\n";
-    boost::asio::streambuf remote_rx_buff;
+    Buffer remote_rx_buff;
     asio::const_buffers_1 output_buf = asio::buffer(data.c_str(), data.size());
     acceptor.async_accept(peer_socket, [&](const sys::error_code &error_code) {
         BREDIS_LOG_DEBUG("async_accept: " << error_code.message() << ", "
@@ -64,12 +70,12 @@ TEST_CASE("close-afrer-read", "[connection]") {
     boost::asio::streambuf rx_buff;
     c.async_write("ping", [&](const auto &error_code) {
         REQUIRE(!error_code);
-        c.async_read(rx_buff, [&](const auto &error_code, r::redis_result_t &&r,
-                                  size_t consumed) {
-            REQUIRE(error_code);
-            REQUIRE(error_code.message() == "End of file");
-            completion_promise.set_value();
-        });
+        c.async_read(rx_buff,
+                     [&](const auto &error_code, Marker &&r, size_t consumed) {
+                         REQUIRE(error_code);
+                         REQUIRE(error_code.message() == "End of file");
+                         completion_promise.set_value();
+                     });
     });
 
     while (completion_future.wait_for(sleep_delay) !=
@@ -85,8 +91,13 @@ TEST_CASE("close-before-write", "[connection]") {
 #else
     using next_layer_t = socket_t;
 #endif
-
+    using Buffer = boost::asio::streambuf;
+    using Iterator =
+        boost::asio::buffers_iterator<typename Buffer::const_buffers_type,
+                                      char>;
+    using Marker = r::markers::redis_result_t<Iterator>;
     using result_t = void;
+
     std::chrono::milliseconds sleep_delay(1);
 
     uint16_t port = ep::get_random<ep::Kind::TCP>();
@@ -101,7 +112,6 @@ TEST_CASE("close-before-write", "[connection]") {
     auto peer_socket = socket_t(io_service);
     std::string data = "bla-bla";
     std::string end_marker = "ping\r\n";
-    asio::const_buffers_1 output_buf = asio::buffer(data.c_str(), data.size());
     acceptor.async_accept(peer_socket, [&](const sys::error_code &error_code) {
         BREDIS_LOG_DEBUG("async_accept: " << error_code.message() << ", "
                                           << peer_socket.local_endpoint());
@@ -115,15 +125,15 @@ TEST_CASE("close-before-write", "[connection]") {
     std::promise<result_t> completion_promise;
     std::future<result_t> completion_future = completion_promise.get_future();
 
-    boost::asio::streambuf rx_buff;
+    Buffer rx_buff;
     c.async_write("ping", [&](const auto &error_code) {
         REQUIRE(!error_code);
-        c.async_read(rx_buff, [&](const auto &error_code, r::redis_result_t &&r,
-                                  size_t consumed) {
-            REQUIRE(error_code);
-            REQUIRE(error_code.message() == "Connection reset by peer");
-            completion_promise.set_value();
-        });
+        c.async_read(
+            rx_buff, [&](const auto &error_code, Marker &&r, size_t consumed) {
+                REQUIRE(error_code);
+                REQUIRE(error_code.message() == "Connection reset by peer");
+                completion_promise.set_value();
+            });
     });
     while (completion_future.wait_for(sleep_delay) !=
            std::future_status::ready) {

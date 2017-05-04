@@ -7,9 +7,11 @@
 #include "EmptyPort.hpp"
 #include "TestServer.hpp"
 #include "catch.hpp"
-#include "SocketWithLogging.hpp"
 
 #include "bredis/Connection.hpp"
+#include "bredis/Extract.hpp"
+
+#include "SocketWithLogging.hpp"
 
 namespace r = bredis;
 namespace asio = boost::asio;
@@ -23,11 +25,17 @@ TEST_CASE("ping", "[connection]") {
 #else
     using next_layer_t = socket_t;
 #endif
+    using Buffer = boost::asio::streambuf;
+    using Iterator =
+        boost::asio::buffers_iterator<typename Buffer::const_buffers_type,
+                                      char>;
+    using Marker = r::markers::redis_result_t<Iterator>;
+    using Extractor = r::extractor<Iterator>;
 
     using result_t = void;
     using read_callback_t =
         std::function<void(const boost::system::error_code &error_code,
-                           r::redis_result_t &&r, size_t consumed)>;
+                           Marker &&r, size_t consumed)>;
 
     std::chrono::milliseconds sleep_delay(1);
 
@@ -47,7 +55,7 @@ TEST_CASE("ping", "[connection]") {
     std::future<result_t> completion_future = completion_promise.get_future();
 
     int order = 0;
-    boost::asio::streambuf rx_buff;
+    Buffer rx_buff;
 
     r::command_container_t cmds_container{
         r::single_command_t("LLEN", "x"),
@@ -58,48 +66,53 @@ TEST_CASE("ping", "[connection]") {
         r::single_command_t("time"),
     };
     std::vector<read_callback_t> callbacks{
-        [&](const boost::system::error_code &error_code, r::redis_result_t &&r,
+        [&](const boost::system::error_code &error_code, Marker &&r,
             size_t consumed) {
-            REQUIRE(boost::get<r::int_result_t>(r) == 0);
+            auto extract = boost::apply_visitor(Extractor(), r);
+            REQUIRE(boost::get<r::extracts::int_t>(extract) == 0);
             REQUIRE(order == 0);
         },
-        [&](const boost::system::error_code &error_code, r::redis_result_t &&r,
+        [&](const boost::system::error_code &error_code, Marker &&r,
             size_t consumed) {
-            REQUIRE(boost::get<r::nil_t>(r) == r::nil_t{});
+            auto extract = boost::apply_visitor(Extractor(), r);
+            REQUIRE(boost::get<r::extracts::nil_t>(&extract));
             REQUIRE(order == 1);
         },
-        [&](const boost::system::error_code &error_code, r::redis_result_t &&r,
+        [&](const boost::system::error_code &error_code, Marker &&r,
             size_t consumed) {
-            REQUIRE(boost::get<r::string_holder_t>(r).str == "OK");
+            auto extract = boost::apply_visitor(Extractor(), r);
+            REQUIRE(boost::get<r::extracts::string_t>(extract).str == "OK");
             REQUIRE(order == 2);
         },
-        [&](const boost::system::error_code &error_code, r::redis_result_t &&r,
+        [&](const boost::system::error_code &error_code, Marker &&r,
             size_t consumed) {
-            REQUIRE(boost::get<r::string_holder_t>(r).str == "value");
+            auto extract = boost::apply_visitor(Extractor(), r);
+            REQUIRE(boost::get<r::extracts::string_t>(extract).str == "value");
             REQUIRE(order == 3);
         },
-        [&](const boost::system::error_code &error_code, r::redis_result_t &&r,
+        [&](const boost::system::error_code &error_code, Marker &&r,
             size_t consumed) {
-            REQUIRE(boost::get<r::error_holder_t>(r).str ==
+            auto extract = boost::apply_visitor(Extractor(), r);
+            REQUIRE(boost::get<r::extracts::error_t>(extract).str ==
                     "ERR wrong number of arguments for 'llen' command");
             REQUIRE(order == 4);
         },
-        [&](const boost::system::error_code &error_code, r::redis_result_t &&r,
+        [&](const boost::system::error_code &error_code, Marker &&r,
             size_t consumed) {
             REQUIRE(order == 5);
-            auto arr = boost::get<r::array_holder_t>(r);
+            auto extract = boost::apply_visitor(Extractor(), r);
+            auto &arr = boost::get<r::extracts::array_holder_t>(extract);
             REQUIRE(arr.elements.size() == 2);
-            REQUIRE(boost::lexical_cast<r::int_result_t>(
-                        boost::get<r::string_holder_t>(arr.elements[0]).str) >=
-                    0);
-            REQUIRE(boost::lexical_cast<r::int_result_t>(
-                        boost::get<r::string_holder_t>(arr.elements[1]).str) >=
-                    0);
+            auto &c1 = boost::get<r::extracts::string_t>(arr.elements[0]).str;
+            auto &c2 = boost::get<r::extracts::string_t>(arr.elements[1]).str;
+
+            REQUIRE(boost::lexical_cast<r::extracts::int_t>(c1) >= 0);
+            REQUIRE(boost::lexical_cast<r::extracts::int_t>(c2) >= 0);
             completion_promise.set_value();
         }};
 
     read_callback_t generic_callback =
-        [&](const boost::system::error_code &error_code, r::redis_result_t &&r,
+        [&](const boost::system::error_code &error_code, Marker &&r,
             size_t consumed) {
             REQUIRE(!error_code);
             auto &cb = callbacks[order];

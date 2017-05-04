@@ -20,6 +20,11 @@
 
 namespace bredis {
 
+template <typename DynamicBuffer> struct to_iterator {
+    using iterator_t = boost::asio::buffers_iterator<
+        typename DynamicBuffer::const_buffers_type, char>;
+};
+
 struct protocol_error_t {
     std::string what;
     bool operator==(const char *rhs) { return what == rhs; }

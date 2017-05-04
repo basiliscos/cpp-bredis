@@ -2,8 +2,8 @@
 
 #include <boost/asio/buffer.hpp>
 #include <boost/asio/streambuf.hpp>
-#include <vector>
 #include <sstream>
+#include <vector>
 
 #include "bredis/MarkerHelpers.hpp"
 #include "bredis/Protocol.hpp"
@@ -12,7 +12,6 @@
 
 namespace r = bredis;
 namespace asio = boost::asio;
-
 
 TEST_CASE("right consumption", "[protocol]") {
     using Buffer = std::vector<asio::const_buffers_1>;
@@ -56,10 +55,9 @@ TEST_CASE("right consumption", "[protocol]") {
             nullptr);
 }
 
-
 TEST_CASE("using strembuff", "[protocol]") {
     using Buffer = boost::asio::streambuf;
-    using Iterator = boost::asio::buffers_iterator<typename Buffer::const_buffers_type, char>;
+    using Iterator = typename r::to_iterator<Buffer>::iterator_t;
     using parsed_result_t = r::parse_result_t<Iterator>;
 
     std::string ok = "+OK\r\n";
@@ -69,7 +67,7 @@ TEST_CASE("using strembuff", "[protocol]") {
 
     auto const_buff = buff.data();
     auto from = Iterator::begin(const_buff), to = Iterator::end(const_buff);
-    auto parsed_result = r::Protocol::parse(from , to);
+    auto parsed_result = r::Protocol::parse(from, to);
 
     auto positive_parse_result =
         boost::get<r::positive_parse_result_t<Iterator>>(parsed_result);

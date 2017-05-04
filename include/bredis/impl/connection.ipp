@@ -43,8 +43,7 @@ void Connection<NextLayer>::async_read(DynamicBuffer &rx_buff,
     namespace asio = boost::asio;
     namespace sys = boost::system;
     using boost::asio::async_read_until;
-    using Iterator = boost::asio::buffers_iterator<
-        typename DynamicBuffer::const_buffers_type, char>;
+    using Iterator = typename to_iterator<DynamicBuffer>::iterator_t;
 
     async_read_until(
         stream_, rx_buff, MatchResult<Iterator>(replies_count),
@@ -74,7 +73,6 @@ void Connection<NextLayer>::async_read(DynamicBuffer &rx_buff,
                     read_callback(parse_error_code, std::move(result), 0);
                     return;
                 }
-                auto *nod = boost::get<no_enogh_data_t>(&parse_result);
                 auto &positive_result =
                     boost::get<positive_parse_result_t<Iterator>>(parse_result);
                 results.elements.emplace_back(positive_result.result);
@@ -90,7 +88,6 @@ void Connection<NextLayer>::async_read(DynamicBuffer &rx_buff,
         });
 }
 
-#if 0
 template <typename NextLayer>
 void Connection<NextLayer>::write(const command_wrapper_t &command,
                                   boost::system::error_code &ec) {
@@ -111,35 +108,38 @@ void Connection<NextLayer>::write(const command_wrapper_t &command) {
 
 template <typename NextLayer>
 template <typename DynamicBuffer>
-positive_parse_result_t
+positive_parse_result_t<typename to_iterator<DynamicBuffer>::iterator_t>
 Connection<NextLayer>::read(DynamicBuffer &rx_buff,
                             boost::system::error_code &ec) {
     namespace asio = boost::asio;
     using boost::asio::read_until;
+    using Iterator = typename to_iterator<DynamicBuffer>::iterator_t;
+    using result_t = positive_parse_result_t<
+        typename to_iterator<DynamicBuffer>::iterator_t>;
 
-    auto rx_bytes = read_until(stream_, rx_buff, MatchResult(1), ec);
+    auto rx_bytes = read_until(stream_, rx_buff, MatchResult<Iterator>(1), ec);
     if (ec) {
-        return positive_parse_result_t{{}, 0};
+        return result_t{{}, 0};
     }
 
-    const auto char_ptr =
-        boost::asio::buffer_cast<const char *>(rx_buff.data());
-    auto size = rx_buff.size();
-    string_t data(char_ptr, size);
+    auto const_buff = rx_buff.data();
+    auto begin = Iterator::begin(const_buff);
+    auto end = Iterator::end(const_buff);
 
-    auto parse_result = Protocol::parse(data);
+    auto parse_result = Protocol::parse(begin, end);
+
     auto *parse_error = boost::get<protocol_error_t>(&parse_result);
     if (parse_error) {
-        // BREDIS_LOG_DEBUG("protocol error: " << parse_error->what);
         ec = Error::make_error_code(bredis_errors::protocol_error);
-        return positive_parse_result_t{{}, 0};
+        return result_t{};
     }
-    return boost::get<positive_parse_result_t>(parse_result);
+    return boost::get<positive_parse_result_t<Iterator>>(parse_result);
 }
 
 template <typename NextLayer>
 template <typename DynamicBuffer>
-positive_parse_result_t Connection<NextLayer>::read(DynamicBuffer &rx_buff) {
+positive_parse_result_t<typename to_iterator<DynamicBuffer>::iterator_t>
+Connection<NextLayer>::read(DynamicBuffer &rx_buff) {
     namespace asio = boost::asio;
 
     boost::system::error_code ec;
@@ -149,6 +149,5 @@ positive_parse_result_t Connection<NextLayer>::read(DynamicBuffer &rx_buff) {
     }
     return result;
 }
-#endif
 
 } // namespace bredis

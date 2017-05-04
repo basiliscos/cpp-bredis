@@ -3,8 +3,6 @@
 #include "EmptyPort.hpp"
 #include "TestServer.hpp"
 #include "catch.hpp"
-#include "SocketWithLogging.hpp"
-
 
 #include <boost/asio.hpp>
 #include <cstdio>
@@ -13,6 +11,9 @@
 #include <vector>
 
 #include "bredis/Connection.hpp"
+#include "bredis/MarkerHelpers.hpp"
+
+#include "SocketWithLogging.hpp"
 
 namespace r = bredis;
 namespace asio = boost::asio;
@@ -32,11 +33,16 @@ TEST_CASE("ping", "[connection]") {
 #else
     using next_layer_t = socket_t;
 #endif
+    using Buffer = boost::asio::streambuf;
+    using Iterator =
+        boost::asio::buffers_iterator<typename Buffer::const_buffers_type,
+                                      char>;
+    using Marker = r::markers::redis_result_t<Iterator>;
 
     using result_t = void;
     using read_callback_t =
         std::function<void(const boost::system::error_code &error_code,
-                           r::redis_result_t &&r, size_t consumed)>;
+                           Marker &&r, size_t consumed)>;
 
     std::chrono::nanoseconds sleep_delay(1);
 
@@ -65,34 +71,37 @@ TEST_CASE("ping", "[connection]") {
     socket_t socket(io_service, end_point.protocol());
     socket.connect(end_point);
 
-    std::vector<std::string> results;
     r::Connection<next_layer_t> c(std::move(socket));
     std::promise<result_t> completion_promise;
     std::future<result_t> completion_future = completion_promise.get_future();
-    boost::asio::streambuf rx_buff;
+    Buffer rx_buff;
 
-    read_callback_t read_callback =
-        [&](const auto &error_code, r::redis_result_t &&r, size_t consumed) {
-            REQUIRE(!error_code);
-            auto &reply_ref = boost::get<r::string_holder_t>(r).str;
-            std::string reply_str(reply_ref.cbegin(), reply_ref.cend());
-            results.emplace_back(reply_str);
-            BREDIS_LOG_DEBUG("callback, size: " << results.size());
-            if (results.size() == count) {
-                completion_promise.set_value();
-            } else {
-                c.async_read(rx_buff, read_callback);
-            }
-        };
+    read_callback_t read_callback = [&](const auto &error_code, Marker &&r,
+                                        size_t consumed) {
+        REQUIRE(!error_code);
+
+        auto str =
+            boost::apply_visitor(r::marker_helpers::stringizer<Iterator>(), r);
+        BREDIS_LOG_DEBUG("result: " << str);
+
+        auto equality = r::marker_helpers::equality<Iterator>("PONG");
+        auto &results = boost::get<r::markers::array_holder_t<Iterator>>(r);
+        BREDIS_LOG_DEBUG("callback, size: " << results.elements.size());
+        REQUIRE(results.elements.size() == count);
+
+        for (const auto &v : results.elements) {
+            REQUIRE(boost::apply_visitor(equality, v));
+        }
+        completion_promise.set_value();
+    };
 
     c.async_write(cmd, [&](const auto &error_code) {
         REQUIRE(!error_code);
-        c.async_read(rx_buff, read_callback);
+        c.async_read(rx_buff, read_callback, count);
     });
 
     while (completion_future.wait_for(sleep_delay) !=
            std::future_status::ready) {
         io_service.run_one();
     }
-    REQUIRE(results.size() == count);
 };

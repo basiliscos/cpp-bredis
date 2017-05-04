@@ -50,18 +50,18 @@ template <typename NextLayer> class Connection {
     template <typename ReadCallback, typename DynamicBuffer>
     void async_read(DynamicBuffer &rx_buff, ReadCallback read_callback,
                     std::size_t replies_count = 1);
-#if 0
 
     /* synchronous interface */
     void write(const command_wrapper_t &command);
     void write(const command_wrapper_t &command, boost::system::error_code &ec);
 
     template <typename DynamicBuffer>
-    positive_parse_result_t read(DynamicBuffer &rx_buff);
+    positive_parse_result_t<typename to_iterator<DynamicBuffer>::iterator_t>
+    read(DynamicBuffer &rx_buff);
+
     template <typename DynamicBuffer>
-    positive_parse_result_t read(DynamicBuffer &rx_buff,
-                                 boost::system::error_code &ec);
-#endif
+    positive_parse_result_t<typename to_iterator<DynamicBuffer>::iterator_t>
+    read(DynamicBuffer &rx_buff, boost::system::error_code &ec);
 };
 
 } // namespace bredis
