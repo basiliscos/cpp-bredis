@@ -27,6 +27,8 @@ addons:
 script:
     - make
     - make test
+    - if [ "$CXX" = "g++" ]; then bredis_coverage; bash <(curl -s https://codecov.io/bash) -X lcov; fi
+
 
 install:
     - if [ "$CXX" = "g++" ]; then export CXX="g++-4.9"; fi
