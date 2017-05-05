@@ -1,5 +1,3 @@
-#define CATCH_CONFIG_MAIN
-
 #include <boost/asio/buffer.hpp>
 #include <vector>
 

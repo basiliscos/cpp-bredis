@@ -1,5 +1,3 @@
-#define CATCH_CONFIG_MAIN
-
 #include "EmptyPort.hpp"
 #include "TestServer.hpp"
 #include "catch.hpp"
@@ -9,6 +7,7 @@
 #include <future>
 #include <iostream>
 #include <vector>
+#include <fstream>
 
 #include "bredis/Connection.hpp"
 #include "bredis/MarkerHelpers.hpp"
@@ -50,7 +49,7 @@ TEST_CASE("ping", "[connection]") {
     tmpfile_holder_t redis_config(std::tmpnam(nullptr));
     auto redis_socket = std::tmpnam(nullptr);
     {
-        std::ofstream redis_out(redis_config.filename_);
+        std::ofstream redis_out {redis_config.filename_};
         redis_out << "port " << port << "\n";
         redis_out << "unixsocket " << redis_socket << "\n";
     }

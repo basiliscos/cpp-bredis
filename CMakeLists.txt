@@ -1,6 +1,15 @@
 cmake_minimum_required(VERSION 3.0)
 project (bredis)
 
+set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/CMakeModules)
+if(CMAKE_COMPILER_IS_GNUCXX)
+    include(CodeCoverage)
+    set(CMAKE_CXX_FLAGS "-g -O0 -fprofile-arcs -ftest-coverage")
+    set(CMAKE_C_FLAGS "-g -O0 -fprofile-arcs -ftest-coverage")
+    set(LCOV_REMOVE_EXTRA "'${PROJECT_SOURCE_DIR}/t/*'")
+    setup_target_for_coverage(${PROJECT_NAME}_coverage ctest coverage)
+endif()
+
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -15,14 +24,15 @@ find_package(
 )
 include_directories(${bredis_SOURCE_DIR}/include ${Boost_INCLUDE_DIRS})
 
-set(LINK_DEPENDENCIES pthread ${Boost_LIBRARIES})
+add_library(catch_lib t/tests-main.cpp)
+set(LINK_DEPENDENCIES pthread ${Boost_LIBRARIES} catch_lib)
 
 add_executable(t-05-protocol t/05-protocol.cpp)
 target_link_libraries(t-05-protocol ${LINK_DEPENDENCIES})
 add_test("t-05-protocol" t-05-protocol)
 
 add_executable(t-06-fragmented-buffer t/06-fragmented-buffer.cpp)
-target_link_libraries(t-05-protocol ${LINK_DEPENDENCIES})
+target_link_libraries(t-06-fragmented-buffer ${LINK_DEPENDENCIES})
 add_test("t-06-fragmented-buffer" t-06-fragmented-buffer)
 
 add_executable(t-07-extract t/07-extract.cpp)
