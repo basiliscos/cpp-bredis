@@ -94,7 +94,7 @@ TEST_CASE("ping", "[connection]") {
         completion_promise.set_value();
     };
 
-    c.async_write(cmd, [&](const auto &error_code) {
+    c.async_write(cmd, [&](const auto &error_code, auto bytes_transferred) {
         REQUIRE(!error_code);
         c.async_read(rx_buff, read_callback, count);
     });

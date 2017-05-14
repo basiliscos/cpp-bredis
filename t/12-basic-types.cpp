@@ -121,7 +121,7 @@ TEST_CASE("ping", "[connection]") {
         };
 
     c.async_write(r::command_wrapper_t(cmds_container),
-                  [&](const auto &error_code) {
+                  [&](const auto &error_code, auto bytes_transferred) {
                       REQUIRE(!error_code);
                       c.async_read(rx_buff, generic_callback);
                   });

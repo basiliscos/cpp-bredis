@@ -17,6 +17,8 @@
 #include <vector>
 
 #include <boost/asio.hpp>
+#include <boost/asio/async_result.hpp>
+#include <boost/asio/handler_type.hpp>
 #include <boost/utility/string_ref.hpp>
 
 #include "Command.hpp"
@@ -44,12 +46,19 @@ template <typename NextLayer> class Connection {
 
     /* asynchronous interface */
     template <typename WriteCallback>
-    void async_write(const command_wrapper_t &command,
-                     WriteCallback write_callback);
+    typename ::boost::asio::async_result<typename boost::asio::handler_type<
+        WriteCallback,
+        void(const boost::system::error_code &, std::size_t)>::type>::type
+    async_write(const command_wrapper_t &command, WriteCallback write_callback);
 
     template <typename ReadCallback, typename DynamicBuffer>
-    void async_read(DynamicBuffer &rx_buff, ReadCallback read_callback,
-                    std::size_t replies_count = 1);
+    typename ::boost::asio::async_result<typename ::boost::asio::handler_type<
+        ReadCallback, void(const boost::system::error_code &,
+                           markers::redis_result_t<typename to_iterator<
+                               DynamicBuffer>::iterator_t> &&,
+                           std::size_t)>::type>::type
+    async_read(DynamicBuffer &rx_buff, ReadCallback read_callback,
+               std::size_t replies_count = 1);
 
     /* synchronous interface */
     void write(const command_wrapper_t &command);

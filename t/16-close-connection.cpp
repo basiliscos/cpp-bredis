@@ -66,7 +66,7 @@ TEST_CASE("close-afrer-read", "[connection]") {
     std::future<result_t> completion_future = completion_promise.get_future();
 
     boost::asio::streambuf rx_buff;
-    c.async_write("ping", [&](const auto &error_code) {
+    c.async_write("ping", [&](const auto &error_code, auto bytes_transferred) {
         REQUIRE(!error_code);
         c.async_read(rx_buff,
                      [&](const auto &error_code, Marker &&r, size_t consumed) {
@@ -124,7 +124,7 @@ TEST_CASE("close-before-write", "[connection]") {
     std::future<result_t> completion_future = completion_promise.get_future();
 
     Buffer rx_buff;
-    c.async_write("ping", [&](const auto &error_code) {
+    c.async_write("ping", [&](const auto &error_code, auto bytes_transferred) {
         REQUIRE(!error_code);
         c.async_read(
             rx_buff, [&](const auto &error_code, Marker &&r, size_t consumed) {

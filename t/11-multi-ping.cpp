@@ -29,7 +29,7 @@ TEST_CASE("ping", "[connection]") {
 
     using result_t = void;
     using write_callback_t =
-        std::function<void(const boost::system::error_code &error_code)>;
+        std::function<void(const boost::system::error_code &error_code, std::size_t bytes_transferred)>;
     using read_callback_t = std::function<void(
         const boost::system::error_code &error_code,
         r::markers::redis_result_t<Iterator> &&r, size_t consumed)>;
@@ -76,7 +76,7 @@ TEST_CASE("ping", "[connection]") {
         };
 
     write_callback_t write_callback =
-        [&](const boost::system::error_code &error_code) {
+        [&](const boost::system::error_code &error_code, auto bytes_transferred) {
             BREDIS_LOG_DEBUG("write_callback");
             REQUIRE(!error_code);
         };

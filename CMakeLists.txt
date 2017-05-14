@@ -78,3 +78,7 @@ add_test("t-18-subscription" t-18-subscription)
 add_executable(t-19-transaction t/19-transaction.cpp)
 target_link_libraries(t-19-transaction ${LINK_DEPENDENCIES})
 add_test("t-19-transaction" t-19-transaction)
+
+#add_executable(t-20-promise t/20-promise.cpp)
+#target_link_libraries(t-20-promise ${LINK_DEPENDENCIES})
+#add_test("t-20-promise" t-20-promise)

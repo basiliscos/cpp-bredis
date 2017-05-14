@@ -16,42 +16,67 @@ namespace bredis {
 
 template <typename NextLayer>
 template <typename WriteCallback>
-void Connection<NextLayer>::async_write(const command_wrapper_t &command,
-                                        WriteCallback write_callback) {
+typename ::boost::asio::async_result<typename ::boost::asio::handler_type<
+    WriteCallback,
+    void(const boost::system::error_code &, std::size_t)>::type>::type
+Connection<NextLayer>::async_write(const command_wrapper_t &command,
+                                   WriteCallback write_callback) {
     namespace asio = boost::asio;
     namespace sys = boost::system;
     using boost::asio::async_write;
+    using real_handler_t =
+        typename asio::handler_type<WriteCallback, void(const sys::error_code &,
+                                                        std::size_t)>::type;
+
+    real_handler_t real_handler(std::forward<WriteCallback>(write_callback));
 
     auto str = std::make_shared<std::string>(
         boost::apply_visitor(command_serializer_visitor(), command));
     auto str_ptr = str.get();
     auto const output_buf = asio::buffer(str_ptr->c_str(), str_ptr->size());
 
+    asio::async_result<real_handler_t> result(real_handler);
+
     async_write(stream_, output_buf,
-                [str, write_callback](const sys::error_code &error_code,
-                                      std::size_t bytes_transferred) {
-                    write_callback(error_code);
+                [str, real_handler](const sys::error_code &error_code,
+                                    std::size_t bytes_transferred) {
+                    real_handler(error_code, bytes_transferred);
                 });
+
+    return result.get();
 }
 
 template <typename NextLayer>
 template <typename ReadCallback, typename DynamicBuffer>
-void Connection<NextLayer>::async_read(DynamicBuffer &rx_buff,
-                                       ReadCallback read_callback,
-                                       std::size_t replies_count) {
+typename ::boost::asio::async_result<typename ::boost::asio::handler_type<
+    ReadCallback, void(const boost::system::error_code &,
+                       markers::redis_result_t<
+                           typename to_iterator<DynamicBuffer>::iterator_t> &&,
+                       std::size_t)>::type>::type
+Connection<NextLayer>::async_read(DynamicBuffer &rx_buff,
+                                  ReadCallback read_callback,
+                                  std::size_t replies_count) {
 
     namespace asio = boost::asio;
     namespace sys = boost::system;
     using boost::asio::async_read_until;
     using Iterator = typename to_iterator<DynamicBuffer>::iterator_t;
+    using real_handler_t =
+        typename asio::handler_type<ReadCallback,
+                                    void(const boost::system::error_code &,
+                                         markers::redis_result_t<Iterator> &&,
+                                         std::size_t)>::type;
+
+    real_handler_t real_handler(std::forward<ReadCallback>(read_callback));
+    asio::async_result<real_handler_t> result(real_handler);
 
     async_read_until(
         stream_, rx_buff, MatchResult<Iterator>(replies_count),
-        [read_callback, &rx_buff, replies_count](
+        [real_handler, &rx_buff, replies_count](
             const sys::error_code &error_code, std::size_t bytes_transferred) {
             markers::redis_result_t<Iterator> result;
             if (error_code) {
-                read_callback(error_code, std::move(result), 0);
+                real_handler(error_code, std::move(result), 0);
                 return;
             }
             auto const_buff = rx_buff.data();
@@ -70,7 +95,7 @@ void Connection<NextLayer>::async_read(DynamicBuffer &rx_buff,
                 if (parse_error) {
                     auto parse_error_code =
                         Error::make_error_code(bredis_errors::protocol_error);
-                    read_callback(parse_error_code, std::move(result), 0);
+                    real_handler(parse_error_code, std::move(result), 0);
                     return;
                 }
                 auto &positive_result =
@@ -80,12 +105,14 @@ void Connection<NextLayer>::async_read(DynamicBuffer &rx_buff,
             } while (results.elements.size() < replies_count);
 
             if (replies_count == 1) {
-                read_callback(ec, std::move(results.elements[0]),
-                              cumulative_consumption);
+                real_handler(ec, std::move(results.elements[0]),
+                             cumulative_consumption);
             } else {
-                read_callback(ec, std::move(results), cumulative_consumption);
+                real_handler(ec, std::move(results), cumulative_consumption);
             }
         });
+
+    return result.get();
 }
 
 template <typename NextLayer>

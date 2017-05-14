@@ -85,7 +85,7 @@ TEST_CASE("transaction", "[connection]") {
     };
 
     c.async_read(rx_buff, read_callback, tx_commands.size());
-    c.async_write(cmd, [&](const auto &error_code) { REQUIRE(!error_code); });
+    c.async_write(cmd, [&](const auto &error_code, auto bytes_transferred) { REQUIRE(!error_code); });
 
     while (completion_future.wait_for(sleep_delay) !=
            std::future_status::ready) {
