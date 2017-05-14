@@ -3,6 +3,7 @@ Boost::ASIO low-level redis client (connector)
 
 [![Travis](https://img.shields.io/travis/basiliscos/cpp-bredis.svg)]()
 [![license](https://img.shields.io/github/license/basiliscos/cpp-bredis.svg)]()
+[![Coveralls](https://img.shields.io/coveralls/basiliscos/cpp-bredis.svg)]()
 
 ## Features
 
