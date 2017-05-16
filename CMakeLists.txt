@@ -17,12 +17,18 @@ include (CTest)
 enable_testing()
 
 add_definitions(-DBOOST_ERROR_CODE_HEADER_ONLY)
-#add_definitions(-DBREDIS_DEBUG)
+add_definitions(-DBREDIS_DEBUG)
 
 find_package(
     Boost
+    COMPONENTS
+        coroutine
+        context
+    REQUIRED
 )
 include_directories(${bredis_SOURCE_DIR}/include ${Boost_INCLUDE_DIRS})
+MESSAGE(STATUS "boost inc: " ${Boost_INCLUDE_DIRS})
+MESSAGE(STATUS "boost libs: " ${Boost_LIBRARIES})
 
 add_library(catch_lib t/tests-main.cpp)
 set(LINK_DEPENDENCIES pthread ${Boost_LIBRARIES} catch_lib)
@@ -79,6 +85,6 @@ add_executable(t-19-transaction t/19-transaction.cpp)
 target_link_libraries(t-19-transaction ${LINK_DEPENDENCIES})
 add_test("t-19-transaction" t-19-transaction)
 
-add_executable(t-20-promise t/20-promise.cpp)
-target_link_libraries(t-20-promise ${LINK_DEPENDENCIES})
-add_test("t-20-promise" t-20-promise)
+#add_executable(t-20-promise t/20-promise.cpp)
+#target_link_libraries(t-20-promise ${LINK_DEPENDENCIES})
+#add_test("t-20-promise" t-20-promise)

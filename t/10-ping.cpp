@@ -47,6 +47,7 @@ TEST_CASE("ping", "[connection]") {
     Buffer rx_buff;
 
     c.async_write("ping", [&](const auto &error_code, auto bytes_transferred) {
+        REQUIRE(!error_code);
         c.async_read(rx_buff,
                      [&](const auto &error_code, auto &&r, size_t consumed) {
                          completion_promise.set_value(r);

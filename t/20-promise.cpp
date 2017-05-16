@@ -1,5 +1,6 @@
 #include <boost/asio.hpp>
 #include <boost/asio/use_future.hpp>
+//#include <boost/asio/spawn.hpp>
 #include <future>
 
 #include "EmptyPort.hpp"
@@ -43,8 +44,17 @@ TEST_CASE("ping", "[connection]") {
 
     r::Connection<next_layer_t> c(std::move(socket));
 
-    auto future_write = c.async_write("ping", asio::use_future);
+    /*
+    boost::asio::spawn(io_service, [&] (boost::asio::yield_context yield) mutable {
+        boost::system::error_code error_code;
+        auto future_write = c.async_write("ping", yield[error_code]);
+        REQUIRE(!error_code);
 
+    });
+
+    io_service.run();
+    */
+    auto fut = c.async_write("ping", asio::use_future);
 
 /*
     std::promise<result_t> completion_promise;

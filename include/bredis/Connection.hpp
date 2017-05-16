@@ -46,9 +46,7 @@ template <typename NextLayer> class Connection {
 
     /* asynchronous interface */
     template <typename WriteCallback>
-    typename ::boost::asio::async_result<typename boost::asio::handler_type<
-        WriteCallback,
-        void(const boost::system::error_code &, std::size_t)>::type>::type
+    BOOST_ASIO_INITFN_RESULT_TYPE(WriteCallback, void(boost::system::error_code, std::size_t))
     async_write(const command_wrapper_t &command, WriteCallback write_callback);
 
     template <typename ReadCallback, typename DynamicBuffer>
