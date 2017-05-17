@@ -17,7 +17,7 @@ include (CTest)
 enable_testing()
 
 add_definitions(-DBOOST_ERROR_CODE_HEADER_ONLY)
-add_definitions(-DBREDIS_DEBUG)
+#add_definitions(-DBREDIS_DEBUG)
 
 find_package(
     Boost
@@ -88,3 +88,8 @@ add_test("t-19-transaction" t-19-transaction)
 #add_executable(t-20-promise t/20-promise.cpp)
 #target_link_libraries(t-20-promise ${LINK_DEPENDENCIES})
 #add_test("t-20-promise" t-20-promise)
+
+add_executable(t-21-coroutine t/21-coroutine.cpp)
+target_link_libraries(t-21-coroutine ${LINK_DEPENDENCIES})
+add_test("t-21-coroutine" t-21-coroutine)
+

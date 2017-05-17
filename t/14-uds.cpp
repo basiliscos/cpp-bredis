@@ -4,10 +4,10 @@
 
 #include <boost/asio.hpp>
 #include <cstdio>
+#include <fstream>
 #include <future>
 #include <iostream>
 #include <vector>
-#include <fstream>
 
 #include "bredis/Connection.hpp"
 #include "bredis/MarkerHelpers.hpp"
@@ -49,7 +49,7 @@ TEST_CASE("ping", "[connection]") {
     tmpfile_holder_t redis_config(std::tmpnam(nullptr));
     auto redis_socket = std::tmpnam(nullptr);
     {
-        std::ofstream redis_out {redis_config.filename_};
+        std::ofstream redis_out{redis_config.filename_};
         redis_out << "port " << port << "\n";
         redis_out << "unixsocket " << redis_socket << "\n";
     }
@@ -73,7 +73,7 @@ TEST_CASE("ping", "[connection]") {
     r::Connection<next_layer_t> c(std::move(socket));
     std::promise<result_t> completion_promise;
     std::future<result_t> completion_future = completion_promise.get_future();
-    Buffer rx_buff;
+    Buffer rx_buff, tx_buff;
 
     read_callback_t read_callback = [&](const auto &error_code, Marker &&r,
                                         size_t consumed) {
@@ -94,10 +94,12 @@ TEST_CASE("ping", "[connection]") {
         completion_promise.set_value();
     };
 
-    c.async_write(cmd, [&](const auto &error_code, auto bytes_transferred) {
-        REQUIRE(!error_code);
-        c.async_read(rx_buff, read_callback, count);
-    });
+    c.async_write(tx_buff, cmd,
+                  [&](const auto &error_code, auto bytes_transferred) {
+                      REQUIRE(!error_code);
+                      tx_buff.consume(bytes_transferred);
+                      c.async_read(rx_buff, read_callback, count);
+                  });
 
     while (completion_future.wait_for(sleep_delay) !=
            std::future_status::ready) {

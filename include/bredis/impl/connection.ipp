@@ -6,42 +6,47 @@
 //
 #pragma once
 
+#include "common.ipp"
 #include <algorithm>
 #include <cassert>
-#include <type_traits>
 #include <ostream>
-#include <sstream>
-#include "common.ipp"
+#include <type_traits>
 
 namespace bredis {
 
-template <typename Handler, typename Value>
-struct handler_frontend: Handler {
+template <typename Handler, typename Value> struct handler_frontend : Handler {
 
     Value v_;
 
-    template<typename BackendHandler>
-    handler_frontend(BackendHandler&& handler, Value&& v):
-        Handler(std::forward<BackendHandler>(handler)),
-        v_(std::forward<Value>(v)) {
-        }
+    template <typename BackendHandler>
+    handler_frontend(BackendHandler &&handler, Value &&v)
+        : Handler(std::forward<BackendHandler>(handler)),
+          v_(std::forward<Value>(v)) {}
 };
 
 template <typename NextLayer>
-template <typename WriteCallback>
-BOOST_ASIO_INITFN_RESULT_TYPE(WriteCallback, void(boost::system::error_code, std::size_t))
-Connection<NextLayer>::async_write(const command_wrapper_t &command,
+template <typename WriteCallback, typename DynamicBuffer>
+BOOST_ASIO_INITFN_RESULT_TYPE(WriteCallback,
+                              void(boost::system::error_code, std::size_t))
+Connection<NextLayer>::async_write(DynamicBuffer &tx_buff,
+                                   const command_wrapper_t &command,
                                    WriteCallback write_callback) {
     namespace asio = boost::asio;
     namespace sys = boost::system;
     using boost::asio::async_write;
-    using real_handler_t = typename asio::handler_type<typename std::decay<WriteCallback>::type, void(boost::system::error_code, std::size_t)>::type;
+    using real_handler_t =
+        typename asio::handler_type<typename std::decay<WriteCallback>::type,
+                                    void(boost::system::error_code,
+                                         std::size_t)>::type;
     using frontend_handler_t = handler_frontend<real_handler_t, std::string>;
 
-    auto str = boost::apply_visitor(command_serializer_visitor(), command);
-    frontend_handler_t frontend_handler{std::move(write_callback), std::move(str)};
-    asio::const_buffers_1 buff(frontend_handler.v_.c_str(), frontend_handler.v_.size());
-    return async_write(stream_, buff, frontend_handler);
+    std::ostream os(&tx_buff);
+    auto string = boost::apply_visitor(command_serializer_visitor(), command);
+    os.write(string.c_str(), string.size());
+    tx_buff.commit(string.size());
+
+    real_handler_t handler(std::forward<WriteCallback>(write_callback));
+    return async_write(stream_, tx_buff, handler);
 }
 
 template <typename NextLayer>

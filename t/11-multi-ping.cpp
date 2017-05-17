@@ -29,14 +29,15 @@ TEST_CASE("ping", "[connection]") {
 
     using result_t = void;
     using write_callback_t =
-        std::function<void(const boost::system::error_code &error_code, std::size_t bytes_transferred)>;
+        std::function<void(const boost::system::error_code &error_code,
+                           std::size_t bytes_transferred)>;
     using read_callback_t = std::function<void(
         const boost::system::error_code &error_code,
         r::markers::redis_result_t<Iterator> &&r, size_t consumed)>;
 
     std::chrono::nanoseconds sleep_delay(1);
 
-    auto count = 1000;
+    auto count = 1000000;
     r::single_command_t ping_cmd("ping");
     r::command_container_t ping_cmds_container;
     for (auto i = 0; i < count; ++i) {
@@ -59,7 +60,7 @@ TEST_CASE("ping", "[connection]") {
     std::promise<result_t> completion_promise;
     std::future<result_t> completion_future = completion_promise.get_future();
 
-    boost::asio::streambuf rx_buff;
+    Buffer tx_buff, rx_buff;
     read_callback_t read_callback =
         [&](const boost::system::error_code &error_code,
             r::markers::redis_result_t<Iterator> &&r, size_t consumed) {
@@ -75,14 +76,19 @@ TEST_CASE("ping", "[connection]") {
             rx_buff.consume(consumed);
         };
 
-    write_callback_t write_callback =
-        [&](const boost::system::error_code &error_code, auto bytes_transferred) {
-            BREDIS_LOG_DEBUG("write_callback");
+    write_callback_t write_callback = [&](
+        const boost::system::error_code &error_code, auto bytes_transferred) {
+        BREDIS_LOG_DEBUG("write_callback");
+        if (error_code) {
+            BREDIS_LOG_DEBUG("error: " << error_code.message());
             REQUIRE(!error_code);
-        };
+        }
+        REQUIRE(!error_code);
+        tx_buff.consume(bytes_transferred);
+    };
 
     c.async_read(rx_buff, read_callback, count);
-    c.async_write(cmd, write_callback);
+    c.async_write(tx_buff, cmd, write_callback);
 
     while (completion_future.wait_for(sleep_delay) !=
            std::future_status::ready) {

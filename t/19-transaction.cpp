@@ -56,7 +56,7 @@ TEST_CASE("transaction", "[connection]") {
     socket.connect(end_point);
     r::Connection<next_layer_t> c(std::move(socket));
 
-    Buffer rx_buff;
+    Buffer rx_buff, tx_buff;
     read_callback_t read_callback = [&](
         const boost::system::error_code &error_code, Marker &&r,
         size_t consumed) {
@@ -85,7 +85,11 @@ TEST_CASE("transaction", "[connection]") {
     };
 
     c.async_read(rx_buff, read_callback, tx_commands.size());
-    c.async_write(cmd, [&](const auto &error_code, auto bytes_transferred) { REQUIRE(!error_code); });
+    c.async_write(tx_buff, cmd,
+                  [&](const auto &error_code, auto bytes_transferred) {
+                      tx_buff.consume(bytes_transferred);
+                      REQUIRE(!error_code);
+                  });
 
     while (completion_future.wait_for(sleep_delay) !=
            std::future_status::ready) {

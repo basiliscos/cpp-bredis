@@ -53,7 +53,7 @@ TEST_CASE("ping", "[connection]") {
     std::future<result_t> completion_future = completion_promise.get_future();
 
     int order = 0;
-    Buffer rx_buff;
+    Buffer rx_buff, tx_buff;
 
     r::command_container_t cmds_container{
         r::single_command_t("LLEN", "x"),
@@ -120,9 +120,10 @@ TEST_CASE("ping", "[connection]") {
             c.async_read(rx_buff, generic_callback);
         };
 
-    c.async_write(r::command_wrapper_t(cmds_container),
+    c.async_write(tx_buff, r::command_wrapper_t(cmds_container),
                   [&](const auto &error_code, auto bytes_transferred) {
                       REQUIRE(!error_code);
+                      tx_buff.consume(bytes_transferred);
                       c.async_read(rx_buff, generic_callback);
                   });
 

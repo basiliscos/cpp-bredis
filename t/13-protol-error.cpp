@@ -69,17 +69,19 @@ TEST_CASE("protocol-error", "[connection]") {
     std::promise<result_t> completion_promise;
     std::future<result_t> completion_future = completion_promise.get_future();
 
-    Buffer rx_buff;
-    c.async_write("ping", [&](const auto &error_code, auto bytes_transferred) {
-        REQUIRE(!error_code);
-        c.async_read(rx_buff,
-                     [&](const auto &error_code, Marker &&r, size_t consumed) {
-                         REQUIRE(error_code);
-                         REQUIRE(error_code.message() == "protocol error");
-                         completion_promise.set_value();
+    Buffer rx_buff, tx_buff;
+    c.async_write(tx_buff, "ping",
+                  [&](const auto &error_code, auto bytes_transferred) {
+                      REQUIRE(!error_code);
+                      tx_buff.consume(bytes_transferred);
+                      c.async_read(rx_buff, [&](const auto &error_code,
+                                                Marker &&r, size_t consumed) {
+                          REQUIRE(error_code);
+                          REQUIRE(error_code.message() == "protocol error");
+                          completion_promise.set_value();
 
-                     });
-    });
+                      });
+                  });
     while (completion_future.wait_for(sleep_delay) !=
            std::future_status::ready) {
         io_service.run_one();

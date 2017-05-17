@@ -1,6 +1,5 @@
 #include <boost/asio.hpp>
 #include <boost/asio/use_future.hpp>
-//#include <boost/asio/spawn.hpp>
 #include <future>
 
 #include "EmptyPort.hpp"
@@ -43,40 +42,33 @@ TEST_CASE("ping", "[connection]") {
     socket.connect(end_point);
 
     r::Connection<next_layer_t> c(std::move(socket));
+    Buffer rx_buff, tx_buff;
+
+    auto fut = c.async_write(tx_buff, "ping", asio::use_future);
 
     /*
-    boost::asio::spawn(io_service, [&] (boost::asio::yield_context yield) mutable {
-        boost::system::error_code error_code;
-        auto future_write = c.async_write("ping", yield[error_code]);
-        REQUIRE(!error_code);
+        std::promise<result_t> completion_promise;
+        std::future<result_t> completion_future =
+       completion_promise.get_future();
 
-    });
+        Buffer rx_buff;
 
-    io_service.run();
+        c.async_write("ping", [&](const auto &error_code) {
+            c.async_read(rx_buff,
+                         [&](const auto &error_code, auto &&r, size_t consumed)
+       {
+                             completion_promise.set_value(r);
+                         });
+        });
+
+        while (completion_future.wait_for(sleep_delay) !=
+               std::future_status::ready) {
+            io_service.run_one();
+        }
+
+        auto result = completion_future.get();
+        auto extract = boost::apply_visitor(r::extractor<Iterator>(), result);
+        auto &reply_str = boost::get<r::extracts::string_t>(extract);
+        REQUIRE(reply_str.str == "PONG");
     */
-    auto fut = c.async_write("ping", asio::use_future);
-
-/*
-    std::promise<result_t> completion_promise;
-    std::future<result_t> completion_future = completion_promise.get_future();
-
-    Buffer rx_buff;
-
-    c.async_write("ping", [&](const auto &error_code) {
-        c.async_read(rx_buff,
-                     [&](const auto &error_code, auto &&r, size_t consumed) {
-                         completion_promise.set_value(r);
-                     });
-    });
-
-    while (completion_future.wait_for(sleep_delay) !=
-           std::future_status::ready) {
-        io_service.run_one();
-    }
-
-    auto result = completion_future.get();
-    auto extract = boost::apply_visitor(r::extractor<Iterator>(), result);
-    auto &reply_str = boost::get<r::extracts::string_t>(extract);
-    REQUIRE(reply_str.str == "PONG");
-*/
 };
