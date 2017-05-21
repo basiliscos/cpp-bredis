@@ -26,12 +26,11 @@ TEST_CASE("transaction", "[connection]") {
     using Iterator =
         boost::asio::buffers_iterator<typename Buffer::const_buffers_type,
                                       char>;
-    using Marker = r::markers::redis_result_t<Iterator>;
+    using ParseResult = r::positive_parse_result_t<Iterator>;
 
     using result_t = void;
-    using read_callback_t =
-        std::function<void(const boost::system::error_code &error_code,
-                           Marker &&r, size_t consumed)>;
+    using read_callback_t = std::function<void(
+        const boost::system::error_code &error_code, ParseResult &&r)>;
 
     std::chrono::milliseconds sleep_delay(1);
 
@@ -58,11 +57,11 @@ TEST_CASE("transaction", "[connection]") {
 
     Buffer rx_buff, tx_buff;
     read_callback_t read_callback = [&](
-        const boost::system::error_code &error_code, Marker &&r,
-        size_t consumed) {
+        const boost::system::error_code &error_code, ParseResult &&r) {
         REQUIRE(!error_code);
 
-        auto &replies = boost::get<r::markers::array_holder_t<Iterator>>(r);
+        auto &replies =
+            boost::get<r::markers::array_holder_t<Iterator>>(r.result);
         REQUIRE(replies.elements.size() == tx_commands.size());
 
         auto eq_OK = r::marker_helpers::equality<Iterator>("OK");
@@ -81,7 +80,7 @@ TEST_CASE("transaction", "[connection]") {
                                      tx_replies.elements[1]));
 
         completion_promise.set_value();
-        rx_buff.consume(consumed);
+        rx_buff.consume(r.consumed);
     };
 
     c.async_read(rx_buff, read_callback, tx_commands.size());

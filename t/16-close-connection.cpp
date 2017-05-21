@@ -26,7 +26,7 @@ TEST_CASE("close-afrer-read", "[connection]") {
     using Iterator =
         boost::asio::buffers_iterator<typename Buffer::const_buffers_type,
                                       char>;
-    using Marker = r::markers::redis_result_t<Iterator>;
+    using ParseResult = r::positive_parse_result_t<Iterator>;
 
     std::chrono::milliseconds sleep_delay(1);
 
@@ -66,17 +66,16 @@ TEST_CASE("close-afrer-read", "[connection]") {
     std::future<result_t> completion_future = completion_promise.get_future();
 
     Buffer rx_buff, tx_buff;
-    c.async_write(tx_buff, "ping",
-                  [&](const auto &error_code, auto bytes_transferred) {
-                      REQUIRE(!error_code);
-                      tx_buff.consume(bytes_transferred);
-                      c.async_read(rx_buff, [&](const auto &error_code,
-                                                Marker &&r, size_t consumed) {
-                          REQUIRE(error_code);
-                          REQUIRE(error_code.message() == "End of file");
-                          completion_promise.set_value();
-                      });
-                  });
+    c.async_write(
+        tx_buff, "ping", [&](const auto &error_code, auto bytes_transferred) {
+            REQUIRE(!error_code);
+            tx_buff.consume(bytes_transferred);
+            c.async_read(rx_buff, [&](const auto &error_code, ParseResult &&r) {
+                REQUIRE(error_code);
+                REQUIRE(error_code.message() == "End of file");
+                completion_promise.set_value();
+            });
+        });
 
     while (completion_future.wait_for(sleep_delay) !=
            std::future_status::ready) {
@@ -95,7 +94,7 @@ TEST_CASE("close-before-write", "[connection]") {
     using Iterator =
         boost::asio::buffers_iterator<typename Buffer::const_buffers_type,
                                       char>;
-    using Marker = r::markers::redis_result_t<Iterator>;
+    using ParseResult = r::positive_parse_result_t<Iterator>;
     using result_t = void;
 
     std::chrono::milliseconds sleep_delay(1);
@@ -130,8 +129,7 @@ TEST_CASE("close-before-write", "[connection]") {
         tx_buff, "ping", [&](const auto &error_code, auto bytes_transferred) {
             REQUIRE(!error_code);
             tx_buff.consume(bytes_transferred);
-            c.async_read(rx_buff, [&](const auto &error_code, Marker &&r,
-                                      size_t consumed) {
+            c.async_read(rx_buff, [&](const auto &error_code, ParseResult &&r) {
                 REQUIRE(error_code);
                 REQUIRE(error_code.message() == "Connection reset by peer");
                 completion_promise.set_value();

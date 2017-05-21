@@ -28,6 +28,9 @@
 
 namespace bredis {
 
+#define BREDIS_PARSE_RESULT(B)                                                 \
+    positive_parse_result_t<typename to_iterator<B>::iterator_t>
+
 template <typename NextLayer> class Connection {
 
   public:
@@ -52,11 +55,9 @@ template <typename NextLayer> class Connection {
                 WriteCallback write_callback);
 
     template <typename ReadCallback, typename DynamicBuffer>
-    typename ::boost::asio::async_result<typename ::boost::asio::handler_type<
-        ReadCallback, void(const boost::system::error_code &,
-                           markers::redis_result_t<typename to_iterator<
-                               DynamicBuffer>::iterator_t> &&,
-                           std::size_t)>::type>::type
+    BOOST_ASIO_INITFN_RESULT_TYPE(ReadCallback,
+                                  void(boost::system::error_code,
+                                       BREDIS_PARSE_RESULT(DynamicBuffer)))
     async_read(DynamicBuffer &rx_buff, ReadCallback read_callback,
                std::size_t replies_count = 1);
 

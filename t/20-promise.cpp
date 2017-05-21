@@ -26,7 +26,7 @@ TEST_CASE("ping", "[connection]") {
 #endif
     using Buffer = boost::asio::streambuf;
     using Iterator = typename r::to_iterator<Buffer>::iterator_t;
-    using result_t = r::markers::redis_result_t<Iterator>;
+    using ParseResult = r::positive_parse_result_t<Iterator>;
 
     std::chrono::milliseconds sleep_delay(1);
 
@@ -44,31 +44,19 @@ TEST_CASE("ping", "[connection]") {
     r::Connection<next_layer_t> c(std::move(socket));
     Buffer rx_buff, tx_buff;
 
-    auto fut = c.async_write(tx_buff, "ping", asio::use_future);
+    auto f_tx_consumed = c.async_write(tx_buff, "ping", asio::use_future);
+    auto f_parse_result = c.async_read(rx_buff, asio::use_future, 1);
 
-    /*
-        std::promise<result_t> completion_promise;
-        std::future<result_t> completion_future =
-       completion_promise.get_future();
+    std::thread thread([&io_service]() { io_service.run(); });
 
-        Buffer rx_buff;
+    REQUIRE(f_tx_consumed.get() > 0);
 
-        c.async_write("ping", [&](const auto &error_code) {
-            c.async_read(rx_buff,
-                         [&](const auto &error_code, auto &&r, size_t consumed)
-       {
-                             completion_promise.set_value(r);
-                         });
-        });
+    auto parse_result = f_parse_result.get();
+    auto extract =
+        boost::apply_visitor(r::extractor<Iterator>(), parse_result.result);
+    auto &reply_str = boost::get<r::extracts::string_t>(extract);
+    REQUIRE(reply_str.str == "PONG");
 
-        while (completion_future.wait_for(sleep_delay) !=
-               std::future_status::ready) {
-            io_service.run_one();
-        }
-
-        auto result = completion_future.get();
-        auto extract = boost::apply_visitor(r::extractor<Iterator>(), result);
-        auto &reply_str = boost::get<r::extracts::string_t>(extract);
-        REQUIRE(reply_str.str == "PONG");
-    */
+    io_service.stop();
+    thread.join();
 };

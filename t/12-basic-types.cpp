@@ -27,13 +27,12 @@ TEST_CASE("ping", "[connection]") {
     using Iterator =
         boost::asio::buffers_iterator<typename Buffer::const_buffers_type,
                                       char>;
-    using Marker = r::markers::redis_result_t<Iterator>;
+    using ParseResult = r::positive_parse_result_t<Iterator>;
     using Extractor = r::extractor<Iterator>;
 
     using result_t = void;
-    using read_callback_t =
-        std::function<void(const boost::system::error_code &error_code,
-                           Marker &&r, size_t consumed)>;
+    using read_callback_t = std::function<void(
+        const boost::system::error_code &error_code, ParseResult &&r)>;
 
     std::chrono::milliseconds sleep_delay(1);
 
@@ -64,41 +63,35 @@ TEST_CASE("ping", "[connection]") {
         r::single_command_t("time"),
     };
     std::vector<read_callback_t> callbacks{
-        [&](const boost::system::error_code &error_code, Marker &&r,
-            size_t consumed) {
-            auto extract = boost::apply_visitor(Extractor(), r);
+        [&](const boost::system::error_code &error_code, ParseResult &&r) {
+            auto extract = boost::apply_visitor(Extractor(), r.result);
             REQUIRE(boost::get<r::extracts::int_t>(extract) == 0);
             REQUIRE(order == 0);
         },
-        [&](const boost::system::error_code &error_code, Marker &&r,
-            size_t consumed) {
-            auto extract = boost::apply_visitor(Extractor(), r);
+        [&](const boost::system::error_code &error_code, ParseResult &&r) {
+            auto extract = boost::apply_visitor(Extractor(), r.result);
             REQUIRE(boost::get<r::extracts::nil_t>(&extract));
             REQUIRE(order == 1);
         },
-        [&](const boost::system::error_code &error_code, Marker &&r,
-            size_t consumed) {
-            auto extract = boost::apply_visitor(Extractor(), r);
+        [&](const boost::system::error_code &error_code, ParseResult &&r) {
+            auto extract = boost::apply_visitor(Extractor(), r.result);
             REQUIRE(boost::get<r::extracts::string_t>(extract).str == "OK");
             REQUIRE(order == 2);
         },
-        [&](const boost::system::error_code &error_code, Marker &&r,
-            size_t consumed) {
-            auto extract = boost::apply_visitor(Extractor(), r);
+        [&](const boost::system::error_code &error_code, ParseResult &&r) {
+            auto extract = boost::apply_visitor(Extractor(), r.result);
             REQUIRE(boost::get<r::extracts::string_t>(extract).str == "value");
             REQUIRE(order == 3);
         },
-        [&](const boost::system::error_code &error_code, Marker &&r,
-            size_t consumed) {
-            auto extract = boost::apply_visitor(Extractor(), r);
+        [&](const boost::system::error_code &error_code, ParseResult &&r) {
+            auto extract = boost::apply_visitor(Extractor(), r.result);
             REQUIRE(boost::get<r::extracts::error_t>(extract).str ==
                     "ERR wrong number of arguments for 'llen' command");
             REQUIRE(order == 4);
         },
-        [&](const boost::system::error_code &error_code, Marker &&r,
-            size_t consumed) {
+        [&](const boost::system::error_code &error_code, ParseResult &&r) {
             REQUIRE(order == 5);
-            auto extract = boost::apply_visitor(Extractor(), r);
+            auto extract = boost::apply_visitor(Extractor(), r.result);
             auto &arr = boost::get<r::extracts::array_holder_t>(extract);
             REQUIRE(arr.elements.size() == 2);
             auto &c1 = boost::get<r::extracts::string_t>(arr.elements[0]).str;
@@ -110,11 +103,11 @@ TEST_CASE("ping", "[connection]") {
         }};
 
     read_callback_t generic_callback =
-        [&](const boost::system::error_code &error_code, Marker &&r,
-            size_t consumed) {
+        [&](const boost::system::error_code &error_code, ParseResult &&r) {
             REQUIRE(!error_code);
             auto &cb = callbacks[order];
-            cb(error_code, std::move(r), consumed);
+            auto consumed = r.consumed;
+            cb(error_code, std::move(r));
             rx_buff.consume(consumed);
             ++order;
             c.async_read(rx_buff, generic_callback);

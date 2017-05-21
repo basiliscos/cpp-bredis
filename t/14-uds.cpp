@@ -36,12 +36,11 @@ TEST_CASE("ping", "[connection]") {
     using Iterator =
         boost::asio::buffers_iterator<typename Buffer::const_buffers_type,
                                       char>;
-    using Marker = r::markers::redis_result_t<Iterator>;
+    using ParseResult = r::positive_parse_result_t<Iterator>;
 
     using result_t = void;
-    using read_callback_t =
-        std::function<void(const boost::system::error_code &error_code,
-                           Marker &&r, size_t consumed)>;
+    using read_callback_t = std::function<void(
+        const boost::system::error_code &error_code, ParseResult &&r)>;
 
     std::chrono::nanoseconds sleep_delay(1);
 
@@ -75,16 +74,18 @@ TEST_CASE("ping", "[connection]") {
     std::future<result_t> completion_future = completion_promise.get_future();
     Buffer rx_buff, tx_buff;
 
-    read_callback_t read_callback = [&](const auto &error_code, Marker &&r,
-                                        size_t consumed) {
+    read_callback_t read_callback = [&](const auto &error_code,
+                                        ParseResult &&r) {
         REQUIRE(!error_code);
+        rx_buff.consume(r.consumed);
 
-        auto str =
-            boost::apply_visitor(r::marker_helpers::stringizer<Iterator>(), r);
+        auto str = boost::apply_visitor(
+            r::marker_helpers::stringizer<Iterator>(), r.result);
         BREDIS_LOG_DEBUG("result: " << str);
 
         auto equality = r::marker_helpers::equality<Iterator>("PONG");
-        auto &results = boost::get<r::markers::array_holder_t<Iterator>>(r);
+        auto &results =
+            boost::get<r::markers::array_holder_t<Iterator>>(r.result);
         BREDIS_LOG_DEBUG("callback, size: " << results.elements.size());
         REQUIRE(results.elements.size() == count);
 

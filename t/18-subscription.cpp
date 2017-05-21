@@ -28,12 +28,11 @@ TEST_CASE("subscription", "[connection]") {
     using Iterator =
         boost::asio::buffers_iterator<typename Buffer::const_buffers_type,
                                       char>;
-    using Marker = r::markers::redis_result_t<Iterator>;
+    using ParseResult = r::positive_parse_result_t<Iterator>;
     using Extractor = r::extractor<Iterator>;
 
-    using read_callback_t =
-        std::function<void(const boost::system::error_code &error_code,
-                           Marker &&r, size_t consumed)>;
+    using read_callback_t = std::function<void(
+        const boost::system::error_code &error_code, ParseResult &&r)>;
 
     std::chrono::milliseconds sleep_delay(1);
     uint16_t port = ep::get_random<ep::Kind::TCP>();
@@ -132,13 +131,14 @@ TEST_CASE("subscription", "[connection]") {
     r::Connection<next_layer_t> c(socket);
 
     read_callback_t notification_callback = [&](const boost::system::error_code,
-                                                Marker &&r, size_t consumed) {
+                                                ParseResult &&r) {
 #ifdef BREDIS_DEBUG
-        BREDIS_LOG_DEBUG("subscription callback " << boost::apply_visitor(
-                             r::marker_helpers::stringizer<Iterator>(), r));
+        BREDIS_LOG_DEBUG(
+            "subscription callback " << boost::apply_visitor(
+                r::marker_helpers::stringizer<Iterator>(), r.result));
 #endif
 
-        auto extract = boost::apply_visitor(Extractor(), r);
+        auto extract = boost::apply_visitor(Extractor(), r.result);
         r::extracts::array_holder_t array_reply =
             boost::get<r::extracts::array_holder_t>(extract);
         auto *type_reply =
@@ -160,7 +160,7 @@ TEST_CASE("subscription", "[connection]") {
             std::string payload(string_reply->str);
             messages.emplace_back(channel + ":" + payload);
         }
-        rx_buff.consume(consumed);
+        rx_buff.consume(r.consumed);
     };
     c.async_read(rx_buff, notification_callback);
 

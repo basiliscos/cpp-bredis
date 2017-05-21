@@ -14,16 +14,6 @@
 
 namespace bredis {
 
-template <typename Handler, typename Value> struct handler_frontend : Handler {
-
-    Value v_;
-
-    template <typename BackendHandler>
-    handler_frontend(BackendHandler &&handler, Value &&v)
-        : Handler(std::forward<BackendHandler>(handler)),
-          v_(std::forward<Value>(v)) {}
-};
-
 template <typename NextLayer>
 template <typename WriteCallback, typename DynamicBuffer>
 BOOST_ASIO_INITFN_RESULT_TYPE(WriteCallback,
@@ -34,11 +24,9 @@ Connection<NextLayer>::async_write(DynamicBuffer &tx_buff,
     namespace asio = boost::asio;
     namespace sys = boost::system;
     using boost::asio::async_write;
+    using Signature = void(boost::system::error_code, std::size_t);
     using real_handler_t =
-        typename asio::handler_type<typename std::decay<WriteCallback>::type,
-                                    void(boost::system::error_code,
-                                         std::size_t)>::type;
-    using frontend_handler_t = handler_frontend<real_handler_t, std::string>;
+        typename asio::handler_type<WriteCallback, Signature>::type;
 
     std::ostream os(&tx_buff);
     auto string = boost::apply_visitor(command_serializer_visitor(), command);
@@ -51,11 +39,9 @@ Connection<NextLayer>::async_write(DynamicBuffer &tx_buff,
 
 template <typename NextLayer>
 template <typename ReadCallback, typename DynamicBuffer>
-typename ::boost::asio::async_result<typename ::boost::asio::handler_type<
-    ReadCallback, void(const boost::system::error_code &,
-                       markers::redis_result_t<
-                           typename to_iterator<DynamicBuffer>::iterator_t> &&,
-                       std::size_t)>::type>::type
+BOOST_ASIO_INITFN_RESULT_TYPE(ReadCallback,
+                              void(const boost::system::error_code,
+                                   BREDIS_PARSE_RESULT(DynamicBuffer)))
 Connection<NextLayer>::async_read(DynamicBuffer &rx_buff,
                                   ReadCallback read_callback,
                                   std::size_t replies_count) {
@@ -64,58 +50,61 @@ Connection<NextLayer>::async_read(DynamicBuffer &rx_buff,
     namespace sys = boost::system;
     using boost::asio::async_read_until;
     using Iterator = typename to_iterator<DynamicBuffer>::iterator_t;
+    using Signature =
+        void(boost::system::error_code, BREDIS_PARSE_RESULT(DynamicBuffer));
     using real_handler_t =
-        typename asio::handler_type<ReadCallback,
-                                    void(const boost::system::error_code &,
-                                         markers::redis_result_t<Iterator> &&,
-                                         std::size_t)>::type;
+        typename asio::handler_type<ReadCallback, Signature>::type;
+    using result_t = ::boost::asio::async_result<real_handler_t>;
 
     real_handler_t real_handler(std::forward<ReadCallback>(read_callback));
-    asio::async_result<real_handler_t> result(real_handler);
+    asio::async_result<real_handler_t> async_result(real_handler);
 
-    async_read_until(
-        stream_, rx_buff, MatchResult<Iterator>(replies_count),
-        [real_handler, &rx_buff, replies_count](
-            const sys::error_code &error_code, std::size_t bytes_transferred) {
-            markers::redis_result_t<Iterator> result;
-            if (error_code) {
-                real_handler(error_code, std::move(result), 0);
+    async_read_until(stream_, rx_buff, MatchResult<Iterator>(replies_count), [
+        handler = std::move(real_handler), &rx_buff, replies_count
+    ](const sys::error_code &error_code, std::size_t bytes_transferred) {
+
+        real_handler_t real_handler(std::move(handler));
+        positive_parse_result_t<Iterator> result;
+
+        if (error_code) {
+            real_handler(error_code, std::move(result));
+            return;
+        }
+        auto const_buff = rx_buff.data();
+        auto begin = Iterator::begin(const_buff);
+        auto end = Iterator::end(const_buff);
+
+        markers::array_holder_t<Iterator> results;
+        results.elements.reserve(replies_count);
+        int32_t cumulative_consumption = 0;
+        boost::system::error_code ec;
+
+        do {
+            auto from = begin + cumulative_consumption;
+            auto parse_result = Protocol::parse(from, end);
+            auto *parse_error = boost::get<protocol_error_t>(&parse_result);
+            if (parse_error) {
+                auto parse_error_code =
+                    Error::make_error_code(bredis_errors::protocol_error);
+                real_handler(parse_error_code, std::move(result));
                 return;
             }
-            auto const_buff = rx_buff.data();
-            auto begin = Iterator::begin(const_buff);
-            auto end = Iterator::end(const_buff);
+            auto &positive_result =
+                boost::get<positive_parse_result_t<Iterator>>(parse_result);
+            results.elements.emplace_back(positive_result.result);
+            cumulative_consumption += positive_result.consumed;
+        } while (results.elements.size() < replies_count);
 
-            markers::array_holder_t<Iterator> results;
-            results.elements.reserve(replies_count);
-            size_t cumulative_consumption = 0;
-            boost::system::error_code ec;
-
-            do {
-                auto from = begin + cumulative_consumption;
-                auto parse_result = Protocol::parse(from, end);
-                auto *parse_error = boost::get<protocol_error_t>(&parse_result);
-                if (parse_error) {
-                    auto parse_error_code =
-                        Error::make_error_code(bredis_errors::protocol_error);
-                    real_handler(parse_error_code, std::move(result), 0);
-                    return;
-                }
-                auto &positive_result =
-                    boost::get<positive_parse_result_t<Iterator>>(parse_result);
-                results.elements.emplace_back(positive_result.result);
-                cumulative_consumption += positive_result.consumed;
-            } while (results.elements.size() < replies_count);
-
-            if (replies_count == 1) {
-                real_handler(ec, std::move(results.elements[0]),
-                             cumulative_consumption);
-            } else {
-                real_handler(ec, std::move(results), cumulative_consumption);
-            }
-        });
-
-    return result.get();
+        if (replies_count == 1) {
+            real_handler(ec, positive_parse_result_t<Iterator>{
+                                 std::move(results.elements[0]),
+                                 cumulative_consumption});
+        } else {
+            real_handler(ec, positive_parse_result_t<Iterator>{
+                                 std::move(results), cumulative_consumption});
+        }
+    });
+    return async_result.get();
 }
 
 template <typename NextLayer>

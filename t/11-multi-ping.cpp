@@ -25,19 +25,19 @@ TEST_CASE("ping", "[connection]") {
     using Iterator =
         boost::asio::buffers_iterator<typename Buffer::const_buffers_type,
                                       char>;
-    using Marker = r::markers::redis_result_t<Iterator>;
+    using ParseResult = r::positive_parse_result_t<Iterator>;
 
     using result_t = void;
     using write_callback_t =
         std::function<void(const boost::system::error_code &error_code,
                            std::size_t bytes_transferred)>;
-    using read_callback_t = std::function<void(
-        const boost::system::error_code &error_code,
-        r::markers::redis_result_t<Iterator> &&r, size_t consumed)>;
+    using read_callback_t =
+        std::function<void(const boost::system::error_code &error_code,
+                           r::positive_parse_result_t<Iterator> &&r)>;
 
     std::chrono::nanoseconds sleep_delay(1);
 
-    auto count = 1000000;
+    auto count = 1000;
     r::single_command_t ping_cmd("ping");
     r::command_container_t ping_cmds_container;
     for (auto i = 0; i < count; ++i) {
@@ -63,17 +63,18 @@ TEST_CASE("ping", "[connection]") {
     Buffer tx_buff, rx_buff;
     read_callback_t read_callback =
         [&](const boost::system::error_code &error_code,
-            r::markers::redis_result_t<Iterator> &&r, size_t consumed) {
+            r::positive_parse_result_t<Iterator> &&r) {
             if (error_code) {
                 BREDIS_LOG_DEBUG("error: " << error_code.message());
                 REQUIRE(!error_code);
             }
             REQUIRE(!error_code);
-            auto &replies = boost::get<r::markers::array_holder_t<Iterator>>(r);
+            auto &replies =
+                boost::get<r::markers::array_holder_t<Iterator>>(r.result);
             BREDIS_LOG_DEBUG("callback, size: " << replies.elements.size());
             REQUIRE(replies.elements.size() == count);
             completion_promise.set_value();
-            rx_buff.consume(consumed);
+            rx_buff.consume(r.consumed);
         };
 
     write_callback_t write_callback = [&](
