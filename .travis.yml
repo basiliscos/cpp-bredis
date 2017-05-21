@@ -9,6 +9,8 @@ os:
 
 before_script:
     - wget -q -O - http://sourceforge.net/projects/boost/files/boost/1.63.0/boost_1_63_0.tar.gz | tar -xz
+    - cd boost_1_63_0 && ./bootstrap.sh --with-libraries=coroutine,system,context,thread,chrono,date_time,atomic
+    - ./b2  --ignore-site-config && cd ..
     - mkdir build
     - cd build
     - cmake -DBOOST_ROOT=`pwd`/../boost_1_63_0 ..
