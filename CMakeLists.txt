@@ -1,15 +1,6 @@
 cmake_minimum_required(VERSION 3.0)
 project (bredis)
 
-set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/CMakeModules)
-if(CMAKE_COMPILER_IS_GNUCXX)
-    include(CodeCoverage)
-    set(CMAKE_CXX_FLAGS "-g -O0 -fprofile-arcs -ftest-coverage")
-    set(CMAKE_C_FLAGS "-g -O0 -fprofile-arcs -ftest-coverage")
-    set(LCOV_REMOVE_EXTRA "'${PROJECT_SOURCE_DIR}/t/*'")
-    setup_target_for_coverage(${PROJECT_NAME}_coverage ctest coverage)
-endif()
-
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -26,6 +17,17 @@ find_package(
         context
     REQUIRED
 )
+
+set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/CMakeModules)
+if(CMAKE_COMPILER_IS_GNUCXX)
+    include(CodeCoverage)
+    set(CMAKE_CXX_FLAGS "-g -O0 -fprofile-arcs -ftest-coverage")
+    set(CMAKE_C_FLAGS "-g -O0 -fprofile-arcs -ftest-coverage")
+    set(LCOV_REMOVE_EXTRA "'${PROJECT_SOURCE_DIR}/t/*'" "'${Boost_INCLUDE_DIRS}'")
+    setup_target_for_coverage(${PROJECT_NAME}_coverage ctest coverage)
+endif()
+
+
 include_directories(${bredis_SOURCE_DIR}/include ${Boost_INCLUDE_DIRS})
 MESSAGE(STATUS "boost inc: " ${Boost_INCLUDE_DIRS})
 MESSAGE(STATUS "boost libs: " ${Boost_LIBRARIES})

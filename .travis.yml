@@ -30,7 +30,7 @@ script:
     - $CXX --version
     - make
     - make test
-    - if [ "$CXX" == "g++-4.9" ]; then make bredis_coverage VERBOSE=1; bash <(curl -s https://codecov.io/bash) -X lcov; fi
+    - if [ "$CXX" == "g++-4.9" ]; then make bredis_coverage; bash <(curl -s https://codecov.io/bash) -X lcov; fi
 
 
 install:
