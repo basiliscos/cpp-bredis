@@ -29,7 +29,7 @@ script:
     - make
     - make test
     - if [ "$CXX" == "g++-4.9" ]; then whereis lcov; fi
-    - if [ "$CXX" == "g++-4.9" ]; then make coverage; bash <(curl -s https://codecov.io/bash) -x gcov-4.9 -f '!boost_1_63_0/'; fi
+    - if [ "$CXX" == "g++-4.9" ]; then make coverage; bash <(curl -s https://codecov.io/bash) -x gcov-4.9; fi
 
 
 install:
