@@ -28,12 +28,14 @@ if(CMAKE_COMPILER_IS_GNUCXX)
     string(STRIP ${GCC_VERSION} GCC_VERSION)
     MESSAGE(STATUS "gcc version: [" ${GCC_VERSION} "]")
 
-    execute_process(COMMAND
-        "which" "gcov-${GCC_VERSION}"
-        OUTPUT_VARIABLE GCOV_TOOL)
-    MESSAGE(STATUS "gcov: [" ${GCOV_TOOL} "]")
+    # this works on gentoo, but not on travis/ubuntu, let's hard-code the value
+    #execute_process(COMMAND
+    #    "which" "gcov-${GCC_VERSION}"
+    #    OUTPUT_VARIABLE GCOV_TOOL)
+    #MESSAGE(STATUS "gcov: [" ${GCOV_TOOL} "]")
     #string(STRIP ${GCOV_TOOL} GCOV_TOOL)
     #MESSAGE(STATUS "gcov(fixed): [" ${GCOV_TOOL} "]")
+    set(GCOV_TOOL, "gcov-5")
 
     add_custom_target("coverage"
         COMMAND "lcov" --directory . --zerocounters
