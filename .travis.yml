@@ -20,8 +20,8 @@ addons:
     sources:
     - ubuntu-toolchain-r-test
     packages:
-    - gcc-4.9
-    - g++-4.9
+    - gcc-5
+    - g++-5
     - clang-3.8
     - lcov
 
@@ -29,11 +29,11 @@ script:
     - $CXX --version
     - make
     - make test
-    - if [ "$CXX" == "g++-4.9" ]; then whereis gcov; fi
-    - if [ "$CXX" == "g++-4.9" ]; then make coverage; bash <(curl -s https://codecov.io/bash) -X gcov; fi
+    - if [ "$CXX" == "g++-5" ]; then whereis gcov-5; fi
+    - if [ "$CXX" == "g++-5" ]; then make coverage; bash <(curl -s https://codecov.io/bash) -X gcov; fi
 
 
 install:
-    - if [ "$CXX" = "g++" ]; then export CXX="g++-4.9"; fi
+    - if [ "$CXX" = "g++" ]; then export CXX="g++-5"; fi
     - if [ "$CXX" = "clang++" ]; then export CXX="clang++"; fi
 
