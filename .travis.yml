@@ -30,6 +30,7 @@ script:
     - $CXX --version
     - make
     - make test
+    - if [ "$CXX" == "g++-4.9" ]; whereis lcov fi
     - if [ "$CXX" == "g++-4.9" ]; then make coverage; bash <(curl -s https://codecov.io/bash) -X lcov; fi
 
 
