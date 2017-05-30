@@ -18,15 +18,24 @@ find_package(
     REQUIRED
 )
 
-set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/CMakeModules)
 if(CMAKE_COMPILER_IS_GNUCXX)
-    include(CodeCoverage)
     set(CMAKE_CXX_FLAGS "-g -O0 -fprofile-arcs -ftest-coverage")
     set(CMAKE_C_FLAGS "-g -O0 -fprofile-arcs -ftest-coverage")
-    set(LCOV_REMOVE_EXTRA "'${PROJECT_SOURCE_DIR}/t/*'" "'${Boost_INCLUDE_DIRS}'")
-    setup_target_for_coverage(${PROJECT_NAME}_coverage ctest coverage)
-endif()
 
+    add_custom_target("coverage"
+        COMMAND "lcov" --directory . --zerocounters
+        COMMAND ctest
+        COMMAND "lcov" --directory . --capture --output-file coverage.info
+        COMMAND "lcov" --remove coverage.info "'/t/*'" "'/boost_1_63_0/*'" "'/usr/*'" --output-file coverage.info.cleaned
+
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    )
+    add_custom_target("coverage-report"
+        COMMAND "genhtml" -o coverage coverage.info.cleaned
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+        DEPENDS "coverage"
+    )
+endif()
 
 include_directories(${bredis_SOURCE_DIR}/include ${Boost_INCLUDE_DIRS})
 MESSAGE(STATUS "boost inc: " ${Boost_INCLUDE_DIRS})
