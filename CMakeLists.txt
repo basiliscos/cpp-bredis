@@ -40,8 +40,7 @@ if(CMAKE_COMPILER_IS_GNUCXX)
     add_custom_target("coverage"
         COMMAND "lcov" --directory . --zerocounters
         COMMAND ctest
-        #COMMAND "lcov" --directory . --capture --output-file coverage.info --gcov-tool ${GCOV_TOOL}
-        COMMAND "lcov" --directory . --capture --output-file coverage.info
+        COMMAND "lcov" --directory . --capture --output-file coverage.info --gcov-tool ${GCOV_TOOL}
         COMMAND "lcov" --remove coverage.info "'/t/*'" "'/boost_1_63_0/*'" "'/usr/*'" --output-file coverage.info.cleaned
         COMMAND "rm" coverage.info
 
