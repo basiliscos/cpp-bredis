@@ -22,10 +22,20 @@ if(CMAKE_COMPILER_IS_GNUCXX)
     set(CMAKE_CXX_FLAGS "-g -O0 -fprofile-arcs -ftest-coverage")
     set(CMAKE_C_FLAGS "-g -O0 -fprofile-arcs -ftest-coverage")
 
+    execute_process(COMMAND
+        ${CMAKE_CXX_COMPILER} -dumpversion
+        OUTPUT_VARIABLE GCC_VERSION)
+    string(STRIP ${GCC_VERSION} GCC_VERSION)
+    MESSAGE(STATUS "gcc version: [" ${GCC_VERSION} "]")
+
+    execute_process(COMMAND
+        "which" "gcov-${GCC_VERSION}"
+        OUTPUT_VARIABLE GCOV_TOOL)
+
     add_custom_target("coverage"
         COMMAND "lcov" --directory . --zerocounters
         COMMAND ctest
-        COMMAND "lcov" --directory . --capture --output-file coverage.info
+        COMMAND "lcov" --directory . --capture --output-file coverage.info --gcov-tool ${GCOV_TOOL}
         COMMAND "lcov" --remove coverage.info "'/t/*'" "'/boost_1_63_0/*'" "'/usr/*'" --output-file coverage.info.cleaned
 
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
