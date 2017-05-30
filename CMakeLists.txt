@@ -31,6 +31,8 @@ if(CMAKE_COMPILER_IS_GNUCXX)
     execute_process(COMMAND
         "which" "gcov-${GCC_VERSION}"
         OUTPUT_VARIABLE GCOV_TOOL)
+    string(STRIP ${GCOV_TOOL} GCOV_TOOL)
+    MESSAGE(STATUS "gcov: [" ${GCOV_TOOL} "]")
 
     add_custom_target("coverage"
         COMMAND "lcov" --directory . --zerocounters
