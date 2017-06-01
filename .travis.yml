@@ -9,7 +9,7 @@ os:
 
 before_script:
     - wget -q -O - http://sourceforge.net/projects/boost/files/boost/1.64.0/boost_1_64_0.tar.gz | tar -xz
-    - cd boost_1_64_0 && ./bootstrap.sh --with-libraries=coroutine,system,context,thread,chrono,date_time,atomic
+    - cd boost_1_64_0 && ./bootstrap.sh --with-libraries=coroutine,context
     - ./b2  --ignore-site-config && cd ..
     - mkdir build
     - cd build
