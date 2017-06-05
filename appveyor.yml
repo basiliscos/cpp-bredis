@@ -11,7 +11,10 @@ environment:
     BOOST_LIBRARYDIR: "C:\\Libraries\\boost_1_59_0\\lib32-msvc-14.0"
 
 
-#before_build:
+before_build:
+    - cmake --version
+    - echo %BOOST_ROOT%
+    - dir %BOOST_ROOT%
 #  - cmake -G "Visual Studio 15 2017 Win64"
 
 build_script:
