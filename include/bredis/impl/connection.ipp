@@ -76,7 +76,7 @@ Connection<NextLayer>::async_read(DynamicBuffer &rx_buff,
 
         markers::array_holder_t<Iterator> results;
         results.elements.reserve(replies_count);
-        int32_t cumulative_consumption = 0;
+        size_t cumulative_consumption = 0;
         boost::system::error_code ec;
 
         do {

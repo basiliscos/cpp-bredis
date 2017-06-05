@@ -32,7 +32,7 @@ template <> struct Extractor<extractor_tags::e_string> {
 
     template <typename Iterator>
     optional_parse_result_t<Iterator>
-    operator()(Iterator &from, Iterator &to, int32_t already_consumed) const {
+    operator()(Iterator &from, Iterator &to, size_t already_consumed) const {
 
         auto from_t(Protocol::terminator.cbegin()),
             to_t(Protocol::terminator.cend());
@@ -41,7 +41,7 @@ template <> struct Extractor<extractor_tags::e_string> {
         if (found_terminator == to) {
             return no_enogh_data_t{};
         } else {
-            int32_t consumed = already_consumed +
+            size_t consumed = already_consumed +
                                std::distance(from, found_terminator) +
                                Protocol::terminator.size();
             return optional_parse_result_t<Iterator>{
@@ -56,7 +56,7 @@ template <> struct Extractor<extractor_tags::e_string> {
 template <> struct Extractor<extractor_tags::e_error> {
     template <typename Iterator>
     optional_parse_result_t<Iterator>
-    operator()(Iterator &from, Iterator &to, int32_t already_consumed) const {
+    operator()(Iterator &from, Iterator &to, size_t already_consumed) const {
 
         Extractor<extractor_tags::e_string> e;
         auto parse_result = e(from, to, already_consumed);
@@ -79,7 +79,7 @@ template <> struct Extractor<extractor_tags::e_error> {
 template <> struct Extractor<extractor_tags::e_int> {
     template <typename Iterator>
     optional_parse_result_t<Iterator>
-    operator()(Iterator &from, Iterator &to, int32_t already_consumed) const {
+    operator()(Iterator &from, Iterator &to, size_t already_consumed) const {
 
         Extractor<extractor_tags::e_string> e;
         auto parse_result = e(from, to, already_consumed);
@@ -102,7 +102,7 @@ template <> struct Extractor<extractor_tags::e_int> {
 template <> struct Extractor<extractor_tags::e_bulk_string> {
     template <typename Iterator>
     optional_parse_result_t<Iterator>
-    operator()(Iterator &from, Iterator &to, int32_t already_consumed) const {
+    operator()(Iterator &from, Iterator &to, size_t already_consumed) const {
         Extractor<extractor_tags::e_string> e;
         auto parse_result = e(from, to, 0);
         auto *positive_result =
@@ -144,7 +144,7 @@ template <> struct Extractor<extractor_tags::e_bulk_string> {
                 throw std::runtime_error(
                     "Terminator not found for bulk string");
             }
-            int32_t consumed = positive_result->consumed + count +
+            size_t consumed = positive_result->consumed + count +
                                Protocol::terminator.size() + already_consumed;
             return optional_parse_result_t<Iterator>{
                 positive_parse_result_t<Iterator>{
@@ -158,7 +158,7 @@ template <> struct Extractor<extractor_tags::e_bulk_string> {
 template <> struct Extractor<extractor_tags::e_array> {
     template <typename Iterator>
     optional_parse_result_t<Iterator>
-    operator()(Iterator &from, Iterator &to, int32_t already_consumed) const {
+    operator()(Iterator &from, Iterator &to, size_t already_consumed) const {
         Extractor<extractor_tags::e_string> e;
         auto parse_result = e(from, to, 0);
         auto *positive_result =
@@ -185,7 +185,7 @@ template <> struct Extractor<extractor_tags::e_array> {
         } else {
             auto result = markers::array_holder_t<Iterator>{};
             result.elements.reserve(count);
-            int32_t consumed = positive_result->consumed;
+            size_t consumed = positive_result->consumed;
             for (auto i = 0; i < count; ++i) {
                 Iterator left = from + consumed;
                 auto optional_parse_result = raw_parse(left, to);

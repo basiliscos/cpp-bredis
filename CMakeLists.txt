@@ -13,9 +13,11 @@ add_definitions(-DBOOST_ERROR_CODE_HEADER_ONLY)
 find_package(
     Boost
     COMPONENTS
+        chrono
         coroutine
         context
-        process
+        system
+        thread
     REQUIRED
 )
 

@@ -34,7 +34,7 @@ struct no_enogh_data_t {};
 
 template <typename Iterator> struct positive_parse_result_t {
     markers::redis_result_t<Iterator> result;
-    int32_t consumed;
+    size_t consumed;
 };
 
 template <typename Iterator>
