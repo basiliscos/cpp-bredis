@@ -42,8 +42,8 @@ template <> struct Extractor<extractor_tags::e_string> {
             return no_enogh_data_t{};
         } else {
             size_t consumed = already_consumed +
-                               std::distance(from, found_terminator) +
-                               Protocol::terminator.size();
+                              std::distance(from, found_terminator) +
+                              Protocol::terminator.size();
             return optional_parse_result_t<Iterator>{
                 positive_parse_result_t<Iterator>{
                     markers::redis_result_t<Iterator>{
@@ -129,7 +129,8 @@ template <> struct Extractor<extractor_tags::e_bulk_string> {
         } else {
             auto head = from + positive_result->consumed;
             auto left = std::distance(head, to);
-            if (left < count + Protocol::terminator.size()) {
+            int terminator_size = Protocol::terminator.size();
+            if (left < count + terminator_size) {
                 return no_enogh_data_t{};
             }
             auto tail = head + count;
@@ -144,8 +145,10 @@ template <> struct Extractor<extractor_tags::e_bulk_string> {
                 throw std::runtime_error(
                     "Terminator not found for bulk string");
             }
-            size_t consumed = positive_result->consumed + count +
-                               Protocol::terminator.size() + already_consumed;
+            size_t addition = static_cast<size_t>(count + terminator_size);
+            size_t consumed =
+                positive_result->consumed + addition + already_consumed;
+
             return optional_parse_result_t<Iterator>{
                 positive_parse_result_t<Iterator>{
                     markers::redis_result_t<Iterator>{
