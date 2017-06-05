@@ -2,8 +2,7 @@
 os: Visual Studio 2017
 
 environment:
-  matrix:
-    - BOOST_ROOT: "C:\Libraries\boost_1_64_0"
+    BOOST_ROOT: C:\Libraries\boost_1_59_0
 
 platform: x64
 #configuration: Release
