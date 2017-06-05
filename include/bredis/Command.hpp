@@ -23,6 +23,9 @@ struct single_command_t {
     single_command_t(Args &&... args) : arguments{std::forward<Args>(args)...} {
         static_assert(sizeof...(Args) >= 1, "Empty command is not allowed");
     }
+
+    single_command_t(const single_command_t&) = default;
+    single_command_t(single_command_t&&) = default;
 };
 
 using command_container_t = std::vector<single_command_t>;
