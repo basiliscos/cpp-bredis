@@ -61,7 +61,14 @@ MESSAGE(STATUS "boost inc: " ${Boost_INCLUDE_DIRS})
 MESSAGE(STATUS "boost libs: " ${Boost_LIBRARIES})
 
 add_library(catch_lib t/tests-main.cpp)
-set(LINK_DEPENDENCIES pthread ${Boost_LIBRARIES} catch_lib)
+
+if(WIN32)
+    set(Boost_USE_MULTITHREADED ON)
+    set(LINK_DEPENDENCIES ${Boost_LIBRARIES} catch_lib)
+    # add_definitions(-DBOOST_ALL_DYN_LINK -DBOOST_THREAD_USE_LIB)
+else()
+    set(LINK_DEPENDENCIES pthread ${Boost_LIBRARIES} catch_lib)
+endif()
 
 add_executable(t-05-protocol t/05-protocol.cpp)
 target_link_libraries(t-05-protocol ${LINK_DEPENDENCIES})

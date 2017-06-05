@@ -129,11 +129,12 @@ template <> struct Extractor<extractor_tags::e_bulk_string> {
         } else {
             auto head = from + positive_result->consumed;
             auto left = std::distance(head, to);
-            int terminator_size = Protocol::terminator.size();
-            if (left < count + terminator_size) {
+            size_t ucount = static_cast<size_t>(count);
+            auto terminator_size = Protocol::terminator.size();
+            if (left < ucount + terminator_size) {
                 return no_enogh_data_t{};
             }
-            auto tail = head + count;
+            auto tail = head + ucount;
             std::string debug_str;
             debug_str.append(head, tail);
             const char *ds = debug_str.c_str();
@@ -145,9 +146,8 @@ template <> struct Extractor<extractor_tags::e_bulk_string> {
                 throw std::runtime_error(
                     "Terminator not found for bulk string");
             }
-            size_t addition = static_cast<size_t>(count + terminator_size);
-            size_t consumed =
-                positive_result->consumed + addition + already_consumed;
+            size_t consumed = positive_result->consumed + count +
+                              terminator_size + already_consumed;
 
             return optional_parse_result_t<Iterator>{
                 positive_parse_result_t<Iterator>{
