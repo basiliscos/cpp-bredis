@@ -128,7 +128,7 @@ template <> struct Extractor<extractor_tags::e_bulk_string> {
                                      " in unacceptable for bulk strings");
         } else {
             auto head = from + positive_result->consumed;
-            auto left = std::distance(head, to);
+            size_t left = std::distance(head, to);
             size_t ucount = static_cast<size_t>(count);
             auto terminator_size = Protocol::terminator.size();
             if (left < ucount + terminator_size) {
@@ -175,7 +175,7 @@ template <> struct Extractor<extractor_tags::e_array> {
         std::string s;
         s.reserve(positive_result->consumed);
         s.append(count_string.from, count_string.to);
-        int count = boost::lexical_cast<std::size_t>(s);
+        int count = boost::lexical_cast<int>(s);
         if (count == -1) {
             return optional_parse_result_t<Iterator>{
                 positive_parse_result_t<Iterator>{
