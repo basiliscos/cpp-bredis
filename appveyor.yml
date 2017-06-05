@@ -7,7 +7,7 @@ platform:
 #configuration: Release
 
 environment:
-    BOOST_ROOT: "C:\\Libraries\\boost_1_59_0
+    BOOST_ROOT: "C:\\Libraries\\boost_1_59_0"
     BOOST_LIBRARYDIR: "C:\\Libraries\\boost_1_59_0\\lib32-msvc-14.0"
 
 
@@ -15,7 +15,7 @@ environment:
 #  - cmake -G "Visual Studio 15 2017 Win64"
 
 build_script:
-  - cmake -G "Visual Studio 15 2017 Win64" -H. -B_builds  -DBOOST_ROOT="%BOOST_ROOT%" -DBOOST_LIBRARYDIR="%BOOST_LIBRARYDIR%"
+  - cmake -G "Visual Studio 15 2017 Win64" -H. -B_builds -DBOOST_ROOT="%BOOST_ROOT%" -DBOOST_LIBRARYDIR="%BOOST_LIBRARYDIR%"
   - cmake --build _builds
 
 test_script:
