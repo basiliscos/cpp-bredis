@@ -20,13 +20,13 @@ class bredis_category : public boost::system::error_category {
 };
 
 class Error {
-    static const bredis_category &category;
+    static const bredis_category category;
 
   public:
     static inline boost::system::error_code make_error_code(bredis_errors e);
 };
 
-const bredis_category &Error::category = bredis_category();
+const bredis_category Error::category;
 
 boost::system::error_code Error::make_error_code(bredis_errors e) {
     return boost::system::error_code(static_cast<int>(e), category);
