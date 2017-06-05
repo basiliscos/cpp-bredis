@@ -21,7 +21,8 @@ struct single_command_t {
 
     template <typename... Args>
     single_command_t(Args &&... args)
-        : arguments({std::forward<Args>(args)...}) {
+        : arguments({std::forward<Args>(args)...},
+                    args_container_t::allocator_type()) {
         static_assert(sizeof...(Args) >= 1, "Empty command is not allowed");
     }
 };
