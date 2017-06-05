@@ -116,7 +116,7 @@ template <> struct Extractor<extractor_tags::e_bulk_string> {
         std::string s;
         s.reserve(positive_result->consumed);
         s.append(count_string.from, count_string.to);
-        int count = boost::lexical_cast<std::size_t>(s);
+        int count = boost::lexical_cast<int>(s);
         if (count == -1) {
             return optional_parse_result_t<Iterator>{
                 positive_parse_result_t<Iterator>{
