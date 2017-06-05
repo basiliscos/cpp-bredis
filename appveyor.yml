@@ -1,0 +1,17 @@
+# Operating system (build VM template)
+os: Visual Studio 2015
+
+platform: x64
+#configuration: Release
+
+# scripts to run before build
+before_build:
+  - cmake -G "Visual Studio 14 2015 Win64"
+
+build_script:
+  - cmake -G "Visual Studio 14 2015 Win64" -H. -B_builds
+  - cmake --build _builds
+
+test_script:
+  - ps: cd _builds
+  - ctest -VV -C "%CONFIG%"
