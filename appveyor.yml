@@ -10,10 +10,10 @@ platform: x64
 
 # scripts to run before build
 before_build:
-  - cmake -G "Visual Studio 17 2017 Win64"
+  - cmake -G "Visual Studio 15 2017 Win64"
 
 build_script:
-  - cmake -G "Visual Studio 17 2017 Win64" -H. -B_builds
+  - cmake -G "Visual Studio 15 2017 Win64" -H. -B_builds
   - cmake --build _builds
 
 test_script:
