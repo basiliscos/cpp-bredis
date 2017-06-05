@@ -15,7 +15,6 @@ before_build:
     - cmake --version
     - echo %BOOST_ROOT%
     - dir "C:\Libraries"
-    - dir "C:\Libraries\boost_1_64_0"
     - dir "%BOOST_ROOT%"
 
 #  - cmake -G "Visual Studio 15 2017 Win64"

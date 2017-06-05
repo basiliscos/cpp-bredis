@@ -15,6 +15,7 @@ find_package(
     COMPONENTS
         coroutine
         context
+        process
     REQUIRED
 )
 
