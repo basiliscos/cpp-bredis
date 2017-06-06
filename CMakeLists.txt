@@ -100,9 +100,11 @@ add_executable(t-13-protol-error t/13-protol-error.cpp)
 target_link_libraries(t-13-protol-error ${LINK_DEPENDENCIES})
 add_test("t-13-protol-error" t-13-protol-error)
 
+if(NOT WIN32)
 add_executable(t-14-uds t/14-uds.cpp)
 target_link_libraries(t-14-uds ${LINK_DEPENDENCIES})
 add_test("t-14-uds" t-14-uds)
+endif()
 
 add_executable(t-15-cancellation t/15-cancellation.cpp)
 target_link_libraries(t-15-cancellation ${LINK_DEPENDENCIES})
