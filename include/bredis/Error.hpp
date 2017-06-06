@@ -27,7 +27,7 @@ class Error {
     static inline boost::system::error_code make_error_code(bredis_errors e);
 };
 
-const bredis_category Error::category;
+const bredis_category Error::category{};
 
 boost::system::error_code Error::make_error_code(bredis_errors e) {
     return boost::system::error_code(static_cast<int>(e), category);
