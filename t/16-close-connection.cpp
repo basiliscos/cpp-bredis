@@ -131,7 +131,8 @@ TEST_CASE("close-before-write", "[connection]") {
             tx_buff.consume(bytes_transferred);
             c.async_read(rx_buff, [&](const auto &error_code, ParseResult &&r) {
                 REQUIRE(error_code);
-                REQUIRE(error_code.message() == "Connection reset by peer");
+                // locale and os-dependent
+                // REQUIRE(error_code.message() == "Connection reset by peer");
                 completion_promise.set_value();
             });
         });
