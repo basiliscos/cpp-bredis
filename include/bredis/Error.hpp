@@ -23,6 +23,7 @@ class Error {
     static const bredis_category category;
 
   public:
+    Error() {};
     static inline boost::system::error_code make_error_code(bredis_errors e);
 };
 
