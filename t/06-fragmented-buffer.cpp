@@ -18,8 +18,7 @@ TEST_CASE("right consumption", "[protocol]") {
 
     std::string full_message =
         "*3\r\n$7\r\nmessage\r\n$13\r\nsome-channel1\r\n$10\r\nmessage-a1\r\n";
-    auto from = full_message.cbegin();
-    auto to = full_message.cbegin() - 1;
+
     Buffer buff;
     for (auto i = 0; i < full_message.size(); i++) {
         asio::const_buffers_1 v(full_message.c_str() + i, 1);
