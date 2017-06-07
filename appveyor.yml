@@ -18,6 +18,7 @@ before_build:
     - dir "%BOOST_ROOT%"
     - curl -fsS -o Redis-x64-3.0.504.zip https://github.com/MSOpenTech/redis/releases/download/win-3.0.504/Redis-x64-3.0.504.zip
     - '@ECHO redis downloaded deployed'
+    - dir
     - 7z x Redis-x64-3.0.504.zip
 
 build_script:
