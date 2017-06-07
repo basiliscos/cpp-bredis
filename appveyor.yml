@@ -16,7 +16,7 @@ before_build:
     - echo %BOOST_ROOT%
     - dir "C:\Libraries"
     - dir "%BOOST_ROOT%"
-    - wget -q https://github.com/MSOpenTech/redis/releases/download/win-3.0.504/Redis-x64-3.0.504.zip
+    - ps: wget -q https://github.com/MSOpenTech/redis/releases/download/win-3.0.504/Redis-x64-3.0.504.zip
     - '@ECHO redis downloaded deployed'
     - 7z x Redis-x64-3.0.504.zip
 
