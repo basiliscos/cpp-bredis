@@ -16,8 +16,8 @@ before_build:
     - echo %BOOST_ROOT%
     - dir "C:\Libraries"
     - dir "%BOOST_ROOT%"
-
-#  - cmake -G "Visual Studio 15 2017 Win64"
+    - nuget restore .\Hangfire.Redis.StackExchange.sln
+    - '@ECHO deployed'
 
 build_script:
   - cmake -G "Visual Studio 15 2017 Win64" -H. -B_builds -DBOOST_ROOT="%BOOST_ROOT%" -DBOOST_LIBRARYDIR="%BOOST_LIBRARYDIR%"
