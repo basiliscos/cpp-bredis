@@ -16,8 +16,9 @@ before_build:
     - echo %BOOST_ROOT%
     - dir "C:\Libraries"
     - dir "%BOOST_ROOT%"
-    - nuget restore .\Hangfire.Redis.StackExchange.sln
-    - '@ECHO deployed'
+    - wget -q https://github.com/MSOpenTech/redis/releases/download/win-3.0.504/Redis-x64-3.0.504.zip
+    - '@ECHO redis downloaded deployed'
+    - 7z x Redis-x64-3.0.504.zip
 
 build_script:
   - cmake -G "Visual Studio 15 2017 Win64" -H. -B_builds -DBOOST_ROOT="%BOOST_ROOT%" -DBOOST_LIBRARYDIR="%BOOST_LIBRARYDIR%"
