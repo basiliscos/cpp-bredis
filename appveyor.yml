@@ -6,6 +6,13 @@ platform:
     - Win32
 #configuration: Release
 
+# enable rdp
+init:
+  - ps: iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+
+on_finish:
+  - ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+
 environment:
     BOOST_ROOT: "C:\\Libraries\\boost_1_64_0"
 #    BOOST_LIBRARYDIR: "C:\\Libraries\\boost_1_64_0\\lib32-msvc-15.0"
@@ -34,3 +41,4 @@ build_script:
 test_script:
   - ps: cd _builds
   - ctest -VV -C "%CONFIG%"
+
