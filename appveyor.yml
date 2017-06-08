@@ -31,7 +31,8 @@ before_build:
     # redis
     - set PATH=%APPVEYOR_BUILD_FOLDER%;%PATH%
     # boost
-    - set PATH=%BOOST_ROOT%;%PATH%
+    - set PATH=%BOOST_ROOT%\lib64-msvc-14.1;%PATH%
+    - echo %PATH%
 
 build_script:
   - cmake -G "Visual Studio 15 2017 Win64" -H. -B_builds -DBOOST_ROOT="%BOOST_ROOT%"
