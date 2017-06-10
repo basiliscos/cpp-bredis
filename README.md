@@ -184,29 +184,15 @@ c.async_write(
 
 ```
 
-## Asyncronous unix domain sockets connection example
-```cpp
-#include "bredis/AsyncConnection.hpp"
-#include <boost/variant.hpp>
-#include <boost/utility/string_ref.hpp>
-...
-namespace r = bredis;
-namespace asio = boost::asio;
-...
-/* define used socket type */
-using socket_t = asio::local::stream_protocol::socket;
-...
-/* establishing connection to redis is outside of bredis */
-asio::local::stream_protocol::endpoint end_point("/tmp/redis.socket");
-socket_t socket(io_service, end_point.protocol());
-socket.connect(end_point);
+In the example above separete receive and transfer buffers are used. In theory you can use only one buffer for both operations, but you must ensure that it will not be used simultaneously for reading and writing, in other words you cannot use [pipelining](https://redis.io/topics/pipelining) redis feature.
 
-/* async interface remains the same as for TCP-connectinos */
-r::AsyncConnection<socket_t> redis_connector(std::move(socket));
-redis_connector.push_command("LLEN", "my-queue", 
-                             [](const auto &error_code, r::some_result_t &&r) {
-    int my_queue_size = boost::get<r::int_result_t>(r);
-});
+
+## Asyncronous unix domain sockets connection
+
+The same as above, except the underlying socket type should be changed:
+
+```
+using socket_t = asio::local::stream_protocol::socket;
 ```
 
 ## Subscription with TCP-connection example
