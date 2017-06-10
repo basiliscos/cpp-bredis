@@ -31,19 +31,66 @@ Boost::ASIO low-level redis client (connector)
 - dropped explicit cancellation (socket reference can be passed to connector, and cancellation 
 can be done on the socket object outside of the connector)
 
+## Work with the result
+
+The general idea is that the result of attempt to  redis reply can be either: no enough data or protocol error (exteame case) or some positive parse result. The last one is just **markers** of result, which is actually stored in *receive buffer* (i.e. outside of markers, and outside of bredis-connection). 
+
+The the further work with markers denends on your needs: it is possible either **scan** the result for the expected results (e.g. for `PONG` reply on `PING` command, or for `OK`/`QUEUED` replies on `MULTI`/`EXEC` commands) or **extract** the results (the common redis types: `nil`, `string`, `error`, `int` or (recursive) array of them).
+
+When data in receive buffer is no logner required, it should be consumed. 
+
+Scan example:
+
+```cpp
+#include "bredis/MarkerHelpers.hpp"
+...
+namespace r = bredis;
+...
+Buffer rx_buff;
+auto result_markers = c.read(rx_buff);
+/* check for the responce */
+auto eq_pong = r::marker_helpers::equality<Iterator>("PONG");
+/* print true or false */
+std::cout << boost::apply_visitor(eq_pong, result_markers.result) << "\n";
+/* consume the buffers, after finish work with markers */
+rx_buff.consume(result_markers.consumed);
+```
+
+For *extraction* of results it is possible to use either shipped extactors or write custom one. Shipped extractors detach (copy / convert) extraction results from receive buffer.
+
+```cpp
+#include "bredis/Extract.hpp"
+...
+auto result_markers = c.read(rx_buff);
+auto extract = boost::apply_visitor(r::extractor<Iterator>(), result_markers.result);
+/* safe to consume buffers now */
+rx_buff.consume(result_markers.consumed);
+/* we know what the type is, safe to unpack to string */
+auto &reply_str = boost::get<r::extracts::string_t>(extract);
+/* print "PONG" */
+std::cout << reply_str.str << "\n";
+```
+
+Custom extractors (visitors) might be useful for performance-aware cases, e.g. when JSON in re-constructed in-place from using string reply markers **without** re-allocating whole JSON-string reply.
+
+The underlying reason for decision to have final results in two steps (get markers and then scan/extract results) is caused by the fact that *receive buffer* might be scattered (fragmented). Scan and extraction can be performed without gathering receive buffers (i.e. without flattening / linearizing it).
+
 ## Syncronous TCP-connection example
 
 ```cpp
-#include <bredis/SyncConnection.hpp>
+#include "bredis/Connection.hpp"
+#include "bredis/MarkerHelpers.hpp"
+
 #include <boost/variant.hpp>
 #include <boost/utility/string_ref.hpp>
 ...
 namespace r = bredis;
 namespace asio = boost::asio;
-
 ...
-/* define used socket type */
+/* define used types */
 using socket_t = asio::ip::tcp::socket;
+using Buffer = boost::asio::streambuf;
+using Iterator = typename r::to_iterator<Buffer>::iterator_t;
 ...
 /* establishing connection to redis is outside of bredis */
 asio::ip::tcp::endpoint end_point(
@@ -51,16 +98,54 @@ asio::ip::tcp::endpoint end_point(
 socket_t socket(io_service, end_point.protocol());
 socket.connect(end_point);
 
-/* buffer is not allocated inside bredis */ 
-asio::streambuf rx_buff;
-r::SyncConnection<socket_t> connection(std::move(socket));
-/* get the result, boost::variant */ 
-auto result = c.command("ping", rx_buff);
-/* we know what the type is, safe to unpack to string_ref */
-auto &reply_str = boost::get<r::string_holder_t>(result).str;
-/* now we have a string copy, which is actually "PONG" */
-std::string str(reply_str.cbegin(), reply_str.cend());
+/* wrap socket to bredis connection */
+r::Connection<socket_t> c(std::move(socket));
+
+/* synchronously write command */
+c.write("ping");
+
+/* buffer is allocated outside of bredis connection*/ 
+Buffer rx_buff;
+/* get the result markers */ 
+auto result_markers = c.read(rx_buff);
+/* check for the responce */
+auto eq_pong = r::marker_helpers::equality<Iterator>("PONG");
+/* print true */
+std::cout << boost::apply_visitor(eq_pong, result_markers.result) << "\n";
+/* consume the buffers, after finish work with markers */
+rx_buff.consume(result_markers.consumed);
 ```
+
+In the ping example above the `PONG` reply string from redis is not (re)allocated, but directly scanned in the `rx_buff` using result markers. This can be useful for performance-aware cases, e.g. when JSON in re-constructed in-place from using string reply markers **without** re-allocating whole JSON-string reply.
+
+In the case of need to **extract** reply (i.e. detach it from `rx_buff`), the following can be done:
+
+```cpp
+#include "bredis/Extract.hpp"
+...
+using ParseResult = r::positive_parse_result_t<Iterator>;
+...
+auto result_markers = c.read(rx_buff);
+/* extract the results */
+auto extract = boost::apply_visitor(r::extractor<Iterator>(), result_markers.result);
+/* safe to consume buffers now */
+rx_buff.consume(result_markers.consumed);
+/* we know what the type is, safe to unpack to string */
+auto &reply_str = boost::get<r::extracts::string_t>(extract);
+/* print "PONG" */
+std::cout << reply_str.str << "\n";
+```
+
+The examples above throw Exception in case of I/O or protocol error. It can be used as:
+
+```cpp
+boost::system::error_code ec;
+c.write("ping", ec);
+...
+parse_result = c.read(rx_buff, ec);
+```
+
+in the case you don't want to the throw-exception behaviour
 
 ## Asyncronous TCP-connection example
 ```cpp
