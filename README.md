@@ -246,8 +246,52 @@ read_callback_t notification_callback = [&](const boost::system::error_code,
 
 /* initialise listening subscriptions */
 c.async_read(rx_buff, notification_callback);
+```
+
+## Transactions
+
+There is no specific support for transactions in bredis, but you can easily build your own for you needs.
+
+First, wrap your commands into tranaction:
+
+```cpp
+
+r::command_container_t tx_commands = {
+    r::single_command_t("MULTI"),
+        r::single_command_t("INCR", "foo"),
+        r::single_command_t("GET", "bar"), 
+    r::single_command_t("EXEC"),
+};
+r::command_wrapper_t cmd(tx_commands);
+c.write(cmd);
+```
+
+Then, as above there was **4** redis commands, there should come **4** redis 
+replies: `OK`, `QUEUED`, `QUEUED` and the array of results of execution of commands
+in transaction (i.e. results for `INCR` and `GET` above)
+
+```cpp
+Buffer rx_buff;
+c.async_read(rx_buff, [&](const auto& error_code, auto&& r){
+    auto &replies = boost::get<r::markers::array_holder_t<Iterator>>(r.result);
+    /* scan stream for OK, QUEUED, QUEUED */
+    ...
+    assert(replies.elements.size() == 4);
+    auto eq_OK = r::marker_helpers::equality<Iterator>("OK");
+        auto eq_QUEUED = r::marker_helpers::equality<Iterator>("QUEUED");
+    assert(boost::apply_visitor(eq_OK, replies.elements[0]);
+    assert(boost::apply_visitor(eq_QUEUED, replies.elements[1]));
+    assert(boost::apply_visitor(eq_QUEUED, replies.elements[2]));
+
+    /* get tx replies */
+    auto &tx_replies = boost::get<r::markers::array_holder_t<Iterator>>(replies.elements[3]);
+    ...;
+    rx_buff.consume(r.consumed);
+},
+4); /* pay attention here */
 
 ```
+
 
 ## API
 
