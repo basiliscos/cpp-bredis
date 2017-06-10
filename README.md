@@ -191,7 +191,7 @@ In the example above separete receive and transfer buffers are used. In theory y
 
 The same as above, except the underlying socket type should be changed:
 
-```
+```cpp
 using socket_t = asio::local::stream_protocol::socket;
 ```
 
