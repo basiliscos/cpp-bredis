@@ -11,8 +11,25 @@ Boost::ASIO low-level redis client (connector)
 - header only
 - low-level controls (i.e. you can cancel, or do you manual DNS-resolving before connection)
 - unix domain sockets support
+- works on linux (clang, gcc) and windows (msvc)
 - synchronous & asynchronous interface
-- inspired by beast
+- inspired by [beast](https://github.com/vinniefalco/Beast)
+
+## Changelog
+
+### 0.01
+- initial version 
+
+### 0.02
+- added windows support
+- added coroutines & futures support
+- generalised (templated) buffer support
+- changed return type: instead of result of parsing just result markers are returned, extraction of result can be done as separate step
+- dropped queing support (queuing policy should be implemented at more higher levels)
+- dropped subscription support (can be implemented at higher levels)
+- dropped internal buffers (can be implemented at higher levels)
+- dropped explicit cancellation (socket reference can be passed to connector, and cancellation 
+can be done on the socket object outside of the connector)
 
 ## Syncronous TCP-connection example
 
@@ -178,6 +195,10 @@ Method `command` returns `redis_result_t`. It's signarute is `command(const std:
 # License 
 
 MIT
+
+# Contributors
+
+- [Vinnie Falco](https://github.com/vinniefalco)
 
 ## See also
 - https://github.com/Cylix/cpp_redis
