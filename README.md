@@ -82,7 +82,6 @@ The underlying reason for decision to have final results in two steps (get marke
 #include "bredis/MarkerHelpers.hpp"
 
 #include <boost/variant.hpp>
-#include <boost/utility/string_ref.hpp>
 ...
 namespace r = bredis;
 namespace asio = boost::asio;
@@ -149,27 +148,39 @@ in the case you don't want to the throw-exception behaviour
 
 ## Asyncronous TCP-connection example
 ```cpp
-#include "bredis/AsyncConnection.hpp"
-#include <boost/variant.hpp>
-#include <boost/utility/string_ref.hpp>
+#include "bredis/Connection.hpp"
+#include "bredis/MarkerHelpers.hpp"
 ...
 namespace r = bredis;
 namespace asio = boost::asio;
 ...
-/* define used socket type */
 using socket_t = asio::ip::tcp::socket;
+using Buffer = boost::asio::streambuf;
+using Iterator = typename r::to_iterator<Buffer>::iterator_t;
+using result_t = r::positive_parse_result_t<Iterator>;
+
 ...
 /* establishing connection to redis is outside of bredis */
 asio::ip::tcp::endpoint end_point(
     asio::ip::address::from_string("127.0.0.1"), port);
 socket_t socket(io_service, end_point.protocol());
 socket.connect(end_point);
-
-r::AsyncConnection<socket_t> redis_connector(std::move(socket));
-redis_connector.push_command("LLEN", "my-queue", 
-                             [](const auto &error_code, r::some_result_t &&r) {
-    int my_queue_size = boost::get<r::int_result_t>(r);
-});
+...
+Buffer tx_buff, rx_buff;
+c.async_write(
+    tx_buff, "ping", [&](const auto &error_code, auto bytes_transferred) {
+        /* tx_buff must be consumed when it is no longer needed */
+        tx_buff.consume(bytes_transferred);
+        c.async_read(rx_buff, [&](const auto &error_code, result_t &&r) {
+            /* see above how to work wit result */
+            auto extract = boost::apply_visitor(r::extractor<Iterator>(), r.result);
+            auto &queue_size = boost::get<r::extracts::int_t>(extract);
+            std::cout << "queue size: " << queue_size << "\n";
+            ...
+            /* consume rx_buff when it is no longer needed */
+            rx_buff.consume(r.consumed);
+        });
+    });
 
 ```
 
