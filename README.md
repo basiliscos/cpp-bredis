@@ -195,31 +195,58 @@ The same as above, except the underlying socket type should be changed:
 using socket_t = asio::local::stream_protocol::socket;
 ```
 
-## Subscription with TCP-connection example
-```cpp
-#include "bredis/AsyncConnection.hpp"
-#include <boost/variant.hpp>
-#include <boost/utility/string_ref.hpp>
-...
-namespace r = bredis;
-namespace asio = boost::asio;
-...
-/* define used socket type */
-using socket_t = asio::ip::tcp::socket;
-...
-/* establishing connection to redis is outside of bredis */
-asio::ip::tcp::endpoint end_point(
-    asio::ip::address::from_string("127.0.0.1"), port);
-socket_t socket(io_service, end_point.protocol());
-socket.connect(end_point);
+## Subscriptions 
 
-r::AsyncConnection<socket_t> subscription(
-    std::move(socket), 
-    [&](const auto &error_code, r::redis_result_t &&r) {
-        ...
-    }
-);
-subscription.push_command("subscribe", {"some-channel1", "some-channel2"});
+There is no specific support of subscriptions, but you can easily build your own like
+
+### synchronous subscription
+
+```cpp
+c.command("subscribe", "channel-1", "channel-2");
+Buffer rx_buff;
+
+while(true) {
+  Buffer rx_buff;
+  auto result_markers = c.read(rx_buff);
+  auto extract = boost::apply_visitor(r::extractor<Iterator>(), result_markers.result);
+  rx_buff.consume(result_markers.consumed);
+  
+  /* process the result, which might be subscription confirmation
+     or a message channel */
+  auto& array_reply = boost::get<r::extracts::array_holder_t>(extract);
+  auto* type_reply = boost::get<r::extracts::string_t>(&array_reply.elements[0]);
+  if (type_reply && type_reply->str == "message") {
+      auto& channel = boost::get<r::extracts::string_t>(array_reply.elements[1]);
+      auto& payload = boost::get<r::extracts::string_t>(array_reply.elements[2]);
+      ...
+  }
+}
+```
+### asynchronous subscription
+
+The similar way of synchronous, i.e. push read callback initially and after each successfull read
+```cpp
+using ParseResult = r::positive_parse_result_t<Iterator>;
+using read_callback_t = std::function<void(const boost::system::error_code &error_code, ParseResult &&r)>;
+using Extractor = r::extractor<Iterator>;
+...
+/* we can execute subscription command synchronously, as it is easier */ 
+c.command("subscribe", "channel-1", "channel-2");
+...
+Buffer rx_buff;
+read_callback_t notification_callback = [&](const boost::system::error_code,
+                                            ParseResult &&r) {
+    auto extract = boost::apply_visitor(Extractor(), r.result);
+    rx_buff.consume(r.consumed);
+    /* process the result, see above */
+    ...
+    /* re-trigger new message processing */
+    c.async_read(rx_buff, notification_callback);
+};
+
+/* initialise listening subscriptions */
+c.async_read(rx_buff, notification_callback);
+
 ```
 
 ## API
