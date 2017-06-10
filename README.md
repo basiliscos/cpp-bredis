@@ -328,7 +328,31 @@ boost::asio::spawn(
     });
 ```
 
+## Inspecting network traffic
 
+See `t/SocketWithLogging.hpp` for example. The main idea is quite simple: 
+instead of providing real socket implementation supplied by `Boost::ASIO`,
+provide an wrapper (proxy) which will **spy** on the traffic before
+delegating it to/from `Boost::ASIO` socket.
+
+## Cancellation & other socket operations
+
+There is nothing specific with bredis, but if you need low-level socket
+operations, instead of moving *socket* into bredis connection, you can
+simply move a *reference* to it, and keep (own) the socket somewhere
+outside of bredis connection.
+
+```cpp
+using socket_t = asio::ip::tcp::socket;
+using next_layer_t = socket_t &;
+...
+asio::ip::tcp::endpoint end_point(asio::ip::address::from_string("127.0.0.1"), port);
+socket_t socket(io_service, end_point.protocol());
+socket.connect(end_point);
+r::Connection<next_layer_t> c(socket);
+...
+socket.cancel();
+```
 
 ## API
 
