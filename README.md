@@ -292,6 +292,43 @@ c.async_read(rx_buff, [&](const auto& error_code, auto&& r){
 
 ```
 
+## Futures & Coroutines
+
+The similiar way as in `Boost::ASIO` (special thanks to Vinnie Falko for the suggestion)
+
+### Futures
+
+```cpp
+#include <boost/asio/use_future.hpp>
+...
+Buffer rx_buff, tx_buff;
+auto f_tx_consumed = c.async_write(tx_buff, "ping", asio::use_future);
+auto f_result_markers = c.async_read(rx_buff, asio::use_future);
+...
+tx_buff.consume(f_tx_consumed.get());
+auto result_markers = f_result_markers.get();
+/* scan/extract result, adn consume rx_buff as usual */
+```
+
+### Coroutines
+
+```cpp
+#include <boost/asio/spawn.hpp>
+Buffer rx_buff, tx_buff;
+
+boost::asio::spawn(
+    io_service, [&](boost::asio::yield_context yield) mutable {
+        boost::system::error_code error_code;
+        auto consumed = c.async_write(tx_buff, "ping", yield[error_code]);
+        tx_buff.consume(consumed);
+        ...
+        auto parse_result = c.async_read(rx_buff, yield[error_code], 1);
+        /* scan/extract result */
+        rx_buff.consume(parse_result.consumed);
+    });
+```
+
+
 
 ## API
 
