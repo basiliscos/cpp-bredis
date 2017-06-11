@@ -474,17 +474,8 @@ Perform synchonous write of redis command:
 Perform synchonous read of redis result until the buffer will be parsed or
 some error (procol or I/O) occurs:
 
-- ```cpp
-template <typename DynamicBuffer>
-positive_parse_result_t<Iterator>
-read(DynamicBuffer &rx_buff);
-```
-- ```cpp
-template <typename DynamicBuffer>
-positive_parse_result_t<Iterator>
-read(DynamicBuffer &rx_buff, boost::system::error_code &ec);
-```
-
+- `template <typename DynamicBuffer> positive_parse_result_t<Iterator> read(DynamicBuffer &rx_buff)`
+- `template <typename DynamicBuffer> positive_parse_result_t<Iterator> read(DynamicBuffer &rx_buff, boost::system::error_code &ec);`
 
 # License
 
