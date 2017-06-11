@@ -45,10 +45,7 @@ TEST_CASE("ping", "[connection]") {
     std::future<result_t> completion_future = completion_promise.get_future();
 
     Buffer tx_buff, rx_buff;
-/*
-    r::single_command_t cmd("ping");
-    r::single_command_t cmd2("ping", "2");
-*/
+
     c.async_write(
         tx_buff, "ping", [&](const auto &error_code, auto bytes_transferred) {
             REQUIRE(!error_code);

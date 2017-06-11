@@ -33,10 +33,6 @@ namespace bredis {
 
 template <typename NextLayer> class Connection {
 
-  public:
-    using string_t = boost::string_ref;
-    using args_container_t = std::vector<string_t>;
-
   private:
     NextLayer stream_;
 
