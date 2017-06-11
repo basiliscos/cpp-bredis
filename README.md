@@ -464,7 +464,7 @@ Stream interface accessors:
 
 return underlying stream object.
 
-#### Synchronous interface:
+#### Synchronous interface
 
 Perform synchonous write of redis command:
 
@@ -476,6 +476,60 @@ some error (procol or I/O) occurs:
 
 - `template <typename DynamicBuffer> positive_parse_result_t<Iterator> read(DynamicBuffer &rx_buff)`
 - `template <typename DynamicBuffer> positive_parse_result_t<Iterator> read(DynamicBuffer &rx_buff, boost::system::error_code &ec);`
+
+`DynamicBuffer` must conform `boost::asio::streambuf` interface.
+
+#### Asynchronous interface
+
+##### async_write
+
+`WriteCallback` template should be callable object with the signature:
+
+`void (const boost::system::error_code&, std::size_t bytes_transferred)`
+
+The asynchnous write has the following signature:
+
+```cpp
+void-or-deduced
+async_write(DynamicBuffer &tx_buff, const command_wrapper_t &command,
+                WriteCallback write_callback)
+```
+
+It write the redis command (or commands) into *transfer buffer*, sends them
+to the *next_layer* stream, and invokes `write_callback` after completion.
+
+`tx_buff` must consume `bytes_transferred` upon `write_callback` invocation.
+
+Client must guarantee that `async_write` is not invoked, until the previous
+invocation is finished.
+
+##### async_read
+
+`ReadCallback` template should be callable object with the signature:
+
+`void(boost::system::error_code, r::positive_parse_result_t<Iterator>&& result)`
+
+The asynchnous read has the following signature:
+
+```cpp
+void-or-deduced
+async_read(DynamicBuffer &rx_buff, ReadCallback read_callback,
+               std::size_t replies_count = 1);
+```
+
+It reads `replies_count` replies from the *nex_layer* steam, which will be
+stored in `rx_buff`, or until error (I/O or procol) will be met; then
+`read_callback` will be invoked.
+
+If `replies_count` is greater then `1`, the result type will always be
+`bredis::array_wrapper_t`; if the `replies_count` is `1` then the result type
+depends on redis answer type.
+
+On `read_callback` invocation with successfull parse result it is expected,
+that `rx_buff` will consume the specified in `result` amount of bytes.
+
+Client must guarantee that `async_read` is not invoked, until the previous
+invocation is finished.
 
 # License
 
