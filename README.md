@@ -529,7 +529,9 @@ On `read_callback` invocation with successfull parse result it is expected,
 that `rx_buff` will consume the specified in `result` amount of bytes.
 
 Client must guarantee that `async_read` is not invoked, until the previous
-invocation is finished.
+invocation is finished. If you invoke `async_read` from `read_callback`
+don't forget to **consume** `rx_buff` first, otherwise it leads to
+subtle bugs.
 
 # License
 

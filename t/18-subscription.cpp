@@ -39,6 +39,7 @@ TEST_CASE("subscription", "[connection]") {
     auto port_str = boost::lexical_cast<std::string>(port);
     auto server = ts::make_server({"redis-server", "--port", port_str});
     ep::wait_port<ep::Kind::TCP>(port);
+    //uint16_t port = 6379;
     asio::io_service io_service;
 
     asio::ip::tcp::endpoint end_point(
@@ -130,14 +131,15 @@ TEST_CASE("subscription", "[connection]") {
     Buffer rx_buff;
     r::Connection<next_layer_t> c(socket);
 
-    read_callback_t notification_callback = [&](const boost::system::error_code,
+    read_callback_t notification_callback = [&](const boost::system::error_code ec,
                                                 ParseResult &&r) {
+        REQUIRE(!ec);
 #ifdef BREDIS_DEBUG
         BREDIS_LOG_DEBUG(
             "subscription callback " << boost::apply_visitor(
                 r::marker_helpers::stringizer<Iterator>(), r.result));
 #endif
-
+        REQUIRE(!ec);
         auto extract = boost::apply_visitor(Extractor(), r.result);
         r::extracts::array_holder_t array_reply =
             boost::get<r::extracts::array_holder_t>(extract);
@@ -148,19 +150,25 @@ TEST_CASE("subscription", "[connection]") {
         BREDIS_LOG_DEBUG("examining for completion. String: "
                          << (string_reply ? string_reply->str : ""));
 
+        bool retrigger = false;
         if (type_reply && type_reply->str == "message" && string_reply) {
             if (string_reply->str == "last") {
                 completion_promise.set_value();
             } else {
-                c.async_read(rx_buff, notification_callback);
+                BREDIS_LOG_DEBUG("retriggering notification_callback");
+                retrigger = true;
             }
-            std::string channel =
-                boost::get<r::extracts::string_t>(&array_reply.elements[1])
-                    ->str;
+            auto *channel = boost::get<r::extracts::string_t>(&array_reply.elements[1]);
+            REQUIRE(channel);
             std::string payload(string_reply->str);
-            messages.emplace_back(channel + ":" + payload);
+            messages.emplace_back(channel->str + ":" + payload);
         }
+        BREDIS_LOG_DEBUG("consuming " << r.consumed  << " bytes");
+        REQUIRE(r.consumed);
         rx_buff.consume(r.consumed);
+        if (retrigger) {
+            c.async_read(rx_buff, notification_callback);
+        }
     };
     c.async_read(rx_buff, notification_callback);
 
