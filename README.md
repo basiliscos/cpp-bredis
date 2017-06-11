@@ -18,7 +18,7 @@ Boost::ASIO low-level redis client (connector)
 ## Changelog
 
 ### 0.01
-- initial version 
+- initial version
 
 ### 0.02
 - added windows support
@@ -28,16 +28,16 @@ Boost::ASIO low-level redis client (connector)
 - dropped queing support (queuing policy should be implemented at more higher levels)
 - dropped subscription support (can be implemented at higher levels)
 - dropped internal buffers (can be implemented at higher levels)
-- dropped explicit cancellation (socket reference can be passed to connector, and cancellation 
+- dropped explicit cancellation (socket reference can be passed to connector, and cancellation
 can be done on the socket object outside of the connector)
 
 ## Work with the result
 
-The general idea is that the result of attempt to  redis reply can be either: no enough data or protocol error (exteame case) or some positive parse result. The last one is just **markers** of result, which is actually stored in *receive buffer* (i.e. outside of markers, and outside of bredis-connection). 
+The general idea is that the result of attempt to  redis reply can be either: no enough data or protocol error (exteame case) or some positive parse result. The last one is just **markers** of result, which is actually stored in *receive buffer* (i.e. outside of markers, and outside of bredis-connection).
 
 The the further work with markers denends on your needs: it is possible either **scan** the result for the expected results (e.g. for `PONG` reply on `PING` command, or for `OK`/`QUEUED` replies on `MULTI`/`EXEC` commands) or **extract** the results (the common redis types: `nil`, `string`, `error`, `int` or (recursive) array of them).
 
-When data in receive buffer is no logner required, it should be consumed. 
+When data in receive buffer is no logner required, it should be consumed.
 
 Scan example:
 
@@ -45,6 +45,8 @@ Scan example:
 #include "bredis/MarkerHelpers.hpp"
 ...
 namespace r = bredis;
+...
+using Buffer = boost::asio::streambuf;
 ...
 Buffer rx_buff;
 auto result_markers = c.read(rx_buff);
@@ -103,9 +105,9 @@ r::Connection<socket_t> c(std::move(socket));
 /* synchronously write command */
 c.write("ping");
 
-/* buffer is allocated outside of bredis connection*/ 
+/* buffer is allocated outside of bredis connection*/
 Buffer rx_buff;
-/* get the result markers */ 
+/* get the result markers */
 auto result_markers = c.read(rx_buff);
 /* check for the responce */
 auto eq_pong = r::marker_helpers::equality<Iterator>("PONG");
@@ -195,7 +197,7 @@ The same as above, except the underlying socket type should be changed:
 using socket_t = asio::local::stream_protocol::socket;
 ```
 
-## Subscriptions 
+## Subscriptions
 
 There is no specific support of subscriptions, but you can easily build your own like
 
@@ -210,7 +212,7 @@ while(true) {
   auto result_markers = c.read(rx_buff);
   auto extract = boost::apply_visitor(r::extractor<Iterator>(), result_markers.result);
   rx_buff.consume(result_markers.consumed);
-  
+
   /* process the result, which might be subscription confirmation
      or a message channel */
   auto& array_reply = boost::get<r::extracts::array_holder_t>(extract);
@@ -230,7 +232,7 @@ using ParseResult = r::positive_parse_result_t<Iterator>;
 using read_callback_t = std::function<void(const boost::system::error_code &error_code, ParseResult &&r)>;
 using Extractor = r::extractor<Iterator>;
 ...
-/* we can execute subscription command synchronously, as it is easier */ 
+/* we can execute subscription command synchronously, as it is easier */
 c.command("subscribe", "channel-1", "channel-2");
 ...
 Buffer rx_buff;
@@ -259,14 +261,14 @@ First, wrap your commands into tranaction:
 r::command_container_t tx_commands = {
     r::single_command_t("MULTI"),
         r::single_command_t("INCR", "foo"),
-        r::single_command_t("GET", "bar"), 
+        r::single_command_t("GET", "bar"),
     r::single_command_t("EXEC"),
 };
 r::command_wrapper_t cmd(tx_commands);
 c.write(cmd);
 ```
 
-Then, as above there was **4** redis commands, there should come **4** redis 
+Then, as above there was **4** redis commands, there should come **4** redis
 replies: `OK`, `QUEUED`, `QUEUED` and the array of results of execution of commands
 in transaction (i.e. results for `INCR` and `GET` above)
 
@@ -330,7 +332,7 @@ boost::asio::spawn(
 
 ## Inspecting network traffic
 
-See `t/SocketWithLogging.hpp` for example. The main idea is quite simple: 
+See `t/SocketWithLogging.hpp` for example. The main idea is quite simple:
 instead of providing real socket implementation supplied by `Boost::ASIO`,
 provide an wrapper (proxy) which will **spy** on the traffic before
 delegating it to/from `Boost::ASIO` socket.
@@ -356,57 +358,135 @@ socket.cancel();
 
 ## API
 
-### `redis_result_t`
+### `Iterator` template
 
-The `some_result_t` is `boost::variant` of the following types: 
-- `string_holder_t`
-- `error_holder_t`
-- `nil_t`
-- recursive array wrapper of `redis_result_t` (`boost::recursive_wrapper<array_holder_t>`)
+underlying iterator type for used dynamic buffer type (e.g. `boost::asio::streambuf`)
 
-`redis_result_t` and `error_holder_t` just have `str` member, which is basically `boost::string_ref`.
+### `redis_result_t<Iterator>`
 
-`nil_t` is obvious type to present `nil` redis result. 
+Header: `include/bredis/Markers.hpp`
 
-`array_holder_t` has `elements` member, which is `std::vector` of `some_result_t`.
+Namespace: `bredis::markers`
 
-### `AsyncConnection<T>`
 
-Type `T` can be either TCP socket type or unix-domain sockets (e.g. `boost::asio::ip::tcp::socket` or `boost::asio::local::stream_protocol::socket`). 
+`boost::variant` for the basic types in redis protocol [](https://redis.io/topics/protocol),
+i.e. the following marker types :
+- `nil_t<Iterator>`
+- `int_t<Iterator>`
+- `string_t<Iterator>` (simple string and bulk strings)
+- `error_t<Iterator>`
+- `array_holder_t<Iterator>`
 
-Constructor takes socket instance (`T&&`).
+The basic type is `string_t<Iterator>`, which contains `from` and `to` members (`Iterator`),
+where string is held. String does not contains special redis-protocol symbols, and other
+metadata, i.e. can be used to extract/flatten the whole string.
 
-Method `cancel` cancels all pending I/O operations.
+`nil_t<Iterator>`, `int_t<Iterator>`, `error_t<Iterator>` just have `string` member
+to point underlying string in redis protocol.
 
-Method `push_command(const std::string &cmd, C &&contaier, command_callback_t callback)` pushes new redis command with optional list of arguments. `callback` is invoked on error(socket write, socket read error, redis protocol error) or on successfull result parsing. 
+`array_holder_t` is recursive wrapper for the `redis_result_t<Iterator>`, it contains
+`elements` member of `std::array` of `redis_result_t<Iterator>`
 
-`command_callback_t` is `std::function<void(const boost::system::error_code &error_code, redis_result_t &&result)>`;
+### `parse_result_t<Iterator>`
 
-### `Subscription<T>`
+Header: `include/bredis/Result.hpp`
 
-Subscription is special mode, when redis server operates in `push` mode.
+Namespace: `bredis`
 
-Type `T` can be either TCP socket type or unix-domain sockets (e.g. `boost::asio::ip::tcp::socket` or `boost::asio::local::stream_protocol::socket`). 
+Represents results of parse attempt. It is `boost::variant` of the following types:
+- `no_enogh_data_t`
+- `protocol_error_t`
+- `positive_parse_result_t<Iterator>`
 
-Constructor takes socket instance (`T&&`) and `command_callback_t callback`, which is executed on every incoming reply; the reply is not necessary `message`, e.g. it can be (un)subscription confirmation from redis.
+`no_enogh_data_t` is empty struct, meaning that buffer just does not contains enough
+information to completely parse it.
 
-Method `cancel` cancels all pending I/O operations.
+`protocol_error_t` has `std::string what` member, descriping the error in protocol,
+(e.g. when type in stream is specified as integer, but it cannot be converted to integer).
+This error should never occur in production code, meaning that no (logical) errors
+are expected in redis-server nor in bredis parser.
 
-Method `push_command(const std::string &cmd, C &&contaier)` pushes new redis command with optional list of arguments. By semantic the command can be either `subscribe`, `psubscribe`, `unsubscribe` and `punsubscribe`. 
+`positive_parse_result_t<Iterator>` contains members:
+- `markers::redis_result_t<Iterator> result` - result of mark-up buffer; can be used
+either for scanning for particular results or for extraction of results.
+- `size_t consumed` - how many bytes of receive buffer must be consumed, after
+using `result` field.
+
+
+### `stringizer<Iterator>` and `equality<Iterator>`
+
+Header: `include/bredis/MarkerHelpers.hpp`
+
+Namespace: `bredis::marker_helpers`
+
+`boost::static_visitor`s for stringize the result (can be useful for debugging)
+and `equality<Iterator>(std::string str)` is used to find *string* in the
+parsed results.
+
+### `command_wrapper_t`
+
+Header: `include/bredis/Command.hpp`
+
+Namespace: `bredis`
+
+`boost::variant` for the basic commands:
+- `single_command_t`
+- `command_container_t`
+
+`single_command_t` represents single redis command with all it's arguments, e.g.:
 
 ```cpp
-subscription.push_command("subscribe", {"some-channel-1", "some-channel-2"});
+r::single_command_t {"ping"};
+r::single_command_t {"get", "queu-name"};
 ```
 
-### `SyncConnection<T>`
+The arguments must be conversible to `boost::string_ref`.
 
-Type `T` can be either TCP socket type or unix-domain sockets (e.g. `boost::asio::ip::tcp::socket` or `boost::asio::local::stream_protocol::socket`). 
+`command_container_t` is `std::vector` of `single_command_t`. Useful for transactions
+or buck messages creation.
 
-Constructor takes socket instance (`T&&`).
+### `Connection<NextLayer>`
 
-Method `command` returns `redis_result_t`. It's signarute is `command(const std::string &cmd, C &&container, boost::asio::streambuf &rx_buff)`. `rx_buff` is used to store incoming data from redis server.
+Header: `include/bredis/Connection.hpp`
 
-# License 
+Namespace: `bredis`
+
+A thin wrapper around `NextLayer`; represents connection to redis. `NextLayer` can
+be either `asio::ip::tcp::socket` or `asio::ip::tcp::socket&` or custom wrapper, which
+follows the specification of `asio::ip::tcp::socket`.
+
+Constructor `template <typename... Args> Connection(Args &&... args)` used for
+construction of NextLayer (stream interface).
+
+Stream interface accessors:
+- `NextLayer &next_layer()`
+- `const NextLayer &next_layer() const`
+
+return underlying stream object.
+
+#### Synchronous interface:
+
+Perform synchonous write of redis command:
+
+- `void write(const command_wrapper_t &command)`
+- `void write(const command_wrapper_t &command, boost::system::error_code &ec)`
+
+Perform synchonous read of redis result until the buffer will be parsed or
+some error (procol or I/O) occurs:
+
+- ```cpp
+template <typename DynamicBuffer>
+positive_parse_result_t<Iterator>
+read(DynamicBuffer &rx_buff);
+```
+- ```cpp
+template <typename DynamicBuffer>
+positive_parse_result_t<Iterator>
+read(DynamicBuffer &rx_buff, boost::system::error_code &ec);
+```
+
+
+# License
 
 MIT
 
