@@ -38,7 +38,8 @@ template <typename NextLayer> class Connection {
 
   public:
     template <typename... Args>
-    Connection(Args &&... args) : stream_(std::forward<Args>(args)...) {}
+    explicit Connection(Args &&... args)
+        : stream_(std::forward<Args>(args)...) {}
 
     inline NextLayer &next_layer() { return stream_; }
     inline const NextLayer &next_layer() const { return stream_; }
