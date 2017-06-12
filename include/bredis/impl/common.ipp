@@ -11,6 +11,7 @@
 #include <boost/type_traits.hpp>
 #include <iostream>
 #include <sstream>
+#include <locale>
 
 #ifdef BREDIS_DEBUG
 #define BREDIS_LOG_DEBUG(msg)                                                  \
@@ -63,12 +64,14 @@ class command_serializer_visitor : public boost::static_visitor<std::string> {
   public:
     std::string operator()(const single_command_t &value) const {
         std::stringstream out;
+        out.imbue(std::locale::classic());
         Protocol::serialize(out, value);
         return out.str();
     }
 
     std::string operator()(const command_container_t &value) const {
         std::stringstream out;
+        out.imbue(std::locale::classic());
         for (const auto &cmd : value) {
             Protocol::serialize(out, cmd);
         }
