@@ -20,7 +20,7 @@ BOOST_ASIO_INITFN_RESULT_TYPE(WriteCallback,
                               void(boost::system::error_code, std::size_t))
 Connection<NextLayer>::async_write(DynamicBuffer &tx_buff,
                                    const command_wrapper_t &command,
-                                   WriteCallback write_callback) {
+                                   WriteCallback &&write_callback) {
     namespace asio = boost::asio;
     namespace sys = boost::system;
     using boost::asio::async_write;
@@ -43,7 +43,7 @@ BOOST_ASIO_INITFN_RESULT_TYPE(ReadCallback,
                               void(const boost::system::error_code,
                                    BREDIS_PARSE_RESULT(DynamicBuffer)))
 Connection<NextLayer>::async_read(DynamicBuffer &rx_buff,
-                                  ReadCallback read_callback,
+                                  ReadCallback &&read_callback,
                                   std::size_t replies_count) {
 
     namespace asio = boost::asio;

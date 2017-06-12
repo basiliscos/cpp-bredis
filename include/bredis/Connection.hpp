@@ -49,13 +49,13 @@ template <typename NextLayer> class Connection {
     BOOST_ASIO_INITFN_RESULT_TYPE(WriteCallback,
                                   void(boost::system::error_code, std::size_t))
     async_write(DynamicBuffer &tx_buff, const command_wrapper_t &command,
-                WriteCallback write_callback);
+                WriteCallback &&write_callback);
 
     template <typename DynamicBuffer, typename ReadCallback>
     BOOST_ASIO_INITFN_RESULT_TYPE(ReadCallback,
                                   void(boost::system::error_code,
                                        BREDIS_PARSE_RESULT(DynamicBuffer)))
-    async_read(DynamicBuffer &rx_buff, ReadCallback read_callback,
+    async_read(DynamicBuffer &rx_buff, ReadCallback &&read_callback,
                std::size_t replies_count = 1);
 
     /* synchronous interface */
