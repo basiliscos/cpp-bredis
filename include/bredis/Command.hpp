@@ -15,6 +15,8 @@
 
 namespace bredis {
 
+namespace detail {
+
 template <bool...> struct bool_pack;
 template <bool... bs>
 using all_true = std::is_same<bool_pack<bs..., true>, bool_pack<true, bs...>>;
@@ -22,13 +24,15 @@ using all_true = std::is_same<bool_pack<bs..., true>, bool_pack<true, bs...>>;
 template <class R, class... Ts>
 using are_all_constructible = all_true<std::is_constructible<R, Ts>::value...>;
 
+} // namespace detail
+
 using args_container_t = std::vector<boost::string_ref>;
 struct single_command_t {
     args_container_t arguments;
 
     template <typename... Args,
-              typename = std::enable_if_t<
-                  are_all_constructible<boost::string_ref, Args...>::value>>
+              typename = std::enable_if_t<detail::are_all_constructible<
+                  boost::string_ref, Args...>::value>>
     single_command_t(Args &&... args) : arguments{std::forward<Args>(args)...} {
         static_assert(sizeof...(Args) >= 1, "Empty command is not allowed");
     }
