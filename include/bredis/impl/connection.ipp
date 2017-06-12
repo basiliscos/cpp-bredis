@@ -15,7 +15,7 @@
 namespace bredis {
 
 template <typename NextLayer>
-template <typename WriteCallback, typename DynamicBuffer>
+template <typename DynamicBuffer, typename WriteCallback>
 BOOST_ASIO_INITFN_RESULT_TYPE(WriteCallback,
                               void(boost::system::error_code, std::size_t))
 Connection<NextLayer>::async_write(DynamicBuffer &tx_buff,
@@ -38,7 +38,7 @@ Connection<NextLayer>::async_write(DynamicBuffer &tx_buff,
 }
 
 template <typename NextLayer>
-template <typename ReadCallback, typename DynamicBuffer>
+template <typename DynamicBuffer, typename ReadCallback>
 BOOST_ASIO_INITFN_RESULT_TYPE(ReadCallback,
                               void(const boost::system::error_code,
                                    BREDIS_PARSE_RESULT(DynamicBuffer)))
