@@ -44,7 +44,7 @@ template <typename Iterator> class MatchResult {
                 break;
             }
 
-            auto *no_enoght_data = boost::get<no_enogh_data_t>(&parse_result);
+            auto *no_enoght_data = boost::get<not_enough_data_t>(&parse_result);
             if (no_enoght_data) {
                 break;
             }

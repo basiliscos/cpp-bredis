@@ -28,7 +28,7 @@ TEST_CASE("empty string", "[protocol]") {
     Buffer buff(ok.c_str(), ok.size());
     auto from = Iterator::begin(buff), to = Iterator::end(buff);
     auto parsed_result = r::Protocol::parse(from, to);
-    r::no_enogh_data_t *r = boost::get<r::no_enogh_data_t>(&parsed_result);
+    r::not_enough_data_t *r = boost::get<r::not_enough_data_t>(&parsed_result);
     REQUIRE(r != nullptr);
 };
 
@@ -37,7 +37,7 @@ TEST_CASE("non-finished ", "[protocol]") {
     Buffer buff(ok.c_str(), ok.size());
     auto from = Iterator::begin(buff), to = Iterator::end(buff);
     auto parsed_result = r::Protocol::parse(from, to);
-    r::no_enogh_data_t *r = boost::get<r::no_enogh_data_t>(&parsed_result);
+    r::not_enough_data_t *r = boost::get<r::not_enough_data_t>(&parsed_result);
     REQUIRE(r != nullptr);
 };
 
@@ -142,7 +142,7 @@ TEST_CASE("patrial bulk string(1)", "[protocol]") {
     Buffer buff(ok.c_str(), ok.size());
     auto from = Iterator::begin(buff), to = Iterator::end(buff);
     auto parsed_result = r::Protocol::parse(from, to);
-    REQUIRE(boost::get<r::no_enogh_data_t>(&parsed_result) != nullptr);
+    REQUIRE(boost::get<r::not_enough_data_t>(&parsed_result) != nullptr);
 };
 
 TEST_CASE("patrial bulk string(2)", "[protocol]") {
@@ -150,7 +150,7 @@ TEST_CASE("patrial bulk string(2)", "[protocol]") {
     Buffer buff(ok.c_str(), ok.size());
     auto from = Iterator::begin(buff), to = Iterator::end(buff);
     auto parsed_result = r::Protocol::parse(from, to);
-    REQUIRE(boost::get<r::no_enogh_data_t>(&parsed_result) != nullptr);
+    REQUIRE(boost::get<r::not_enough_data_t>(&parsed_result) != nullptr);
 };
 
 TEST_CASE("malformed bulk string(2)", "[protocol]") {
@@ -207,7 +207,7 @@ TEST_CASE("patrial array", "[protocol]") {
     Buffer buff(ok.c_str(), ok.size());
     auto from = Iterator::begin(buff), to = Iterator::end(buff);
     auto parsed_result = r::Protocol::parse(from, to);
-    REQUIRE(boost::get<r::no_enogh_data_t>(&parsed_result) != nullptr);
+    REQUIRE(boost::get<r::not_enough_data_t>(&parsed_result) != nullptr);
 };
 
 TEST_CASE("array: string, int, nil", "[protocol]") {

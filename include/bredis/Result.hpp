@@ -30,7 +30,7 @@ struct protocol_error_t {
     bool operator==(const char *rhs) { return what == rhs; }
 };
 
-struct no_enogh_data_t {};
+struct not_enough_data_t {};
 
 template <typename Iterator> struct positive_parse_result_t {
     markers::redis_result_t<Iterator> result;
@@ -39,11 +39,11 @@ template <typename Iterator> struct positive_parse_result_t {
 
 template <typename Iterator>
 using optional_parse_result_t =
-    boost::variant<no_enogh_data_t, positive_parse_result_t<Iterator>>;
+    boost::variant<not_enough_data_t, positive_parse_result_t<Iterator>>;
 
 template <typename Iterator>
 using parse_result_t =
-    boost::variant<no_enogh_data_t, positive_parse_result_t<Iterator>,
+    boost::variant<not_enough_data_t, positive_parse_result_t<Iterator>,
                    protocol_error_t>;
 
 } // namespace bredis

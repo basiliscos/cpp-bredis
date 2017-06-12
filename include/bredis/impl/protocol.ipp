@@ -39,7 +39,7 @@ template <> struct Extractor<extractor_tags::e_string> {
         auto found_terminator = std::search(from, to, from_t, to_t);
 
         if (found_terminator == to) {
-            return no_enogh_data_t{};
+            return not_enough_data_t{};
         } else {
             size_t consumed = already_consumed +
                               std::distance(from, found_terminator) +
@@ -63,7 +63,7 @@ template <> struct Extractor<extractor_tags::e_error> {
         auto *positive_result =
             boost::get<positive_parse_result_t<Iterator>>(&parse_result);
         if (!positive_result) {
-            return no_enogh_data_t{};
+            return not_enough_data_t{};
         } else {
             auto &string_result = boost::get<markers::string_t<Iterator>>(
                 positive_result->result);
@@ -86,7 +86,7 @@ template <> struct Extractor<extractor_tags::e_int> {
         auto *positive_result =
             boost::get<positive_parse_result_t<Iterator>>(&parse_result);
         if (!positive_result) {
-            return no_enogh_data_t{};
+            return not_enough_data_t{};
         } else {
             auto &string_result = boost::get<markers::string_t<Iterator>>(
                 positive_result->result);
@@ -108,7 +108,7 @@ template <> struct Extractor<extractor_tags::e_bulk_string> {
         auto *positive_result =
             boost::get<positive_parse_result_t<Iterator>>(&parse_result);
         if (!positive_result) {
-            return no_enogh_data_t{};
+            return not_enough_data_t{};
         }
 
         auto &count_string =
@@ -132,7 +132,7 @@ template <> struct Extractor<extractor_tags::e_bulk_string> {
             size_t ucount = static_cast<size_t>(count);
             auto terminator_size = Protocol::terminator.size();
             if (left < ucount + terminator_size) {
-                return no_enogh_data_t{};
+                return not_enough_data_t{};
             }
             auto tail = head + ucount;
             std::string debug_str;
@@ -167,7 +167,7 @@ template <> struct Extractor<extractor_tags::e_array> {
         auto *positive_result =
             boost::get<positive_parse_result_t<Iterator>>(&parse_result);
         if (!positive_result) {
-            return no_enogh_data_t{};
+            return not_enough_data_t{};
         }
 
         auto &count_string =
@@ -193,7 +193,7 @@ template <> struct Extractor<extractor_tags::e_array> {
                 Iterator left = from + consumed;
                 auto optional_parse_result = raw_parse(left, to);
                 auto *no_enogh_data =
-                    boost::get<no_enogh_data_t>(&optional_parse_result);
+                    boost::get<not_enough_data_t>(&optional_parse_result);
                 if (no_enogh_data) {
                     return *no_enogh_data;
                 }
@@ -215,7 +215,7 @@ template <typename Iterator>
 static optional_parse_result_t<Iterator> raw_parse(Iterator &from,
                                                    Iterator &to) {
     if (from == to) {
-        return no_enogh_data_t{};
+        return not_enough_data_t{};
     }
 
     auto marker = *from++;
