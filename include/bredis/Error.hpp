@@ -20,17 +20,19 @@ class bredis_category : public boost::system::error_category {
 };
 
 class Error {
-    static const bredis_category category;
 
   public:
-    Error() {};
+    Error(){};
     static inline boost::system::error_code make_error_code(bredis_errors e);
+    static inline bredis_category const &get_error_category() {
+        static bredis_category const cat{};
+        return cat;
+    }
 };
 
-const bredis_category Error::category{};
-
 boost::system::error_code Error::make_error_code(bredis_errors e) {
-    return boost::system::error_code(static_cast<int>(e), category);
+    return boost::system::error_code(static_cast<int>(e),
+                                     Error::get_error_category());
 }
 
 } // namespace bredis
