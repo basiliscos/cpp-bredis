@@ -60,10 +60,8 @@ Connection<NextLayer>::async_read(DynamicBuffer &rx_buff,
     asio::async_result<real_handler_t> async_result(real_handler);
 
     async_read_until(stream_, rx_buff, MatchResult<Iterator>(replies_count), [
-        handler = std::move(real_handler), &rx_buff, replies_count
-    ](const sys::error_code &error_code, std::size_t bytes_transferred) {
-
-        real_handler_t real_handler(std::move(handler));
+        real_handler = std::move(real_handler), &rx_buff, replies_count
+    ](const sys::error_code &error_code, std::size_t bytes_transferred) mutable {
         positive_parse_result_t<Iterator> result;
 
         if (error_code) {
