@@ -19,7 +19,6 @@ class async_read_op {
     DynamicBuffer &rx_buff_;
     ReadCallback callback_;
     std::size_t replies_count_;
-    bool done_ = false;
 
   public:
     async_read_op(async_read_op &&) = default;
@@ -35,8 +34,7 @@ class async_read_op {
 
     friend bool asio_handler_is_continuation(async_read_op *op) {
         using boost::asio::asio_handler_is_continuation;
-        return op->done_ ||
-               asio_handler_is_continuation(std::addressof(op->callback_));
+        return asio_handler_is_continuation(std::addressof(op->callback_));
     }
 
     friend void *asio_handler_allocate(std::size_t size, async_read_op *op) {
@@ -103,7 +101,6 @@ operator()(boost::system::error_code error_code,
     }
 
     callback_(error_code, std::move(result));
-    done_ = true;
 }
 
 } // namespace bredis
