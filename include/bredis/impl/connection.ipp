@@ -12,6 +12,8 @@
 #include <ostream>
 #include <type_traits>
 
+#include "async_op.ipp"
+
 namespace bredis {
 
 template <typename NextLayer>
@@ -59,49 +61,11 @@ Connection<NextLayer>::async_read(DynamicBuffer &rx_buff,
     real_handler_t real_handler(std::forward<ReadCallback>(read_callback));
     asio::async_result<real_handler_t> async_result(real_handler);
 
-    async_read_until(stream_, rx_buff, MatchResult<Iterator>(replies_count), [
-        real_handler = std::move(real_handler), &rx_buff, replies_count
-    ](const sys::error_code &error_code, std::size_t bytes_transferred) mutable {
-        positive_parse_result_t<Iterator> result;
+    async_read_op<NextLayer, DynamicBuffer, real_handler_t> async_op(
+        std::move(real_handler), stream_, rx_buff, replies_count);
 
-        if (error_code) {
-            real_handler(error_code, std::move(result));
-            return;
-        }
-        auto const_buff = rx_buff.data();
-        auto begin = Iterator::begin(const_buff);
-        auto end = Iterator::end(const_buff);
-
-        markers::array_holder_t<Iterator> results;
-        results.elements.reserve(replies_count);
-        size_t cumulative_consumption = 0;
-        boost::system::error_code ec;
-
-        do {
-            auto from = begin + cumulative_consumption;
-            auto parse_result = Protocol::parse(from, end);
-            auto *parse_error = boost::get<protocol_error_t>(&parse_result);
-            if (parse_error) {
-                auto parse_error_code =
-                    Error::make_error_code(bredis_errors::protocol_error);
-                real_handler(parse_error_code, std::move(result));
-                return;
-            }
-            auto &positive_result =
-                boost::get<positive_parse_result_t<Iterator>>(parse_result);
-            results.elements.emplace_back(positive_result.result);
-            cumulative_consumption += positive_result.consumed;
-        } while (results.elements.size() < replies_count);
-
-        if (replies_count == 1) {
-            real_handler(ec, positive_parse_result_t<Iterator>{
-                                 std::move(results.elements[0]),
-                                 cumulative_consumption});
-        } else {
-            real_handler(ec, positive_parse_result_t<Iterator>{
-                                 std::move(results), cumulative_consumption});
-        }
-    });
+    async_read_until(stream_, rx_buff, MatchResult<Iterator>(replies_count),
+                     std::move(async_op));
     return async_result.get();
 }
 
