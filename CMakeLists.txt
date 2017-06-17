@@ -72,6 +72,8 @@ else()
     set(LINK_DEPENDENCIES pthread ${Boost_LIBRARIES} catch_lib)
 endif()
 
+add_subdirectory(examples)
+
 add_executable(t-05-protocol t/05-protocol.cpp)
 target_link_libraries(t-05-protocol ${LINK_DEPENDENCIES})
 add_test("t-05-protocol" t-05-protocol)
