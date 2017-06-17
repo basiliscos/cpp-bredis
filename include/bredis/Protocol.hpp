@@ -17,14 +17,12 @@ namespace bredis {
 
 class Protocol {
   public:
-    static const std::string terminator;
-
     template <typename Iterator>
-    static parse_result_t<Iterator> parse(Iterator &from,
-                                          Iterator &to) noexcept;
+    static inline parse_result_t<Iterator> parse(Iterator &from,
+                                                 Iterator &to) noexcept;
 
-    static std::ostream &serialize(std::ostream &buff,
-                                   const single_command_t &cmd);
+    static inline std::ostream &serialize(std::ostream &buff,
+                                          const single_command_t &cmd);
 };
 };
 

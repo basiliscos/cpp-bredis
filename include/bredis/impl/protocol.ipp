@@ -12,7 +12,10 @@
 
 namespace bredis {
 
-const std::string Protocol::terminator = "\r\n";
+static inline const std::string &get_terminator() {
+    static std::string terminator("\r\n");
+    return terminator;
+}
 
 template <typename Iterator>
 static optional_parse_result_t<Iterator> raw_parse(Iterator &from,
@@ -34,8 +37,7 @@ template <> struct Extractor<extractor_tags::e_string> {
     optional_parse_result_t<Iterator>
     operator()(Iterator &from, Iterator &to, size_t already_consumed) const {
 
-        auto from_t(Protocol::terminator.cbegin()),
-            to_t(Protocol::terminator.cend());
+        auto from_t(get_terminator().cbegin()), to_t(get_terminator().cend());
         auto found_terminator = std::search(from, to, from_t, to_t);
 
         if (found_terminator == to) {
@@ -43,7 +45,7 @@ template <> struct Extractor<extractor_tags::e_string> {
         } else {
             size_t consumed = already_consumed +
                               std::distance(from, found_terminator) +
-                              Protocol::terminator.size();
+                              get_terminator().size();
             return optional_parse_result_t<Iterator>{
                 positive_parse_result_t<Iterator>{
                     markers::redis_result_t<Iterator>{
@@ -130,7 +132,7 @@ template <> struct Extractor<extractor_tags::e_bulk_string> {
             auto head = from + positive_result->consumed;
             size_t left = std::distance(head, to);
             size_t ucount = static_cast<size_t>(count);
-            auto terminator_size = Protocol::terminator.size();
+            auto terminator_size = get_terminator().size();
             if (left < ucount + terminator_size) {
                 return not_enough_data_t{};
             }
@@ -139,8 +141,8 @@ template <> struct Extractor<extractor_tags::e_bulk_string> {
             debug_str.append(head, tail);
             const char *ds = debug_str.c_str();
 
-            auto from_t(Protocol::terminator.cbegin()),
-                to_t(Protocol::terminator.cend());
+            auto from_t(get_terminator().cbegin()),
+                to_t(get_terminator().cend());
             auto found_terminator = std::search(tail, to, from_t, to_t);
             if (found_terminator != tail) {
                 throw std::runtime_error(
@@ -258,11 +260,11 @@ parse_result_t<Iterator> Protocol::parse(Iterator &from,
 
 std::ostream &Protocol::serialize(std::ostream &buff,
                                   const single_command_t &cmd) {
-    buff << '*' << (cmd.arguments.size()) << Protocol::terminator;
+    buff << '*' << (cmd.arguments.size()) << get_terminator();
 
     for (const auto &arg : cmd.arguments) {
-        buff << '$' << arg.size() << Protocol::terminator << arg
-             << Protocol::terminator;
+        buff << '$' << arg.size() << get_terminator() << arg
+             << get_terminator();
     }
     return buff;
 }
