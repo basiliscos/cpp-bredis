@@ -67,7 +67,7 @@ struct eq_array : public boost::static_visitor<bool> {
 // [ [string] "message", [string] channel_name, [string] payload]
 //
 // This class is NOT templated by Iterator as it operates on extracts
-// of redis replyes, i.e. already decoupled (copies) from buffer.
+// of redis replies, i.e. already decoupled (copies) from buffer.
 //
 // redis reply without results extraction, what is obviously faster
 
