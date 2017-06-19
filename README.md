@@ -438,8 +438,16 @@ Namespace: `bredis`
 `single_command_t` represents single redis command with all it's arguments, e.g.:
 
 ```cpp
-r::single_command_t {"ping"};
-r::single_command_t {"get", "queu-name"};
+// compile-time version
+r::single_command_t cmd_ping {"ping"};
+r::single_command_t cmd_get {"get", "queu-name"};
+...
+// or runtime-version
+std::vector<std::string> subscription_items { "subscribe", "channel-a", "channel-b"};
+r::single_command_t cmd_subscribe {
+    subscription_items.cbegin(), 
+    subscription_items.cend()
+};
 ```
 
 The arguments must be conversible to `boost::string_ref`.
