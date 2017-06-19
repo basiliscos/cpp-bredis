@@ -36,6 +36,13 @@ struct single_command_t {
     single_command_t(Args &&... args) : arguments{std::forward<Args>(args)...} {
         static_assert(sizeof...(Args) >= 1, "Empty command is not allowed");
     }
+
+    template <typename InputIterator,
+              typename = std::enable_if_t<std::is_constructible<
+                  boost::string_ref, typename std::iterator_traits<
+                                         InputIterator>::value_type>::value>>
+    single_command_t(InputIterator first, InputIterator last)
+        : arguments(first, last) {}
 };
 
 using command_container_t = std::vector<single_command_t>;
