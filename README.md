@@ -77,6 +77,8 @@ Custom extractors (visitors) might be useful for performance-aware cases, e.g. w
 
 The underlying reason for decision to have final results in two steps (get markers and then scan/extract results) is caused by the fact that *receive buffer* might be scattered (fragmented). Scan and extraction can be performed without gathering receive buffers (i.e. without flattening / linearizing it).
 
+In other words, *markers* have **referense semantics** (they refer memory regions in buffer, but do not own), while *extracted results* have **value semantics** (ownership).
+
 ## Syncronous TCP-connection example
 
 ```cpp
