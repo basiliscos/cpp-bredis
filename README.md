@@ -77,6 +77,8 @@ Custom extractors (visitors) might be useful for performance-aware cases, e.g. w
 
 The underlying reason for decision to have final results in two steps (get markers and then scan/extract results) is caused by the fact that *receive buffer* might be scattered (fragmented). Scan and extraction can be performed without gathering receive buffers (i.e. without flattening / linearizing it).
 
+In other words, *markers* have **referense semantics** (they refer memory regions in buffer, but do not own), while *extracted results* have **value semantics** (ownership).
+
 ## Syncronous TCP-connection example
 
 ```cpp
@@ -436,8 +438,16 @@ Namespace: `bredis`
 `single_command_t` represents single redis command with all it's arguments, e.g.:
 
 ```cpp
-r::single_command_t {"ping"};
-r::single_command_t {"get", "queu-name"};
+// compile-time version
+r::single_command_t cmd_ping {"ping"};
+r::single_command_t cmd_get {"get", "queu-name"};
+...
+// or runtime-version
+std::vector<std::string> subscription_items { "subscribe", "channel-a", "channel-b"};
+r::single_command_t cmd_subscribe {
+    subscription_items.cbegin(), 
+    subscription_items.cend()
+};
 ```
 
 The arguments must be conversible to `boost::string_ref`.
