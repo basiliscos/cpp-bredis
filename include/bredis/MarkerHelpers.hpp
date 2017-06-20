@@ -156,8 +156,9 @@ class check_subscription : public boost::static_visitor<bool> {
                 return false;
             }
             int idx = idx_option.value();
+            int size = static_cast<int>(cmd_.arguments.size());
             // out of scope
-            if (idx < 1 || idx >= cmd_.arguments.size()) {
+            if (idx < 1 || idx >= size) {
                 return false;
             }
 
