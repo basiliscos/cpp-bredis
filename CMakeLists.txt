@@ -86,6 +86,10 @@ add_executable(t-07-extract t/07-extract.cpp)
 target_link_libraries(t-07-extract ${LINK_DEPENDENCIES})
 add_test("t-07-extract" t-07-extract)
 
+add_executable(t-08-markers t/08-markers.cpp)
+target_link_libraries(t-08-markers ${LINK_DEPENDENCIES})
+add_test("t-07-extract" t-08-markers)
+
 add_executable(t-10-ping t/10-ping.cpp)
 target_link_libraries(t-10-ping ${LINK_DEPENDENCIES})
 add_test("t-10-ping" t-10-ping)

@@ -12,6 +12,7 @@
 #include <memory>
 #include <vector>
 
+#include <boost/asio/buffers_iterator.hpp>
 #include <boost/system/error_code.hpp>
 #include <boost/utility/string_ref.hpp>
 #include <boost/variant.hpp>

@@ -41,43 +41,6 @@
 namespace r = bredis;
 namespace asio = boost::asio;
 
-// Auxillary class, that scans redis parse results for the matching
-// of the strings provided in constructor.
-//
-// We need to check subscription confirmation from redis, as it comes
-// from redis in a form
-// [[string] "subscribe", [string] channel_name, [int] subscribes_count]
-// we check only first two fields (by string equality) and ignore the
-// last (as we usually do not care)
-//
-// This class is templated by Iterator, as we actually just scan
-// redis reply without results extraction, what is obviously faster
-template <typename Iterator>
-struct eq_array : public boost::static_visitor<bool> {
-    std::vector<std::string> values_;
-
-    template <typename... Args>
-    eq_array(Args &&... args) : values_{std::forward<Args>(args)...} {}
-
-    template <typename T> bool operator()(const T &value) const {
-        return false;
-    }
-
-    bool operator()(const r::markers::array_holder_t<Iterator> &value) const {
-        bool r = values_.size() <= value.elements.size();
-        if (r) {
-            for (std::size_t i = 0; i < values_.size() && r; i++) {
-                const auto &exemplar = values_[i];
-                const auto &item = value.elements[i];
-                r = r &&
-                    boost::apply_visitor(
-                        r::marker_helpers::equality<Iterator>(exemplar), item);
-            }
-        }
-        return r;
-    }
-};
-
 // Auxillary class, returns optional channel/payload string from the extracts
 // from redis of published message
 //
@@ -167,12 +130,14 @@ int main(int argc, char **argv) {
 
         // get the subscription confirmation
         Buffer rx_buff;
+        r::marker_helpers::check_subscription<Iterator> check_subscription{
+            std::move(subscribe_cmd)};
+
         for (auto it = cmd_items.cbegin() + 1; it != cmd_items.cend(); it++) {
             auto parse_result = c.read(rx_buff);
-            eq_array<Iterator> confirm_message{"subscribe", *it};
-            // ... and check it
+
             bool subscription_confirmed =
-                boost::apply_visitor(confirm_message, parse_result.result);
+                boost::apply_visitor(check_subscription, parse_result.result);
             if (!subscription_confirmed) {
                 std::cout << "subscription for channel " << *it
                           << "was not confirmed\n";

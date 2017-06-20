@@ -23,8 +23,10 @@
 // If you don't need that, just apply shipped bredis::extractor<Iterator>()
 // to get the familiar std::string, int64_t etc. to work with.
 
+#include <boost/algorithm/string.hpp>
 #include <boost/asio.hpp>
 #include <boost/asio/spawn.hpp>
+#include <boost/optional.hpp>
 #include <bredis/Connection.hpp>
 #include <bredis/MarkerHelpers.hpp>
 #include <iostream>
@@ -37,44 +39,12 @@
 namespace r = bredis;
 namespace asio = boost::asio;
 
-// Auxillary class, that scans redis parse results for the matching
-// of the strings provided in constructor.
-//
-// We need to check subscription confirmation from redis, as it comes
-// from redis in a form
-// [[string] "subscribe", [string] channel_name, [int] subscribes_count]
-// we check only first two fields (by string equality) and ignore the
-// last (as we usually do not care)
-//
-// This class is templated by Iterator, as we actually just scan
-// redis reply without results extraction, what is obviously faster
-template <typename Iterator>
-struct eq_array : public boost::static_visitor<bool> {
-    std::vector<std::string> values_;
-
-    template <typename... Args>
-    eq_array(Args &&... args) : values_{std::forward<Args>(args)...} {}
-
-    template <typename T> bool operator()(const T &value) const {
-        return false;
-    }
-
-    bool operator()(const r::markers::array_holder_t<Iterator> &value) const {
-        bool r = values_.size() <= value.elements.size();
-        if (r) {
-            for (std::size_t i = 0; i < values_.size() && r; i++) {
-                const auto &exemplar = values_[i];
-                const auto &item = value.elements[i];
-                r = r &&
-                    boost::apply_visitor(
-                        r::marker_helpers::equality<Iterator>(exemplar), item);
-            }
-        }
-        return r;
-    }
+struct json_payload {
+    std::string channel;
+    picojson::value json;
 };
 
-// Auxillary class, extracs picojson::value from a published redis message.
+// Auxillary class, extracs option<json_payload> from a published redis message.
 //
 // We need it as the redis messages come in the format
 // [ [string] "message", [string] channel_name, [string] payload]
@@ -82,33 +52,38 @@ struct eq_array : public boost::static_visitor<bool> {
 // This class is templated by Iterator as it operates directy on markers
 // in  redis reply, i.e. still bounded to Buffer (type)
 
+using option_t = boost::optional<json_payload>;
+
 template <typename Iterator>
-struct json_extractor : public boost::static_visitor<picojson::value> {
-    template <typename T> picojson::value operator()(const T &value) const {
-        return picojson::value{};
+struct json_extractor : public boost::static_visitor<option_t> {
+    template <typename T> option_t operator()(const T &value) const {
+        return option_t{};
     }
 
-    picojson::value
+    option_t
     operator()(const r::markers::array_holder_t<Iterator> &value) const {
-        picojson::value v;
         // "message", channel_name, payload.
         // It is possible to have more stricter checks here, as well as
         // return back boost::optional and channel name
         if (value.elements.size() == 3) {
-            // everything except payload is ignored
-            const auto &payload = value.elements[2];
-
-            const auto *message =
-                boost::get<r::markers::string_t<Iterator>>(&payload);
-            if (message) {
+            const auto *channel =
+                boost::get<r::markers::string_t<Iterator>>(&value.elements[1]);
+            const auto *payload =
+                boost::get<r::markers::string_t<Iterator>>(&value.elements[2]);
+            if (channel && payload) {
                 std::string err;
-                picojson::parse(v, message->from, message->to, &err);
+                picojson::value v;
+                picojson::parse(v, payload->from, payload->to, &err);
                 if (!err.empty()) {
                     std::cout << "json parse error :: " << err << "\n";
+                    return option_t{};
                 }
+                // all OK
+                return option_t{
+                    json_payload{std::string{channel->from, channel->to}, v}};
             }
         }
-        return v;
+        return option_t{};
     }
 };
 
@@ -119,16 +94,36 @@ int main(int argc, char **argv) {
     using Buffer = boost::asio::streambuf;
     using Iterator = typename r::to_iterator<Buffer>::iterator_t;
 
+    if (argc < 2) {
+        std::cout << "Usage : " << argv[0]
+                  << " ip:port channel1 channel2 ...\n";
+        return 1;
+    }
+
+    std::string address(argv[1]);
+    std::vector<std::string> dst_parts;
+    boost::split(dst_parts, address, boost::is_any_of(":"));
+    if (dst_parts.size() != 2) {
+        std::cout << "Usage : " << argv[0]
+                  << " ip:port channel1 channel2 ...\n";
+        return 1;
+    }
+
+    std::vector<std::string> cmd_items{"subscribe"};
+    std::copy(&argv[2], &argv[argc], std::back_inserter(cmd_items));
+
     // connect to redis
     asio::io_service io_service;
-    asio::ip::tcp::endpoint end_point(
-        asio::ip::address::from_string("127.0.0.1"), 6379);
+    auto ip_address = asio::ip::address::from_string(dst_parts[0]);
+    auto port = boost::lexical_cast<std::uint16_t>(dst_parts[1]);
+    std::cout << "connecting to " << address << "\n";
+    asio::ip::tcp::endpoint end_point(ip_address, port);
     socket_t socket(io_service, end_point.protocol());
     socket.connect(end_point);
+    std::cout << "connected\n";
 
     // wrap socket into bredis connection
     r::Connection<next_layer_t> c(std::move(socket));
-    std::string channel_name{"json.channel"};
 
     // let's have it synchronous-like sexy syntax
     boost::asio::spawn(io_service, [&](boost::asio::yield_context
@@ -140,18 +135,46 @@ int main(int argc, char **argv) {
         Buffer buff;
 
         // write subscription command
-        r::single_command_t cmd{"subscribe", channel_name};
-        auto consumed = c.async_write(buff, cmd, yield[error_code]);
+        r::single_command_t subscribe_cmd{cmd_items.cbegin(), cmd_items.cend()};
+        auto consumed = c.async_write(buff, subscribe_cmd, yield[error_code]);
 
         if (error_code) {
             std::cout << "subscription error :: " << error_code.message()
                       << "\n";
             io_service.stop();
         }
-        std::cout << "subscribed to " << channel_name << "\n";
+        std::cout << "send subscription\n";
         buff.consume(consumed);
 
-        bool subscription_confirmed = false;
+        // check subscription
+        {
+            r::marker_helpers::check_subscription<Iterator> check_subscription{
+                std::move(subscribe_cmd)};
+
+            for (auto it = cmd_items.cbegin() + 1; it != cmd_items.cend();
+                 it++) {
+                auto parse_result = c.async_read(buff, yield[error_code], 1);
+                std::cout << "received something...\n";
+                if (error_code) {
+                    std::cout
+                        << "reading result error :: " << error_code.message()
+                        << "\n";
+                    io_service.stop();
+                    return;
+                }
+
+                bool confimed = boost::apply_visitor(check_subscription,
+                                                     parse_result.result);
+                if (!confimed) {
+                    std::cout << "subscription was not confirmed\n";
+                    io_service.stop();
+                    return;
+                }
+                buff.consume(parse_result.consumed);
+            }
+            std::cout << "subscription(s) has been confirmed\n";
+        }
+
         while (true) {
             // read the reply
             auto parse_result = c.async_read(buff, yield[error_code], 1);
@@ -161,24 +184,17 @@ int main(int argc, char **argv) {
                           << "\n";
                 break;
             }
-            if (!subscription_confirmed) {
-                // check that it is subscription confirmation
-                eq_array<Iterator> confirm_message{"subscribe", channel_name};
-                subscription_confirmed =
-                    boost::apply_visitor(confirm_message, parse_result.result);
-                if (subscription_confirmed) {
-                    std::cout << "subscription to " << channel_name
-                              << " confirmed\n";
-                } else {
-                    std::cout << "cannot get subscription confirmation\n";
-                    break;
-                }
+            // extract the JSON from message payload
+
+            json_extractor<Iterator> extract;
+            auto payload = boost::apply_visitor(extract, parse_result.result);
+
+            if (payload) {
+                std::cout << "on channel '" << payload.get().channel
+                          << "' got json :: " << payload.get().json.serialize()
+                          << "\n";
             } else {
-                // extract the JSON from message payload
-                json_extractor<Iterator> extract;
-                auto json_value =
-                    boost::apply_visitor(extract, parse_result.result);
-                std::cout << "got json :: " << json_value.serialize() << "\n";
+                std::cout << "wasn't able to parse payload as json\n";
             }
 
             buff.consume(parse_result.consumed);

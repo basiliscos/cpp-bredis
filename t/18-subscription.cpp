@@ -39,7 +39,7 @@ TEST_CASE("subscription", "[connection]") {
     auto port_str = boost::lexical_cast<std::string>(port);
     auto server = ts::make_server({"redis-server", "--port", port_str});
     ep::wait_port<ep::Kind::TCP>(port);
-    //uint16_t port = 6379;
+    // uint16_t port = 6379;
     asio::io_service io_service;
 
     asio::ip::tcp::endpoint end_point(
@@ -53,41 +53,22 @@ TEST_CASE("subscription", "[connection]") {
     std::future<void> completion_future = completion_promise.get_future();
 
     r::Connection<next_layer_t> consumer(socket);
-    r::command_wrapper_t subscribe_cmd(
-        r::single_command_t("subscribe", "some-channel1", "some-channel2"));
+    r::single_command_t subscribe_cmd{"subscribe", "some-channel1",
+                                      "some-channel2"};
 
     /* check point 1, got 2 subscription confirmations */
     {
         Buffer rx_buff;
         consumer.write(subscribe_cmd);
         auto parse_result = consumer.read(rx_buff);
-        auto &reply1 = boost::get<r::markers::array_holder_t<Iterator>>(
-            parse_result.result);
-        REQUIRE(reply1.elements.size() == 3);
 
-        REQUIRE(boost::apply_visitor(
-            r::marker_helpers::equality<Iterator>("subscribe"),
-            reply1.elements[0]));
-        REQUIRE(boost::apply_visitor(
-            r::marker_helpers::equality<Iterator>("some-channel1"),
-            reply1.elements[1]));
-        REQUIRE(boost::apply_visitor(r::marker_helpers::equality<Iterator>("1"),
-                                     reply1.elements[2]));
-
+        r::marker_helpers::check_subscription<Iterator> check_subscription{
+            std::move(subscribe_cmd)};
+        REQUIRE(boost::apply_visitor(check_subscription, parse_result.result));
         rx_buff.consume(parse_result.consumed);
 
         parse_result = consumer.read(rx_buff);
-        auto &reply2 = boost::get<r::markers::array_holder_t<Iterator>>(
-            parse_result.result);
-        REQUIRE(reply2.elements.size() == 3);
-        REQUIRE(boost::apply_visitor(
-            r::marker_helpers::equality<Iterator>("subscribe"),
-            reply2.elements[0]));
-        REQUIRE(boost::apply_visitor(
-            r::marker_helpers::equality<Iterator>("some-channel2"),
-            reply2.elements[1]));
-        REQUIRE(boost::apply_visitor(r::marker_helpers::equality<Iterator>("2"),
-                                     reply2.elements[2]));
+        REQUIRE(boost::apply_visitor(check_subscription, parse_result.result));
         rx_buff.consume(parse_result.consumed);
     }
 
@@ -131,45 +112,46 @@ TEST_CASE("subscription", "[connection]") {
     Buffer rx_buff;
     r::Connection<next_layer_t> c(socket);
 
-    read_callback_t notification_callback = [&](const boost::system::error_code ec,
-                                                ParseResult &&r) {
-        REQUIRE(!ec);
+    read_callback_t notification_callback =
+        [&](const boost::system::error_code ec, ParseResult &&r) {
+            REQUIRE(!ec);
 #ifdef BREDIS_DEBUG
-        BREDIS_LOG_DEBUG(
-            "subscription callback " << boost::apply_visitor(
-                r::marker_helpers::stringizer<Iterator>(), r.result));
+            BREDIS_LOG_DEBUG(
+                "subscription callback " << boost::apply_visitor(
+                    r::marker_helpers::stringizer<Iterator>(), r.result));
 #endif
-        REQUIRE(!ec);
-        auto extract = boost::apply_visitor(Extractor(), r.result);
-        r::extracts::array_holder_t array_reply =
-            boost::get<r::extracts::array_holder_t>(extract);
-        auto *type_reply =
-            boost::get<r::extracts::string_t>(&array_reply.elements[0]);
-        auto *string_reply =
-            boost::get<r::extracts::string_t>(&array_reply.elements[2]);
-        BREDIS_LOG_DEBUG("examining for completion. String: "
-                         << (string_reply ? string_reply->str : ""));
+            REQUIRE(!ec);
+            auto extract = boost::apply_visitor(Extractor(), r.result);
+            r::extracts::array_holder_t array_reply =
+                boost::get<r::extracts::array_holder_t>(extract);
+            auto *type_reply =
+                boost::get<r::extracts::string_t>(&array_reply.elements[0]);
+            auto *string_reply =
+                boost::get<r::extracts::string_t>(&array_reply.elements[2]);
+            BREDIS_LOG_DEBUG("examining for completion. String: "
+                             << (string_reply ? string_reply->str : ""));
 
-        bool retrigger = false;
-        if (type_reply && type_reply->str == "message" && string_reply) {
-            if (string_reply->str == "last") {
-                completion_promise.set_value();
-            } else {
-                BREDIS_LOG_DEBUG("retriggering notification_callback");
-                retrigger = true;
+            bool retrigger = false;
+            if (type_reply && type_reply->str == "message" && string_reply) {
+                if (string_reply->str == "last") {
+                    completion_promise.set_value();
+                } else {
+                    BREDIS_LOG_DEBUG("retriggering notification_callback");
+                    retrigger = true;
+                }
+                auto *channel =
+                    boost::get<r::extracts::string_t>(&array_reply.elements[1]);
+                REQUIRE(channel);
+                std::string payload(string_reply->str);
+                messages.emplace_back(channel->str + ":" + payload);
             }
-            auto *channel = boost::get<r::extracts::string_t>(&array_reply.elements[1]);
-            REQUIRE(channel);
-            std::string payload(string_reply->str);
-            messages.emplace_back(channel->str + ":" + payload);
-        }
-        BREDIS_LOG_DEBUG("consuming " << r.consumed  << " bytes");
-        REQUIRE(r.consumed);
-        rx_buff.consume(r.consumed);
-        if (retrigger) {
-            c.async_read(rx_buff, notification_callback);
-        }
-    };
+            BREDIS_LOG_DEBUG("consuming " << r.consumed << " bytes");
+            REQUIRE(r.consumed);
+            rx_buff.consume(r.consumed);
+            if (retrigger) {
+                c.async_read(rx_buff, notification_callback);
+            }
+        };
     c.async_read(rx_buff, notification_callback);
 
     /* gather enough info */
