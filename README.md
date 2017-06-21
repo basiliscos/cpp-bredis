@@ -415,15 +415,73 @@ either for scanning for particular results or for extraction of results.
 using `result` field.
 
 
-### `stringizer<Iterator>` and `equality<Iterator>`
+### marker helpers
 
 Header: `include/bredis/MarkerHelpers.hpp`
 
 Namespace: `bredis::marker_helpers`
 
-`boost::static_visitor`s for stringize the result (can be useful for debugging)
-and `equality<Iterator>(std::string str)` is used to find *string* in the
-parsed results.
+#### `stringizer<Iterator>`
+
+Apply this `boost::static_visitor<std::string>`s for
+stringize the result (can be useful for debugging).
+
+#### `equality<Iterator>`
+
+Apply this `boost::static_visitor<bool>` to find *string* in the
+parsed results (the markup can point to integer types, but as it
+is transferred as string anyway, it still can be founded as string
+too)
+
+Constructor: `equality<Iterator>(std::string str)`
+
+#### `check_subscription<Iterator>`
+
+This `boost::static_visitor<bool>` hepler is used to find check
+whether redis reply confirms to one of requested channels. Hence,
+the constructor is `check_subscription(single_command_t)`.
+
+Usually, the redis subscription reply is in the form:
+```
+[array] {
+    [string] "subcribe",
+    [string] channel_name,
+    [int] reference
+}
+```
+
+So, it checks, that:
+1. Redis reply is 3-element array
+2. The 1st reply element is string, and it *case-insentensively*
+matches the command, i.e.  is is supposed, that
+command will be `subscribe` or `psubscribe`.
+3. That 3rd reply element is reference, and it is presented
+among command arguments.
+
+It is possible to reuse the same `check_subscription<Iterator>`
+to *multiple* redis replies to signle subsription command.
+
+Example:
+
+```cpp
+bredis::single_command_t subscribe_cmd{
+    "subscribe", "channel-1", "channel-2"
+};
+...
+// write command, so the subscribe_cmd
+// will be no longer required
+...;
+bredis::marker_helpers::check_subscription<Iterator>
+    check_subscription{std::move(subscribe_cmd)};
+...;
+// get the 1st reply
+auto parse_result = ...;
+bool channel_1_ok = boost::apply_visitor(check_subscription, parse_result.result);
+...;
+// get the 2nd reply
+parse_result = ...;
+bool channel_1_ok = boost::apply_visitor(check_subscription, parse_result.result);
+```
 
 ### `command_wrapper_t`
 
@@ -445,7 +503,7 @@ r::single_command_t cmd_get {"get", "queu-name"};
 // or runtime-version
 std::vector<std::string> subscription_items { "subscribe", "channel-a", "channel-b"};
 r::single_command_t cmd_subscribe {
-    subscription_items.cbegin(), 
+    subscription_items.cbegin(),
     subscription_items.cend()
 };
 ```
