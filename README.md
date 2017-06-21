@@ -437,7 +437,7 @@ Constructor: `equality<Iterator>(std::string str)`
 
 #### `check_subscription<Iterator>`
 
-This `boost::static_visitor<bool>` hepler is used to find check
+This `boost::static_visitor<bool>` hepler is used to check
 whether redis reply confirms to one of requested channels. Hence,
 the constructor is `check_subscription(single_command_t)`.
 
@@ -480,7 +480,7 @@ bool channel_1_ok = boost::apply_visitor(check_subscription, parse_result.result
 ...;
 // get the 2nd reply
 parse_result = ...;
-bool channel_1_ok = boost::apply_visitor(check_subscription, parse_result.result);
+bool channel_2_ok = boost::apply_visitor(check_subscription, parse_result.result);
 ```
 
 ### `command_wrapper_t`
