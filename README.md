@@ -396,7 +396,7 @@ i.e. the following marker types :
 - `array_holder_t<Iterator>`
 
 The basic type is `string_t<Iterator>`, which contains `from` and `to` members (`Iterator`),
-where string is held. String does not contains special redis-protocol symbols, and other
+where string is held. String does not contain special redis-protocol symbols, and other
 metadata, i.e. can be used to extract/flatten the whole string.
 
 `nil_t<Iterator>`, `int_t<Iterator>`, `error_t<Iterator>` just have `string` member
