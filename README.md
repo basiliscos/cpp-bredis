@@ -422,7 +422,8 @@ information to completely parse it.
 `protocol_error_t` has `std::string what` member, descriping the error in protocol,
 (e.g. when type in stream is specified as integer, but it cannot be converted to integer).
 This error should never occur in production code, meaning that no (logical) errors
-are expected in redis-server nor in bredis parser.
+are expected in redis-server nor in bredis parser. The error might occur if buffer 
+is corrupted.
 
 `positive_parse_result_t<Iterator>` contains members:
 - `markers::redis_result_t<Iterator> result` - result of mark-up buffer; can be used
