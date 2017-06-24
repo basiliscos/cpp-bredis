@@ -327,7 +327,7 @@ auto f_result_markers = c.async_read(rx_buff, asio::use_future);
 ...
 tx_buff.consume(f_tx_consumed.get());
 auto result_markers = f_result_markers.get();
-/* scan/extract result, adn consume rx_buff as usual */
+/* scan/extract result, and consume rx_buff as usual */
 ```
 
 ### Coroutines
