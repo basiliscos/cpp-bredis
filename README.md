@@ -266,6 +266,8 @@ read_callback_t notification_callback = [&](const boost::system::error_code,
 c.async_read(rx_buff, notification_callback);
 ```
 
+See `examples/stream-parse.cpp` for the full example
+
 ## Transactions
 
 There is no specific support for transactions in bredis, but you can easily build your own for you needs.
@@ -296,7 +298,7 @@ c.async_read(rx_buff, [&](const auto& error_code, auto&& r){
     ...
     assert(replies.elements.size() == 4);
     auto eq_OK = r::marker_helpers::equality<Iterator>("OK");
-        auto eq_QUEUED = r::marker_helpers::equality<Iterator>("QUEUED");
+    auto eq_QUEUED = r::marker_helpers::equality<Iterator>("QUEUED");
     assert(boost::apply_visitor(eq_OK, replies.elements[0]);
     assert(boost::apply_visitor(eq_QUEUED, replies.elements[1]));
     assert(boost::apply_visitor(eq_QUEUED, replies.elements[2]));
