@@ -172,7 +172,7 @@ socket.connect(end_point);
 ...
 Buffer tx_buff, rx_buff;
 c.async_write(
-    tx_buff, "ping", [&](const auto &error_code, auto bytes_transferred) {
+    tx_buff, "llen", "my-queue" [&](const auto &error_code, auto bytes_transferred) {
         /* tx_buff must be consumed when it is no longer needed */
         tx_buff.consume(bytes_transferred);
         c.async_read(rx_buff, [&](const auto &error_code, result_t &&r) {
