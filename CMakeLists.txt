@@ -40,7 +40,7 @@ if(CMAKE_COMPILER_IS_GNUCXX)
     #MESSAGE(STATUS "gcov: [" ${GCOV_TOOL} "]")
     #string(STRIP ${GCOV_TOOL} GCOV_TOOL)
     #MESSAGE(STATUS "gcov(fixed): [" ${GCOV_TOOL} "]")
-    set(GCOV_TOOL, "gcov-5")
+    set(GCOV_TOOL "gcov-5")
 
     add_custom_target("coverage"
         COMMAND "lcov" --directory . --zerocounters
