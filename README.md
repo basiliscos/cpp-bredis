@@ -206,17 +206,28 @@ There is no specific support of subscriptions, but you can easily build your own
 ### synchronous subscription
 
 ```cpp
-c.command("subscribe", "channel-1", "channel-2");
+r::single_command_t subscribe_cmd{"subscribe", "some-channel1", "some-channel2"};
+c.write(subscribe_cmd);
 Buffer rx_buff;
 
+/* get the 2 confirmations, as we subscribed to 2 channels */
+r::marker_helpers::check_subscription<Iterator> check_subscription{std::move(subscribe_cmd)};
+for (auto i = 0; i < 2; ++i){
+  auto result_markers = c.read(rx_buff);
+  bool confirmed =  boost::apply_visitor(check_subscription, result_markers.result);
+  if (!confirmed) {
+    // do something!
+    ...;
+  }
+  rx_buff.consume(result_markers.consumed);
+}
+
 while(true) {
-  Buffer rx_buff;
   auto result_markers = c.read(rx_buff);
   auto extract = boost::apply_visitor(r::extractor<Iterator>(), result_markers.result);
   rx_buff.consume(result_markers.consumed);
 
-  /* process the result, which might be subscription confirmation
-     or a message channel */
+  /* process the result  */
   auto& array_reply = boost::get<r::extracts::array_holder_t>(extract);
   auto* type_reply = boost::get<r::extracts::string_t>(&array_reply.elements[0]);
   if (type_reply && type_reply->str == "message") {
@@ -226,6 +237,9 @@ while(true) {
   }
 }
 ```
+
+See `examples/synch-subscription.cpp` for the full example
+
 ### asynchronous subscription
 
 The similar way of synchronous, i.e. push read callback initially and after each successfull read
