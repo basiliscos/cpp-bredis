@@ -10,8 +10,8 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/type_traits.hpp>
 #include <iostream>
-#include <sstream>
 #include <locale>
+#include <sstream>
 
 #ifdef BREDIS_DEBUG
 #define BREDIS_LOG_DEBUG(msg)                                                  \
@@ -21,6 +21,17 @@
 #endif
 
 namespace bredis {
+
+template <typename Iterator>
+struct consumed_parse : public boost::static_visitor<int> {
+    int operator()(const positive_parse_result_t<Iterator> &value) const {
+        return static_cast<int>(value.consumed);
+    }
+
+    int operator()(const not_enough_data_t &value) const { return 0; }
+
+    int operator()(const protocol_error_t &value) const { return -1; }
+};
 
 template <typename Iterator> class MatchResult {
   private:
@@ -37,23 +48,20 @@ template <typename Iterator> class MatchResult {
         do {
             auto from = begin + consumed;
             auto parse_result = Protocol::parse(from, end);
-            auto *parse_error = boost::get<protocol_error_t>(&parse_result);
-            if (parse_error) {
-                // BREDIS_LOG_DEBUG("parse error : " << parse_error->what);
+            auto consumable =
+                boost::apply_visitor(consumed_parse<Iterator>(), parse_result);
+            if (consumable == -1) {
+                // parse error
                 consumed = 0;
                 parsing_complete = true;
                 break;
             }
-
-            auto *no_enoght_data = boost::get<not_enough_data_t>(&parse_result);
-            if (no_enoght_data) {
+            if (consumable == 0) {
+                // no enough data
                 break;
             }
-
-            auto &positive_result =
-                boost::get<positive_parse_result_t<Iterator>>(parse_result);
             ++matched_results_;
-            consumed += positive_result.consumed;
+            consumed += static_cast<std::size_t>(consumable);
             parsing_complete = (matched_results_ == expected_count_);
         } while (!parsing_complete);
         return std::make_pair(begin + consumed, parsing_complete);
