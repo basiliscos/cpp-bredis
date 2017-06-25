@@ -115,9 +115,7 @@ template <> struct Extractor<extractor_tags::e_bulk_string> {
 
         auto &count_string =
             boost::get<markers::string_t<Iterator>>(positive_result->result);
-        std::string s;
-        s.reserve(positive_result->consumed);
-        s.append(count_string.from, count_string.to);
+        std::string s{count_string.from, count_string.to};
         int count = boost::lexical_cast<int>(s);
         if (count == -1) {
             return optional_parse_result_t<Iterator>{
@@ -132,19 +130,18 @@ template <> struct Extractor<extractor_tags::e_bulk_string> {
             auto head = from + positive_result->consumed;
             size_t left = std::distance(head, to);
             size_t ucount = static_cast<size_t>(count);
-            auto terminator_size = get_terminator().size();
+            const auto &terminator = get_terminator();
+            auto terminator_size = terminator.size();
             if (left < ucount + terminator_size) {
                 return not_enough_data_t{};
             }
             auto tail = head + ucount;
-            std::string debug_str;
-            debug_str.append(head, tail);
-            const char *ds = debug_str.c_str();
+            auto tail_end = tail + terminator_size;
 
             auto from_t(get_terminator().cbegin()),
                 to_t(get_terminator().cend());
-            auto found_terminator = std::search(tail, to, from_t, to_t);
-            if (found_terminator != tail) {
+            bool found_terminator = std::equal(tail, tail_end, from_t, to_t);
+            if (!found_terminator) {
                 throw std::runtime_error(
                     "Terminator not found for bulk string");
             }
@@ -174,9 +171,7 @@ template <> struct Extractor<extractor_tags::e_array> {
 
         auto &count_string =
             boost::get<markers::string_t<Iterator>>(positive_result->result);
-        std::string s;
-        s.reserve(positive_result->consumed);
-        s.append(count_string.from, count_string.to);
+        std::string s{count_string.from, count_string.to};
         int count = boost::lexical_cast<int>(s);
         if (count == -1) {
             return optional_parse_result_t<Iterator>{
