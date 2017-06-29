@@ -9,11 +9,12 @@
 #include <algorithm>
 #include <boost/asio/buffers_iterator.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/utility/string_ref.hpp>
 
 namespace bredis {
 
-static inline const std::string &get_terminator() {
-    static std::string terminator("\r\n");
+static inline const boost::string_ref &get_terminator() {
+    static boost::string_ref terminator("\r\n");
     return terminator;
 }
 
