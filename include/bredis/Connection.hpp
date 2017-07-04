@@ -29,7 +29,8 @@
 namespace bredis {
 
 #define BREDIS_PARSE_RESULT(B)                                                 \
-    positive_parse_result_t<typename to_iterator<B>::iterator_t>
+    positive_parse_result_t<typename to_iterator<B>::iterator_t,               \
+                            bredis::parsing_policy::keep_result>
 
 template <typename NextLayer> class Connection {
 
@@ -63,11 +64,11 @@ template <typename NextLayer> class Connection {
     void write(const command_wrapper_t &command, boost::system::error_code &ec);
 
     template <typename DynamicBuffer>
-    positive_parse_result_t<typename to_iterator<DynamicBuffer>::iterator_t>
+    BREDIS_PARSE_RESULT(DynamicBuffer)
     read(DynamicBuffer &rx_buff);
 
     template <typename DynamicBuffer>
-    positive_parse_result_t<typename to_iterator<DynamicBuffer>::iterator_t>
+    BREDIS_PARSE_RESULT(DynamicBuffer)
     read(DynamicBuffer &rx_buff, boost::system::error_code &ec);
 };
 

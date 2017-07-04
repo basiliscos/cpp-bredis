@@ -25,15 +25,15 @@ TEST_CASE("ping", "[connection]") {
     using Iterator =
         boost::asio::buffers_iterator<typename Buffer::const_buffers_type,
                                       char>;
-    using ParseResult = r::positive_parse_result_t<Iterator>;
+    using Policy = r::parsing_policy::keep_result;
+    using ParseResult = r::positive_parse_result_t<Iterator, Policy>;
 
     using result_t = void;
     using write_callback_t =
         std::function<void(const boost::system::error_code &error_code,
                            std::size_t bytes_transferred)>;
-    using read_callback_t =
-        std::function<void(const boost::system::error_code &error_code,
-                           r::positive_parse_result_t<Iterator> &&r)>;
+    using read_callback_t = std::function<void(
+        const boost::system::error_code &error_code, ParseResult &&r)>;
 
     std::chrono::nanoseconds sleep_delay(1);
 
@@ -62,8 +62,7 @@ TEST_CASE("ping", "[connection]") {
 
     Buffer tx_buff, rx_buff;
     read_callback_t read_callback =
-        [&](const boost::system::error_code &error_code,
-            r::positive_parse_result_t<Iterator> &&r) {
+        [&](const boost::system::error_code &error_code, ParseResult &&r) {
             if (error_code) {
                 BREDIS_LOG_DEBUG("error: " << error_code.message());
                 REQUIRE(!error_code);

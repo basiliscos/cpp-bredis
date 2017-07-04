@@ -14,7 +14,8 @@ namespace asio = boost::asio;
 TEST_CASE("right consumption", "[protocol]") {
     using Buffer = std::vector<asio::const_buffers_1>;
     using Iterator = boost::asio::buffers_iterator<Buffer, char>;
-    using parsed_result_t = r::parse_result_t<Iterator>;
+    using Policy = r::parsing_policy::keep_result;
+    using positive_result_t = r::parse_result_mapper_t<Iterator, Policy>;
 
     std::string full_message =
         "*3\r\n$7\r\nmessage\r\n$13\r\nsome-channel1\r\n$10\r\nmessage-a1\r\n";
@@ -26,8 +27,8 @@ TEST_CASE("right consumption", "[protocol]") {
     }
     auto b_from = Iterator::begin(buff), b_to = Iterator::end(buff);
     auto parsed_result = r::Protocol::parse(b_from, b_to);
-    auto positive_parse_result =
-        boost::get<r::positive_parse_result_t<Iterator>>(parsed_result);
+    auto positive_parse_result = boost::get<positive_result_t>(parsed_result);
+
     REQUIRE(positive_parse_result.consumed);
     REQUIRE(positive_parse_result.consumed == full_message.size());
 
@@ -55,7 +56,8 @@ TEST_CASE("right consumption", "[protocol]") {
 TEST_CASE("using strembuff", "[protocol]") {
     using Buffer = boost::asio::streambuf;
     using Iterator = typename r::to_iterator<Buffer>::iterator_t;
-    using parsed_result_t = r::parse_result_t<Iterator>;
+    using Policy = r::parsing_policy::keep_result;
+    using positive_result_t = r::parse_result_mapper_t<Iterator, Policy>;
 
     std::string ok = "+OK\r\n";
     Buffer buff;
@@ -66,8 +68,7 @@ TEST_CASE("using strembuff", "[protocol]") {
     auto from = Iterator::begin(const_buff), to = Iterator::end(const_buff);
     auto parsed_result = r::Protocol::parse(from, to);
 
-    auto positive_parse_result =
-        boost::get<r::positive_parse_result_t<Iterator>>(parsed_result);
+    auto positive_parse_result = boost::get<positive_result_t>(parsed_result);
     REQUIRE(positive_parse_result.consumed == ok.size());
     REQUIRE(boost::apply_visitor(r::marker_helpers::equality<Iterator>("OK"),
                                  positive_parse_result.result));

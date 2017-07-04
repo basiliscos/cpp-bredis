@@ -28,7 +28,8 @@ TEST_CASE("cancel-on-read", "[cancellation]") {
     using Iterator =
         boost::asio::buffers_iterator<typename Buffer::const_buffers_type,
                                       char>;
-    using ParseResult = r::positive_parse_result_t<Iterator>;
+    using Policy = r::parsing_policy::keep_result;
+    using ParseResult = r::positive_parse_result_t<Iterator, Policy>;
 
     std::chrono::milliseconds sleep_delay(1);
 

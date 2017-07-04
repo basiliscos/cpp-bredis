@@ -33,18 +33,36 @@ struct protocol_error_t {
 
 struct not_enough_data_t {};
 
-template <typename Iterator> struct positive_parse_result_t {
+namespace parsing_policy {
+struct drop_result {};
+struct keep_result {};
+} // namespace parsing_policy
+
+template <typename Iterator, typename Policy> struct positive_parse_result_t {
     markers::redis_result_t<Iterator> result;
     size_t consumed;
 };
 
 template <typename Iterator>
-using optional_parse_result_t =
-    boost::variant<not_enough_data_t, positive_parse_result_t<Iterator>>;
+struct positive_parse_result_t<Iterator, parsing_policy::drop_result> {
+    size_t consumed;
+};
 
-template <typename Iterator>
+template <typename Iterator, typename Policy> struct parse_result_mapper {
+    using type = positive_parse_result_t<Iterator, Policy>;
+};
+
+template <typename Iterator, typename Policy>
+using parse_result_mapper_t =
+    typename parse_result_mapper<Iterator, Policy>::type;
+
+template <typename Iterator, typename Policy>
+using optional_parse_result_t =
+    boost::variant<not_enough_data_t, parse_result_mapper_t<Iterator, Policy>>;
+
+template <typename Iterator, typename Policy>
 using parse_result_t =
-    boost::variant<not_enough_data_t, positive_parse_result_t<Iterator>,
+    boost::variant<not_enough_data_t, parse_result_mapper_t<Iterator, Policy>,
                    protocol_error_t>;
 
 } // namespace bredis

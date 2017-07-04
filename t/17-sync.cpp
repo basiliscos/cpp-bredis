@@ -24,7 +24,6 @@ TEST_CASE("ping", "[connection]") {
 #endif
     using Buffer = boost::asio::streambuf;
     using Iterator = typename r::to_iterator<Buffer>::iterator_t;
-    using ParseResult = r::positive_parse_result_t<Iterator>;
 
     std::chrono::milliseconds sleep_delay(1);
 

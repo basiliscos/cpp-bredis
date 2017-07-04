@@ -89,14 +89,13 @@ void Connection<NextLayer>::write(const command_wrapper_t &command) {
 
 template <typename NextLayer>
 template <typename DynamicBuffer>
-positive_parse_result_t<typename to_iterator<DynamicBuffer>::iterator_t>
+BREDIS_PARSE_RESULT(DynamicBuffer)
 Connection<NextLayer>::read(DynamicBuffer &rx_buff,
                             boost::system::error_code &ec) {
     namespace asio = boost::asio;
     using boost::asio::read_until;
     using Iterator = typename to_iterator<DynamicBuffer>::iterator_t;
-    using result_t = positive_parse_result_t<
-        typename to_iterator<DynamicBuffer>::iterator_t>;
+    using result_t = BREDIS_PARSE_RESULT(DynamicBuffer);
 
     auto rx_bytes = read_until(stream_, rx_buff, MatchResult<Iterator>(1), ec);
     if (ec) {
@@ -114,12 +113,12 @@ Connection<NextLayer>::read(DynamicBuffer &rx_buff,
         ec = Error::make_error_code(bredis_errors::protocol_error);
         return result_t{};
     }
-    return boost::get<positive_parse_result_t<Iterator>>(parse_result);
+    return boost::get<result_t>(parse_result);
 }
 
 template <typename NextLayer>
 template <typename DynamicBuffer>
-positive_parse_result_t<typename to_iterator<DynamicBuffer>::iterator_t>
+BREDIS_PARSE_RESULT(DynamicBuffer)
 Connection<NextLayer>::read(DynamicBuffer &rx_buff) {
     namespace asio = boost::asio;
 

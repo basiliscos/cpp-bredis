@@ -60,8 +60,10 @@ void async_read_op<NextLayer, DynamicBuffer, ReadCallback>::
 operator()(boost::system::error_code error_code,
            std::size_t bytes_transferred) {
     using Iterator = typename to_iterator<DynamicBuffer>::iterator_t;
+    using positive_result_t =
+        parse_result_mapper_t<Iterator, parsing_policy::keep_result>;
 
-    positive_parse_result_t<Iterator> result;
+    positive_result_t result;
 
     if (!error_code) {
         auto const_buff = rx_buff_.data();
@@ -82,7 +84,7 @@ operator()(boost::system::error_code error_code,
                 break;
             } else {
                 auto &positive_result =
-                    boost::get<positive_parse_result_t<Iterator>>(parse_result);
+                    boost::get<positive_result_t>(parse_result);
                 results.elements.emplace_back(positive_result.result);
                 cumulative_consumption += positive_result.consumed;
             }
@@ -91,11 +93,11 @@ operator()(boost::system::error_code error_code,
         /* check again, as protocol error might be met */
         if (!error_code) {
             if (replies_count_ == 1) {
-                result = positive_parse_result_t<Iterator>{
-                    std::move(results.elements[0]), cumulative_consumption};
+                result = positive_result_t{std::move(results.elements[0]),
+                                           cumulative_consumption};
             } else {
-                result = positive_parse_result_t<Iterator>{
-                    std::move(results), cumulative_consumption};
+                result = positive_result_t{std::move(results),
+                                           cumulative_consumption};
             }
         }
     }
