@@ -44,14 +44,15 @@ template <typename Iterator> class MatchResult {
         : expected_count_(expected_count), matched_results_(0) {}
 
     std::pair<Iterator, bool> operator()(Iterator begin, Iterator end) {
+        using Policy = bredis::parsing_policy::drop_result;
+
         auto parsing_complete = false;
         size_t consumed = 0;
         do {
             auto from = begin + consumed;
-            auto parse_result = Protocol::parse(from, end);
+            auto parse_result = Protocol::parse<Iterator, Policy>(from, end);
             auto consumable = boost::apply_visitor(
-                consumed_parse<Iterator, bredis::parsing_policy::keep_result>(),
-                parse_result);
+                consumed_parse<Iterator, Policy>(), parse_result);
             if (consumable == -1) {
                 // parse error
                 consumed = 0;

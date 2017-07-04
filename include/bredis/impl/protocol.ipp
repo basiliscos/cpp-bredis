@@ -31,51 +31,48 @@ struct e_array;
 }; // extractors
 
 template <typename Iterator, typename Policy> struct ExtractorHelper {
+    using optional_wrapper_t = optional_parse_result_t<Iterator, Policy>;
+    using positive_wrapper_t = positive_parse_result_t<Iterator, Policy>;
+
     static auto extract_string(size_t consumed, Iterator from, Iterator to)
-        -> optional_parse_result_t<Iterator, Policy> {
-        return optional_parse_result_t<Iterator, Policy>{
-            positive_parse_result_t<Iterator, Policy>{
-                markers::redis_result_t<Iterator>{
-                    markers::string_t<Iterator>{from, to}},
-                consumed}};
-    }
-    static auto extract_error(
-        parse_result_mapper_t<Iterator, parsing_policy::keep_result> *string)
-        -> optional_parse_result_t<Iterator, Policy> {
-        auto &string_result =
-            boost::get<markers::string_t<Iterator>>(string->result);
-        return optional_parse_result_t<Iterator, Policy>{
-            positive_parse_result_t<Iterator, Policy>{
-                markers::redis_result_t<Iterator>{
-                    markers::error_t<Iterator>{string_result}},
-                string->consumed}};
+        -> optional_wrapper_t {
+        return optional_wrapper_t{
+            positive_wrapper_t{markers::redis_result_t<Iterator>{
+                                   markers::string_t<Iterator>{from, to}},
+                               consumed}};
     }
 
-    static auto extract_int(
-        parse_result_mapper_t<Iterator, parsing_policy::keep_result> *string)
-        -> optional_parse_result_t<Iterator, Policy> {
+    static auto extract_error(parse_result_mapper_t<Iterator, Policy> *string)
+        -> optional_wrapper_t {
         auto &string_result =
             boost::get<markers::string_t<Iterator>>(string->result);
-        return optional_parse_result_t<Iterator, Policy>{
-            positive_parse_result_t<Iterator, Policy>{
-                markers::redis_result_t<Iterator>{
-                    markers::int_t<Iterator>{string_result}},
-                string->consumed}};
+        return optional_wrapper_t{
+            positive_wrapper_t{markers::redis_result_t<Iterator>{
+                                   markers::error_t<Iterator>{string_result}},
+                               string->consumed}};
+    }
+
+    static auto extract_int(parse_result_mapper_t<Iterator, Policy> *string)
+        -> optional_wrapper_t {
+        auto &string_result =
+            boost::get<markers::string_t<Iterator>>(string->result);
+        return optional_wrapper_t{
+            positive_wrapper_t{markers::redis_result_t<Iterator>{
+                                   markers::int_t<Iterator>{string_result}},
+                               string->consumed}};
     }
 
     static auto extract_nil(size_t consumed,
                             markers::string_t<Iterator> &string)
-        -> optional_parse_result_t<Iterator, Policy> {
-        return optional_parse_result_t<Iterator, Policy>{
-            positive_parse_result_t<Iterator, Policy>{
-                markers::redis_result_t<Iterator>{
-                    markers::nil_t<Iterator>{string}},
-                consumed}};
+        -> optional_wrapper_t {
+        return optional_wrapper_t{positive_wrapper_t{
+            markers::redis_result_t<Iterator>{markers::nil_t<Iterator>{string}},
+            consumed}};
     }
 
     static auto extract_bulk_string(size_t already_consumed, size_t shift,
                                     int count, Iterator from, Iterator to)
-        -> optional_parse_result_t<Iterator, Policy> {
+        -> optional_wrapper_t {
         auto head = from + shift;
         size_t left = std::distance(head, to);
         size_t ucount = static_cast<size_t>(count);
@@ -94,16 +91,15 @@ template <typename Iterator, typename Policy> struct ExtractorHelper {
         }
         size_t consumed = shift + count + terminator_size + already_consumed;
 
-        return optional_parse_result_t<Iterator, Policy>{
-            positive_parse_result_t<Iterator, Policy>{
-                markers::redis_result_t<Iterator>{
-                    markers::string_t<Iterator>{head, tail}},
-                consumed}};
+        return optional_wrapper_t{
+            positive_wrapper_t{markers::redis_result_t<Iterator>{
+                                   markers::string_t<Iterator>{head, tail}},
+                               consumed}};
     }
 
     static auto extract_array(size_t already_consumed, size_t shift, int count,
                               Iterator from, Iterator to)
-        -> optional_parse_result_t<Iterator, Policy> {
+        -> optional_wrapper_t {
 
         using positive_wrapper_t = positive_parse_result_t<Iterator, Policy>;
 
@@ -123,9 +119,84 @@ template <typename Iterator, typename Policy> struct ExtractorHelper {
             result.elements.emplace_back(parsed_data.result);
             shift += parsed_data.consumed;
         }
-        return optional_parse_result_t<Iterator, Policy>{
+        return optional_wrapper_t{
             positive_wrapper_t{markers::redis_result_t<Iterator>{result},
                                shift + already_consumed}};
+    }
+};
+
+template <typename Iterator>
+struct ExtractorHelper<Iterator, parsing_policy::drop_result> {
+    using Policy = parsing_policy::drop_result;
+    using optional_wrapper_t = optional_parse_result_t<Iterator, Policy>;
+    using positive_wrapper_t = positive_parse_result_t<Iterator, Policy>;
+
+    static auto extract_string(size_t consumed, Iterator from, Iterator to)
+        -> optional_wrapper_t {
+        return optional_wrapper_t{positive_wrapper_t{consumed}};
+    }
+
+    static auto extract_error(parse_result_mapper_t<Iterator, Policy> *string)
+        -> optional_wrapper_t {
+        return optional_wrapper_t{positive_wrapper_t{string->consumed}};
+    }
+
+    static auto extract_int(parse_result_mapper_t<Iterator, Policy> *string)
+        -> optional_wrapper_t {
+        return optional_wrapper_t{positive_wrapper_t{string->consumed}};
+    }
+
+    static auto extract_nil(size_t consumed,
+                            markers::string_t<Iterator> &string)
+        -> optional_wrapper_t {
+        return optional_wrapper_t{positive_wrapper_t{consumed}};
+    }
+
+    static auto extract_bulk_string(size_t already_consumed, size_t shift,
+                                    int count, Iterator from, Iterator to)
+        -> optional_wrapper_t {
+        auto head = from + shift;
+        size_t left = std::distance(head, to);
+        size_t ucount = static_cast<size_t>(count);
+        const auto &terminator = get_terminator();
+        auto terminator_size = terminator.size();
+        if (left < ucount + terminator_size) {
+            return not_enough_data_t{};
+        }
+        auto tail = head + ucount;
+        auto tail_end = tail + terminator_size;
+
+        auto from_t(get_terminator().cbegin()), to_t(get_terminator().cend());
+        bool found_terminator = std::equal(tail, tail_end, from_t, to_t);
+        if (!found_terminator) {
+            throw std::runtime_error("Terminator not found for bulk string");
+        }
+        size_t consumed = shift + count + terminator_size + already_consumed;
+
+        return optional_wrapper_t{positive_wrapper_t{consumed}};
+    }
+
+    static auto extract_array(size_t already_consumed, size_t shift, int count,
+                              Iterator from, Iterator to)
+        -> optional_wrapper_t {
+
+        using positive_wrapper_t = positive_parse_result_t<Iterator, Policy>;
+
+        auto result = markers::array_holder_t<Iterator>{};
+        result.elements.reserve(count);
+        for (auto i = 0; i < count; ++i) {
+            Iterator left = from + shift;
+            auto optional_parse_result = raw_parse<Iterator, Policy>(left, to);
+            auto *no_enogh_data =
+                boost::get<not_enough_data_t>(&optional_parse_result);
+            if (no_enogh_data) {
+                return *no_enogh_data;
+            }
+            auto &parsed_data =
+                boost::get<positive_wrapper_t>(optional_parse_result);
+            shift += parsed_data.consumed;
+        }
+        return optional_wrapper_t{positive_wrapper_t{shift + already_consumed}};
     }
 };
 
