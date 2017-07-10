@@ -48,8 +48,9 @@ template <typename Iterator> class MatchResult {
 
         auto parsing_complete = false;
         size_t consumed = 0;
+        auto parse_from = begin;
         do {
-            auto from = begin + consumed;
+            auto from = parse_from;
             auto parse_result = Protocol::parse<Iterator, Policy>(from, end);
             auto consumable = boost::apply_visitor(
                 consumed_parse<Iterator, Policy>(), parse_result);
@@ -64,7 +65,9 @@ template <typename Iterator> class MatchResult {
                 break;
             }
             ++matched_results_;
-            consumed += static_cast<std::size_t>(consumable);
+            auto iteration_consumed = static_cast<std::size_t>(consumable);
+            consumed += iteration_consumed;
+            parse_from += iteration_consumed;
             parsing_complete = (matched_results_ == expected_count_);
         } while (!parsing_complete);
         return std::make_pair(begin + consumed, parsing_complete);
