@@ -31,6 +31,9 @@ Boost::ASIO low-level redis client (connector)
 - dropped explicit cancellation (socket reference can be passed to connector, and cancellation
 can be done on the socket object outside of the connector)
 
+### 0.03
+- improved protocol parser (no memory allocations during input stream validity check)
+
 ## Work with the result
 
 The general idea is that the result of attempt to  redis reply can be either: no enough data or protocol error (exteame case) or some positive parse result. The last one is just **markers** of result, which is actually stored in *receive buffer* (i.e. outside of markers, and outside of bredis-connection).
@@ -126,8 +129,6 @@ In the case of need to **extract** reply (i.e. detach it from `rx_buff`), the fo
 ```cpp
 #include "bredis/Extract.hpp"
 ...
-using ParseResult = r::positive_parse_result_t<Iterator>;
-...
 auto result_markers = c.read(rx_buff);
 /* extract the results */
 auto extract = boost::apply_visitor(r::extractor<Iterator>(), result_markers.result);
@@ -161,7 +162,8 @@ namespace asio = boost::asio;
 using socket_t = asio::ip::tcp::socket;
 using Buffer = boost::asio::streambuf;
 using Iterator = typename r::to_iterator<Buffer>::iterator_t;
-using result_t = r::positive_parse_result_t<Iterator>;
+using Policy = r::parsing_policy::keep_result;
+using result_t = r::parse_result_mapper_t<Iterator, Policy>;
 
 ...
 /* establishing connection to redis is outside of bredis */
@@ -244,7 +246,8 @@ See `examples/synch-subscription.cpp` for the full example
 
 The similar way of synchronous, i.e. push read callback initially and after each successfull read
 ```cpp
-using ParseResult = r::positive_parse_result_t<Iterator>;
+using Policy = r::parsing_policy::keep_result;
+using ParseResult = r::parse_result_mapper_t<Iterator, Policy>;
 using read_callback_t = std::function<void(const boost::system::error_code &error_code, ParseResult &&r)>;
 using Extractor = r::extractor<Iterator>;
 ...
