@@ -193,6 +193,16 @@ TEST_CASE("malformed bulk string(2)", "[protocol]") {
     REQUIRE(r->what == "Terminator not found for bulk string");
 };
 
+TEST_CASE("malformed bulk string(3)", "[protocol]") {
+    using Policy = r::parsing_policy::drop_result;
+    std::string ok = "$4\r\nsomemm";
+    Buffer buff(ok.c_str(), ok.size());
+    auto from = Iterator::begin(buff), to = Iterator::end(buff);
+    auto parsed_result = r::Protocol::parse<Iterator, Policy>(from, to);
+    r::protocol_error_t *r = boost::get<r::protocol_error_t>(&parsed_result);
+    REQUIRE(r->what == "Terminator not found for bulk string");
+};
+
 TEST_CASE("empty array", "[protocol]") {
     std::string ok = "*0\r\n";
     Buffer buff(ok.c_str(), ok.size());
