@@ -17,8 +17,9 @@ Boost::ASIO low-level redis client (connector)
 
 ## Changelog
 
-### 0.01
-- initial version
+
+### 0.03
+- improved protocol parser (no memory allocations during input stream validity check)
 
 ### 0.02
 - added windows support
@@ -31,8 +32,8 @@ Boost::ASIO low-level redis client (connector)
 - dropped explicit cancellation (socket reference can be passed to connector, and cancellation
 can be done on the socket object outside of the connector)
 
-### 0.03
-- improved protocol parser (no memory allocations during input stream validity check)
+### 0.01
+- initial version
 
 ## Work with the result
 
