@@ -409,7 +409,7 @@ to point underlying string in redis protocol.
 `array_holder_t` is recursive wrapper for the `redis_result_t<Iterator>`, it contains
 `elements` member of `std::array` of `redis_result_t<Iterator>`
 
-### `parse_result_t<Iterator>`
+### `parse_result_t<Iterator, Policy>`
 
 Header: `include/bredis/Result.hpp`
 
@@ -418,7 +418,7 @@ Namespace: `bredis`
 Represents results of parse attempt. It is `boost::variant` of the following types:
 - `no_enogh_data_t`
 - `protocol_error_t`
-- `positive_parse_result_t<Iterator>`
+- `positive_parse_result_t<Iterator, Policy>`
 
 `no_enogh_data_t` is empty struct, meaning that buffer just does not contains enough
 information to completely parse it.
@@ -429,12 +429,18 @@ This error should never occur in production code, meaning that no (logical) erro
 are expected in redis-server nor in bredis parser. The error might occur if buffer 
 is corrupted.
 
-`positive_parse_result_t<Iterator>` contains members:
+`Policy` (namespace `bredis::parsing_policy`) specifies what to do with with result:
+either drop it (`bredis::parsing_policy::drop_result`) or keep it 
+(`bredis::parsing_policy::keep_result`). The helper 
+`parse_result_mapper_t<Iterator, Policy>` helps to get proper 
+`positive_parse_result_t<Iterator, Policy>` type.
+
+`positive_parse_result_t<Iterator, Policy>` contains members:
 - `markers::redis_result_t<Iterator> result` - result of mark-up buffer; can be used
-either for scanning for particular results or for extraction of results.
+either for scanning for particular results or for extraction of results. Valid only
+for `keep_result` policy.
 - `size_t consumed` - how many bytes of receive buffer must be consumed, after
 using `result` field.
-
 
 ### marker helpers
 
@@ -563,8 +569,8 @@ Perform synchonous write of redis command:
 Perform synchonous read of redis result until the buffer will be parsed or
 some error (procol or I/O) occurs:
 
-- `template <typename DynamicBuffer> positive_parse_result_t<Iterator> read(DynamicBuffer &rx_buff)`
-- `template <typename DynamicBuffer> positive_parse_result_t<Iterator> read(DynamicBuffer &rx_buff, boost::system::error_code &ec);`
+- `template <typename DynamicBuffer> positive_parse_result_t<Iterator, Policy = bredis::parsing_policy::keep_result> read(DynamicBuffer &rx_buff)`
+- `template <typename DynamicBuffer> positive_parse_result_t<Iterator, Policy = bredis::parsing_policy::keep_result> read(DynamicBuffer &rx_buff, boost::system::error_code &ec);`
 
 `DynamicBuffer` must conform `boost::asio::streambuf` interface.
 
@@ -596,7 +602,7 @@ invocation is finished.
 
 `ReadCallback` template should be callable object with the signature:
 
-`void(boost::system::error_code, r::positive_parse_result_t<Iterator>&& result)`
+`void(boost::system::error_code, r::positive_parse_result_t<Iterator, Policy = bredis::parsing_policy::keep_result>&& result)`
 
 The asynchnous read has the following signature:
 
