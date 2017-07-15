@@ -66,6 +66,15 @@ TEST_CASE("number-like", "[protocol]") {
                              positive_parse_result.result));
 };
 
+TEST_CASE("no enough data for number", "[protocol]") {
+    std::string ok = ":55\r";
+    Buffer buff(ok.c_str(), ok.size());
+    auto from = Iterator::begin(buff), to = Iterator::end(buff);
+    auto parsed_result = r::Protocol::parse(from, to);
+    r::not_enough_data_t *r = boost::get<r::not_enough_data_t>(&parsed_result);
+    REQUIRE(r != nullptr);
+};
+
 TEST_CASE("simple error", "[protocol]") {
     std::string ok = "-Ooops\r\n";
     Buffer buff(ok.c_str(), ok.size());
@@ -78,6 +87,15 @@ TEST_CASE("simple error", "[protocol]") {
                 &positive_parse_result.result) != nullptr);
     REQUIRE(boost::apply_visitor(r::marker_helpers::equality<Iterator>("Ooops"),
                                  positive_parse_result.result));
+};
+
+TEST_CASE("no enoght data for error", "[protocol]") {
+    std::string ok = "-Ooops";
+    Buffer buff(ok.c_str(), ok.size());
+    auto from = Iterator::begin(buff), to = Iterator::end(buff);
+    auto parsed_result = r::Protocol::parse(from, to);
+    r::not_enough_data_t *r = boost::get<r::not_enough_data_t>(&parsed_result);
+    REQUIRE(r != nullptr);
 };
 
 TEST_CASE("nil", "[protocol]") {
@@ -149,6 +167,14 @@ TEST_CASE("patrial bulk string(2)", "[protocol]") {
     REQUIRE(boost::get<r::not_enough_data_t>(&parsed_result) != nullptr);
 };
 
+TEST_CASE("patrial bulk string(3)", "[protocol]") {
+    std::string ok = "$4\r";
+    Buffer buff(ok.c_str(), ok.size());
+    auto from = Iterator::begin(buff), to = Iterator::end(buff);
+    auto parsed_result = r::Protocol::parse(from, to);
+    REQUIRE(boost::get<r::not_enough_data_t>(&parsed_result) != nullptr);
+};
+
 TEST_CASE("malformed bulk string(2)", "[protocol]") {
     std::string ok = "$1\r\nsome\r\n";
     Buffer buff(ok.c_str(), ok.size());
@@ -196,8 +222,16 @@ TEST_CASE("malformed array", "[protocol]") {
     REQUIRE(r->what == "Value -4 in unacceptable for arrays");
 };
 
-TEST_CASE("patrial array", "[protocol]") {
+TEST_CASE("patrial array(1)", "[protocol]") {
     std::string ok = "*1\r\n";
+    Buffer buff(ok.c_str(), ok.size());
+    auto from = Iterator::begin(buff), to = Iterator::end(buff);
+    auto parsed_result = r::Protocol::parse(from, to);
+    REQUIRE(boost::get<r::not_enough_data_t>(&parsed_result) != nullptr);
+};
+
+TEST_CASE("patrial array(2)", "[protocol]") {
+    std::string ok = "*1";
     Buffer buff(ok.c_str(), ok.size());
     auto from = Iterator::begin(buff), to = Iterator::end(buff);
     auto parsed_result = r::Protocol::parse(from, to);
