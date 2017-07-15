@@ -175,6 +175,15 @@ TEST_CASE("patrial bulk string(3)", "[protocol]") {
     REQUIRE(boost::get<r::not_enough_data_t>(&parsed_result) != nullptr);
 };
 
+TEST_CASE("patrial bulk string(4)", "[protocol]") {
+    using Policy = r::parsing_policy::drop_result;
+    std::string ok = "$4\r\nsome\r";
+    Buffer buff(ok.c_str(), ok.size());
+    auto from = Iterator::begin(buff), to = Iterator::end(buff);
+    auto parsed_result = r::Protocol::parse<Iterator, Policy>(from, to);
+    REQUIRE(boost::get<r::not_enough_data_t>(&parsed_result) != nullptr);
+};
+
 TEST_CASE("malformed bulk string(2)", "[protocol]") {
     std::string ok = "$1\r\nsome\r\n";
     Buffer buff(ok.c_str(), ok.size());
@@ -235,6 +244,15 @@ TEST_CASE("patrial array(2)", "[protocol]") {
     Buffer buff(ok.c_str(), ok.size());
     auto from = Iterator::begin(buff), to = Iterator::end(buff);
     auto parsed_result = r::Protocol::parse(from, to);
+    REQUIRE(boost::get<r::not_enough_data_t>(&parsed_result) != nullptr);
+};
+
+TEST_CASE("patrial array(3)", "[protocol]") {
+    using Policy = r::parsing_policy::drop_result;
+    std::string ok = "*1\r\n";
+    Buffer buff(ok.c_str(), ok.size());
+    auto from = Iterator::begin(buff), to = Iterator::end(buff);
+    auto parsed_result = r::Protocol::parse<Iterator, Policy>(from, to);
     REQUIRE(boost::get<r::not_enough_data_t>(&parsed_result) != nullptr);
 };
 
