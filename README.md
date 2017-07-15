@@ -17,7 +17,6 @@ Boost::ASIO low-level redis client (connector)
 
 ## Changelog
 
-
 ### 0.03
 - improved protocol parser (no memory allocations during input stream validity check)
 
@@ -34,6 +33,19 @@ can be done on the socket object outside of the connector)
 
 ### 0.01
 - initial version
+
+## Performance
+
+Results achieved with `examples/speed_test_async_multi.cpp` for 1 thread, Intel Core i7-4800MQ, gentoo linux
+
+|  bredis (commands/s)       | redox (commands/s)           |
+|----------------------------|------------------------------|
+|  1.30257e+06               |  1.19214e+06                 | 
+
+Results are not completely fair, because of usage of different semantics in
+APIs; however they are still interesting, as there are used different
+underlying event libraries ([Boost::ASIO](http://www.boost.org/doc/libs/release/libs/asio/) vs [libev](http://software.schmorp.de/pkg/libev.html)) as well redis protocol
+parsing library (written from scratch vs [hiredis](https://github.com/redis/hiredis))
 
 ## Work with the result
 
