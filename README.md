@@ -631,5 +631,5 @@ MIT
 
 ## See also
 - https://github.com/Cylix/cpp_redis
-- https://github.com/blackjack/booredis
+- https://github.com/hmartiro/redox
 - https://github.com/nekipelov/redisclient
