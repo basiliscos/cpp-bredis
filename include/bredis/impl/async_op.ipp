@@ -79,8 +79,7 @@ operator()(boost::system::error_code error_code,
             auto parse_result = Protocol::parse(from, end);
             auto *parse_error = boost::get<protocol_error_t>(&parse_result);
             if (parse_error) {
-                error_code =
-                    Error::make_error_code(bredis_errors::protocol_error);
+                error_code = parse_error->code;
                 break;
             } else {
                 auto &positive_result =

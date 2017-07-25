@@ -110,7 +110,7 @@ Connection<NextLayer>::read(DynamicBuffer &rx_buff,
 
     auto *parse_error = boost::get<protocol_error_t>(&parse_result);
     if (parse_error) {
-        ec = Error::make_error_code(bredis_errors::protocol_error);
+        ec = parse_error->code;
         return result_t{};
     }
     return boost::get<result_t>(parse_result);

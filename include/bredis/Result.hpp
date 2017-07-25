@@ -13,10 +13,10 @@
 #include <vector>
 
 #include <boost/asio/buffers_iterator.hpp>
-#include <boost/system/error_code.hpp>
 #include <boost/utility/string_ref.hpp>
 #include <boost/variant.hpp>
 
+#include "Error.hpp"
 #include "Markers.hpp"
 
 namespace bredis {
@@ -27,8 +27,7 @@ template <typename DynamicBuffer> struct to_iterator {
 };
 
 struct protocol_error_t {
-    std::string what;
-    bool operator==(const char *rhs) { return what == rhs; }
+    boost::system::error_code code;
 };
 
 struct not_enough_data_t {};

@@ -22,7 +22,6 @@
 #include <boost/utility/string_ref.hpp>
 
 #include "Command.hpp"
-#include "Error.hpp"
 #include "Protocol.hpp"
 #include "Result.hpp"
 

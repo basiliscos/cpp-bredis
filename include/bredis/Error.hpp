@@ -11,12 +11,33 @@
 
 namespace bredis {
 
-enum bredis_errors { protocol_error = 1 };
+enum class bredis_errors {
+    wrong_intoduction = 1,
+    parser_error,
+    count_conversion,
+    count_range,
+    bulk_terminator
+};
 
 class bredis_category : public boost::system::error_category {
   public:
     const char *name() const noexcept { return "bredis"; }
-    std::string message(int ev) const { return "protocol error"; }
+    std::string message(int ev) const {
+        auto ec = static_cast<bredis_errors>(ev);
+        switch (ec) {
+        case bredis_errors::wrong_intoduction:
+            return "Wrong introduction";
+        case bredis_errors::parser_error:
+            return "Parser error";
+        case bredis_errors::count_conversion:
+            return "Cannot convert count to number";
+        case bredis_errors::count_range:
+            return "Unacceptable count value";
+        case bredis_errors::bulk_terminator:
+            return "Terminator for bulk string not found";
+        }
+        return "Unknown protocol error";
+    }
 };
 
 class Error {

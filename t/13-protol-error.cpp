@@ -77,7 +77,7 @@ TEST_CASE("protocol-error", "[connection]") {
             tx_buff.consume(bytes_transferred);
             c.async_read(rx_buff, [&](const auto &error_code, ParseResult &&r) {
                 REQUIRE(error_code);
-                REQUIRE(error_code.message() == "protocol error");
+                REQUIRE(error_code.message() == "Wrong introduction");
                 completion_promise.set_value();
             });
         });

@@ -159,8 +159,8 @@ template <typename Iterator, typename Policy> struct unwrap_error_t {
     template <typename Parser>
     wrapped_result_t operator()(const Parser &ignored) const {
         assert("non-reacheable code");
-        // unknown condition
-        return protocol_error_t{};
+        return protocol_error_t{
+            Error::make_error_code(bredis_errors::parser_error)};
     }
 };
 
@@ -248,14 +248,14 @@ template <typename Iterator, typename Policy> struct bulk_string_parser_t {
         errno = 0;
         long count = strtol(count_ptr, &count_end, 10);
         if (errno) {
-            // cannot convert count number to string
-            return protocol_error_t{};
+            return protocol_error_t{
+                Error::make_error_code(bredis_errors::count_conversion)};
         } else if (count == -1) {
             size_t consumed = count_consumed + already_consumed;
             return helper::markup_nil(consumed, count_string_ref);
         } else if (count < -1) {
-            // unacceptable count value for array
-            return protocol_error_t{};
+            return protocol_error_t{
+                Error::make_error_code(bredis_errors::count_range)};
         }
 
         auto head = from + count_consumed;
@@ -271,8 +271,8 @@ template <typename Iterator, typename Policy> struct bulk_string_parser_t {
         bool found_terminator =
             std::equal(tail, tail_end, terminator.cbegin(), terminator.cend());
         if (!found_terminator) {
-            // Terminator not found for bulk string
-            return protocol_error_t{};
+            return protocol_error_t{
+                Error::make_error_code(bredis_errors::bulk_terminator)};
         }
         size_t consumed =
             count_consumed + ucount + terminator_size + already_consumed;
@@ -311,14 +311,14 @@ template <typename Iterator, typename Policy> struct array_parser_t {
         errno = 0;
         long count = strtol(count_ptr, &count_end, 10);
         if (errno) {
-            // cannot convert count number to string
-            return protocol_error_t{};
+            return protocol_error_t{
+                Error::make_error_code(bredis_errors::count_conversion)};
         } else if (count == -1) {
             size_t consumed = count_consumed + already_consumed;
             return helper::markup_nil(consumed, count_string_ref);
         } else if (count < -1) {
-            // unacceptable count value for array
-            return protocol_error_t{};
+            return protocol_error_t{
+                Error::make_error_code(bredis_errors::count_range)};
         }
 
         array_helper elements{already_consumed + count_consumed,
@@ -398,7 +398,8 @@ struct construct_primary_parcer_t {
         }
         }
         // wrong introduction;
-        return protocol_error_t{};
+        return protocol_error_t{
+            Error::make_error_code(bredis_errors::wrong_intoduction)};
     }
 };
 

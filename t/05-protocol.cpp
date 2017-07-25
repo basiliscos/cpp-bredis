@@ -48,7 +48,7 @@ TEST_CASE("wrong start marker", "[protocol]") {
     auto from = Iterator::begin(buff), to = Iterator::end(buff);
     auto parsed_result = r::Protocol::parse(from, to);
     r::protocol_error_t *r = boost::get<r::protocol_error_t>(&parsed_result);
-    REQUIRE(r->what == "wrong introduction");
+    REQUIRE(r->code.message() == "Wrong introduction");
 };
 
 TEST_CASE("number-like", "[protocol]") {
@@ -120,7 +120,7 @@ TEST_CASE("malformed bulk string", "[protocol]") {
     auto from = Iterator::begin(buff), to = Iterator::end(buff);
     auto parsed_result = r::Protocol::parse(from, to);
     r::protocol_error_t *r = boost::get<r::protocol_error_t>(&parsed_result);
-    REQUIRE(r->what == "Value -5 in unacceptable for bulk strings");
+    REQUIRE(r->code.message() == "Unacceptable count value");
 };
 
 TEST_CASE("some bulk string", "[protocol]") {
@@ -190,7 +190,7 @@ TEST_CASE("malformed bulk string(2)", "[protocol]") {
     auto from = Iterator::begin(buff), to = Iterator::end(buff);
     auto parsed_result = r::Protocol::parse(from, to);
     r::protocol_error_t *r = boost::get<r::protocol_error_t>(&parsed_result);
-    REQUIRE(r->what == "Terminator not found for bulk string");
+    REQUIRE(r->code.message() == "Terminator for bulk string not found");
 };
 
 TEST_CASE("malformed bulk string(3)", "[protocol]") {
@@ -200,7 +200,7 @@ TEST_CASE("malformed bulk string(3)", "[protocol]") {
     auto from = Iterator::begin(buff), to = Iterator::end(buff);
     auto parsed_result = r::Protocol::parse<Iterator, Policy>(from, to);
     r::protocol_error_t *r = boost::get<r::protocol_error_t>(&parsed_result);
-    REQUIRE(r->what == "Terminator not found for bulk string");
+    REQUIRE(r->code.message() == "Terminator for bulk string not found");
 };
 
 TEST_CASE("empty array", "[protocol]") {
@@ -238,7 +238,7 @@ TEST_CASE("malformed array", "[protocol]") {
     auto from = Iterator::begin(buff), to = Iterator::end(buff);
     auto parsed_result = r::Protocol::parse(from, to);
     r::protocol_error_t *r = boost::get<r::protocol_error_t>(&parsed_result);
-    REQUIRE(r->what == "Value -4 in unacceptable for arrays");
+    REQUIRE(r->code.message() == "Unacceptable count value");
 };
 
 TEST_CASE("patrial array(1)", "[protocol]") {
