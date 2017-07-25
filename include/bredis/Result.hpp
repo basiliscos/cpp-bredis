@@ -57,10 +57,6 @@ using parse_result_mapper_t =
     typename parse_result_mapper<Iterator, Policy>::type;
 
 template <typename Iterator, typename Policy>
-using optional_parse_result_t =
-    boost::variant<not_enough_data_t, parse_result_mapper_t<Iterator, Policy>>;
-
-template <typename Iterator, typename Policy>
 using parse_result_t =
     boost::variant<not_enough_data_t, parse_result_mapper_t<Iterator, Policy>,
                    protocol_error_t>;

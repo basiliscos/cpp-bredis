@@ -9,156 +9,258 @@
 #include <algorithm>
 #include <boost/asio/buffers_iterator.hpp>
 #include <boost/lexical_cast.hpp>
-#include <boost/utility/string_ref.hpp>
+#include <boost/variant.hpp>
+#include <errno.h>
+#include <stdlib.h>
+#include <string>
 
 namespace bredis {
 
-static inline const boost::string_ref &get_terminator() {
-    static boost::string_ref terminator("\r\n");
-    return terminator;
+struct static_string_t {
+    const char *begin_;
+    const char *end_;
+    size_t size_;
+
+    constexpr static_string_t(const char *ptr, size_t size)
+        : begin_{ptr}, size_{size}, end_{ptr + size} {}
+
+    constexpr const char *cbegin() const { return begin_; };
+    constexpr const char *cend() const { return end_; };
+    constexpr size_t size() const { return size_; };
+};
+
+template <typename T> T &operator<<(T &stream, const static_string_t &str) {
+    return stream << str.begin_;
 }
 
+namespace {
+constexpr static_string_t terminator{"\r\n", 2};
+}
+
+namespace details {
+
+// forward declaration
 template <typename Iterator, typename Policy>
-static optional_parse_result_t<Iterator, Policy> raw_parse(Iterator &from,
-                                                           Iterator &to);
+parse_result_t<Iterator, Policy> raw_parse(const Iterator &from,
+                                           const Iterator &to);
 
-namespace extractor_tags {
-struct e_string;
-struct e_error;
-struct e_int;
-struct e_bulk_string;
-struct e_array;
-}; // extractors
+template <typename Iterator, typename Policy> struct markup_helper_t {
+    using result_wrapper_t = parse_result_t<Iterator, Policy>;
+    using positive_wrapper_t = parse_result_mapper_t<Iterator, Policy>;
+    using result_t = markers::redis_result_t<Iterator>;
+    using string_t = markers::string_t<Iterator>;
 
-template <typename Iterator, typename Policy> struct ExtractorHelper {
-    using optional_wrapper_t = optional_parse_result_t<Iterator, Policy>;
-    using positive_wrapper_t = positive_parse_result_t<Iterator, Policy>;
-
-    static auto extract_string(size_t consumed, Iterator from, Iterator to)
-        -> optional_wrapper_t {
-        return optional_wrapper_t{
-            positive_wrapper_t{markers::redis_result_t<Iterator>{
-                                   markers::string_t<Iterator>{from, to}},
-                               consumed}};
+    static auto markup_string(size_t consumed, const Iterator &from,
+                              const Iterator &to) -> result_wrapper_t {
+        return result_wrapper_t{positive_wrapper_t{
+            result_t{markers::string_t<Iterator>{from, to}}, consumed}};
     }
 
-    static auto extract_error(parse_result_mapper_t<Iterator, Policy> *string)
-        -> optional_wrapper_t {
-        auto &string_result =
-            boost::get<markers::string_t<Iterator>>(string->result);
-        return optional_wrapper_t{
-            positive_wrapper_t{markers::redis_result_t<Iterator>{
-                                   markers::error_t<Iterator>{string_result}},
-                               string->consumed}};
+    static auto markup_nil(size_t consumed, const string_t &str)
+        -> result_wrapper_t {
+        return result_wrapper_t{positive_wrapper_t{
+            result_t{markers::nil_t<Iterator>{str}}, consumed}};
     }
 
-    static auto extract_int(parse_result_mapper_t<Iterator, Policy> *string)
-        -> optional_wrapper_t {
-        auto &string_result =
-            boost::get<markers::string_t<Iterator>>(string->result);
-        return optional_wrapper_t{
-            positive_wrapper_t{markers::redis_result_t<Iterator>{
-                                   markers::int_t<Iterator>{string_result}},
-                               string->consumed}};
+    static auto markup_error(positive_wrapper_t &wrapped_string)
+        -> result_wrapper_t {
+        auto &str = boost::get<string_t>(wrapped_string.result);
+        return result_wrapper_t{
+            positive_wrapper_t{result_t{markers::error_t<Iterator>{str}},
+                               wrapped_string.consumed}};
     }
 
-    static auto extract_nil(size_t consumed,
-                            markers::string_t<Iterator> &string)
-        -> optional_wrapper_t {
-        return optional_wrapper_t{positive_wrapper_t{
-            markers::redis_result_t<Iterator>{markers::nil_t<Iterator>{string}},
-            consumed}};
-    }
-
-    static auto extract_bulk_string(size_t already_consumed, size_t shift,
-                                    int count, Iterator from, Iterator to)
-        -> optional_wrapper_t {
-        auto head = from + shift;
-        size_t left = std::distance(head, to);
-        size_t ucount = static_cast<size_t>(count);
-        const auto &terminator = get_terminator();
-        auto terminator_size = terminator.size();
-        if (left < ucount + terminator_size) {
-            return not_enough_data_t{};
-        }
-        auto tail = head + ucount;
-        auto tail_end = tail + terminator_size;
-
-        auto from_t(get_terminator().cbegin()), to_t(get_terminator().cend());
-        bool found_terminator = std::equal(tail, tail_end, from_t, to_t);
-        if (!found_terminator) {
-            throw std::runtime_error("Terminator not found for bulk string");
-        }
-        size_t consumed = shift + count + terminator_size + already_consumed;
-
-        return optional_wrapper_t{
-            positive_wrapper_t{markers::redis_result_t<Iterator>{
-                                   markers::string_t<Iterator>{head, tail}},
-                               consumed}};
-    }
-
-    static auto extract_array(size_t already_consumed, size_t shift, int count,
-                              Iterator from, Iterator to)
-        -> optional_wrapper_t {
-
-        using positive_wrapper_t = positive_parse_result_t<Iterator, Policy>;
-
-        auto result = markers::array_holder_t<Iterator>{};
-        result.elements.reserve(count);
-        for (auto i = 0; i < count; ++i) {
-            Iterator left = from + shift;
-            auto optional_parse_result =
-                raw_parse<Iterator, parsing_policy::keep_result>(left, to);
-            auto *no_enogh_data =
-                boost::get<not_enough_data_t>(&optional_parse_result);
-            if (no_enogh_data) {
-                return *no_enogh_data;
-            }
-            auto &parsed_data =
-                boost::get<positive_wrapper_t>(optional_parse_result);
-            result.elements.emplace_back(parsed_data.result);
-            shift += parsed_data.consumed;
-        }
-        return optional_wrapper_t{
-            positive_wrapper_t{markers::redis_result_t<Iterator>{result},
-                               shift + already_consumed}};
+    static auto markup_int(positive_wrapper_t &wrapped_string)
+        -> result_wrapper_t {
+        auto &str = boost::get<string_t>(wrapped_string.result);
+        return result_wrapper_t{positive_wrapper_t{
+            result_t{markers::int_t<Iterator>{str}}, wrapped_string.consumed}};
     }
 };
 
 template <typename Iterator>
-struct ExtractorHelper<Iterator, parsing_policy::drop_result> {
-    using Policy = parsing_policy::drop_result;
-    using optional_wrapper_t = optional_parse_result_t<Iterator, Policy>;
-    using positive_wrapper_t = positive_parse_result_t<Iterator, Policy>;
+struct markup_helper_t<Iterator, parsing_policy::drop_result> {
+    using policy_t = parsing_policy::drop_result;
+    using result_wrapper_t = parse_result_t<Iterator, policy_t>;
+    using positive_wrapper_t = parse_result_mapper_t<Iterator, policy_t>;
+    using string_t = markers::string_t<Iterator>;
 
-    static auto extract_string(size_t consumed, Iterator from, Iterator to)
-        -> optional_wrapper_t {
-        return optional_wrapper_t{positive_wrapper_t{consumed}};
+    static auto markup_string(size_t consumed, const Iterator &from,
+                              const Iterator &to) -> result_wrapper_t {
+        return result_wrapper_t{positive_wrapper_t{consumed}};
     }
 
-    static auto extract_error(parse_result_mapper_t<Iterator, Policy> *string)
-        -> optional_wrapper_t {
-        return optional_wrapper_t{positive_wrapper_t{string->consumed}};
+    static auto markup_nil(size_t consumed, const string_t &str)
+        -> result_wrapper_t {
+        return result_wrapper_t{positive_wrapper_t{consumed}};
     }
 
-    static auto extract_int(parse_result_mapper_t<Iterator, Policy> *string)
-        -> optional_wrapper_t {
-        return optional_wrapper_t{positive_wrapper_t{string->consumed}};
+    static auto markup_error(positive_wrapper_t &wrapped_string)
+        -> result_wrapper_t {
+        return result_wrapper_t{positive_wrapper_t{wrapped_string.consumed}};
     }
 
-    static auto extract_nil(size_t consumed,
-                            markers::string_t<Iterator> &string)
-        -> optional_wrapper_t {
-        return optional_wrapper_t{positive_wrapper_t{consumed}};
+    static auto markup_int(positive_wrapper_t &wrapped_string)
+        -> result_wrapper_t {
+        return result_wrapper_t{positive_wrapper_t{wrapped_string.consumed}};
+    }
+};
+
+template <typename Iterator, typename Policy> struct array_helper_t {
+    using policy_t = Policy;
+    using array_t = markers::array_holder_t<Iterator>;
+    using item_t = parse_result_mapper_t<Iterator, policy_t>;
+    using result_t = parse_result_t<Iterator, policy_t>;
+
+    size_t consumed_;
+    size_t count_;
+    array_t array_;
+
+    array_helper_t(size_t consumed, size_t count)
+        : consumed_{consumed}, count_{count} {
+        array_.elements.reserve(count);
     }
 
-    static auto extract_bulk_string(size_t already_consumed, size_t shift,
-                                    int count, Iterator from, Iterator to)
-        -> optional_wrapper_t {
-        auto head = from + shift;
+    void push(const item_t &item) {
+        consumed_ += item.consumed;
+        array_.elements.emplace_back(item.result);
+    }
+
+    result_t get() { return result_t{item_t{std::move(array_), consumed_}}; }
+};
+
+template <typename Iterator>
+struct array_helper_t<Iterator, parsing_policy::drop_result> {
+    using policy_t = parsing_policy::drop_result;
+    using array_t = markers::array_holder_t<Iterator>;
+    using item_t = parse_result_mapper_t<Iterator, policy_t>;
+    using result_t = parse_result_t<Iterator, policy_t>;
+
+    size_t consumed_;
+
+    array_helper_t(size_t consumed, size_t count) : consumed_{consumed} {}
+
+    void push(const item_t &item) { consumed_ += item.consumed; }
+
+    result_t get() { return result_t{item_t{consumed_}}; }
+};
+
+template <typename Iterator, typename Policy> struct unwrap_error_t {
+    using wrapped_result_t = parse_result_t<Iterator, Policy>;
+
+    wrapped_result_t operator()(const not_enough_data_t &value) const {
+        return value;
+    }
+
+    wrapped_result_t operator()(const protocol_error_t &value) const {
+        return value;
+    }
+
+    template <typename Parser>
+    wrapped_result_t operator()(const Parser &ignored) const {
+        assert("non-reacheable code");
+        // unknown condition
+        return protocol_error_t{};
+    }
+};
+
+template <typename Iterator, typename Policy> struct string_parser_t {
+    static auto apply(const Iterator &from, const Iterator &to,
+                      size_t already_consumed)
+        -> parse_result_t<Iterator, Policy> {
+        using helper = markup_helper_t<Iterator, Policy>;
+
+        auto found_terminator =
+            std::search(from, to, terminator.cbegin(), terminator.cend());
+
+        if (found_terminator == to) {
+            return not_enough_data_t{};
+        }
+
+        size_t consumed = already_consumed +
+                          std::distance(from, found_terminator) +
+                          terminator.size();
+        return helper::markup_string(consumed, from, found_terminator);
+    }
+};
+
+template <typename Iterator, typename Policy> struct error_parser_t {
+    static auto apply(const Iterator &from, const Iterator &to,
+                      size_t already_consumed)
+        -> parse_result_t<Iterator, Policy> {
+        using helper = markup_helper_t<Iterator, Policy>;
+        using parser_t = string_parser_t<Iterator, Policy>;
+        using wrapped_result_t = parse_result_mapper_t<Iterator, Policy>;
+
+        auto result = parser_t::apply(from, to, already_consumed);
+        auto *wrapped_string = boost::get<wrapped_result_t>(&result);
+        if (!wrapped_string) {
+            return result;
+        }
+        return helper::markup_error(*wrapped_string);
+    }
+};
+
+template <typename Iterator, typename Policy> struct int_parser_t {
+    static auto apply(const Iterator &from, const Iterator &to,
+                      size_t already_consumed)
+        -> parse_result_t<Iterator, Policy> {
+        using helper = markup_helper_t<Iterator, Policy>;
+        using parser_t = string_parser_t<Iterator, Policy>;
+        using wrapped_result_t = parse_result_mapper_t<Iterator, Policy>;
+
+        auto result = parser_t::apply(from, to, already_consumed);
+        auto *wrapped_string = boost::get<wrapped_result_t>(&result);
+        if (!wrapped_string) {
+            return result;
+        }
+        return helper::markup_int(*wrapped_string);
+    }
+};
+
+template <typename Iterator, typename Policy> struct bulk_string_parser_t {
+    static auto apply(const Iterator &from, const Iterator &to,
+                      size_t already_consumed)
+        -> parse_result_t<Iterator, Policy> {
+
+        using helper = markup_helper_t<Iterator, Policy>;
+        using keep_policy = parsing_policy::keep_result;
+        using wrapped_string_t = parse_result_mapper_t<Iterator, keep_policy>;
+        using count_parser_t = string_parser_t<Iterator, keep_policy>;
+        using count_unwrapper_t = unwrap_error_t<Iterator, Policy>;
+        using string_t = markers::string_t<Iterator>;
+        using array_helper = array_helper_t<Iterator, Policy>;
+        using element_t = parse_result_mapper_t<Iterator, Policy>;
+
+        auto count_result = count_parser_t::apply(from, to, 0);
+        auto *count_string_wrapped =
+            boost::get<wrapped_string_t>(&count_result);
+        if (!count_string_wrapped) {
+            return boost::apply_visitor(count_unwrapper_t{}, count_result);
+        }
+        auto &count_string_ref =
+            boost::get<string_t>(count_string_wrapped->result);
+        std::string count_string{count_string_ref.from, count_string_ref.to};
+        auto count_consumed = count_string_wrapped->consumed;
+        const char *count_ptr = count_string.c_str();
+        char *count_end;
+
+        errno = 0;
+        long count = strtol(count_ptr, &count_end, 10);
+        if (errno) {
+            // cannot convert count number to string
+            return protocol_error_t{};
+        } else if (count == -1) {
+            size_t consumed = count_consumed + already_consumed;
+            return helper::markup_nil(consumed, count_string_ref);
+        } else if (count < -1) {
+            // unacceptable count value for array
+            return protocol_error_t{};
+        }
+
+        auto head = from + count_consumed;
         size_t left = std::distance(head, to);
         size_t ucount = static_cast<size_t>(count);
-        const auto &terminator = get_terminator();
         auto terminator_size = terminator.size();
         if (left < ucount + terminator_size) {
             return not_enough_data_t{};
@@ -166,223 +268,164 @@ struct ExtractorHelper<Iterator, parsing_policy::drop_result> {
         auto tail = head + ucount;
         auto tail_end = tail + terminator_size;
 
-        auto from_t(get_terminator().cbegin()), to_t(get_terminator().cend());
-        bool found_terminator = std::equal(tail, tail_end, from_t, to_t);
+        bool found_terminator =
+            std::equal(tail, tail_end, terminator.cbegin(), terminator.cend());
         if (!found_terminator) {
-            throw std::runtime_error("Terminator not found for bulk string");
+            // Terminator not found for bulk string
+            return protocol_error_t{};
         }
-        size_t consumed = shift + count + terminator_size + already_consumed;
+        size_t consumed =
+            count_consumed + ucount + terminator_size + already_consumed;
 
-        return optional_wrapper_t{positive_wrapper_t{consumed}};
+        return helper::markup_string(consumed, head, tail);
     }
+};
 
-    static auto extract_array(size_t already_consumed, size_t shift, int count,
-                              Iterator from, Iterator to)
-        -> optional_wrapper_t {
+template <typename Iterator, typename Policy> struct array_parser_t {
+    static auto apply(const Iterator &from, const Iterator &to,
+                      size_t already_consumed)
+        -> parse_result_t<Iterator, Policy> {
 
-        using positive_wrapper_t = positive_parse_result_t<Iterator, Policy>;
+        using helper = markup_helper_t<Iterator, Policy>;
+        using keep_policy = parsing_policy::keep_result;
+        using wrapped_string_t = parse_result_mapper_t<Iterator, keep_policy>;
+        using count_parser_t = string_parser_t<Iterator, keep_policy>;
+        using count_unwrapper_t = unwrap_error_t<Iterator, Policy>;
+        using string_t = markers::string_t<Iterator>;
+        using array_helper = array_helper_t<Iterator, Policy>;
+        using element_t = parse_result_mapper_t<Iterator, Policy>;
 
-        auto result = markers::array_holder_t<Iterator>{};
-        result.elements.reserve(count);
-        for (auto i = 0; i < count; ++i) {
-            Iterator left = from + shift;
-            auto optional_parse_result = raw_parse<Iterator, Policy>(left, to);
-            auto *no_enogh_data =
-                boost::get<not_enough_data_t>(&optional_parse_result);
-            if (no_enogh_data) {
-                return *no_enogh_data;
+        auto count_result = count_parser_t::apply(from, to, 0);
+        auto *count_string_wrapped =
+            boost::get<wrapped_string_t>(&count_result);
+        if (!count_string_wrapped) {
+            return boost::apply_visitor(count_unwrapper_t{}, count_result);
+        }
+        auto &count_string_ref =
+            boost::get<string_t>(count_string_wrapped->result);
+        std::string count_string{count_string_ref.from, count_string_ref.to};
+        auto count_consumed = count_string_wrapped->consumed;
+        const char *count_ptr = count_string.c_str();
+        char *count_end;
+
+        errno = 0;
+        long count = strtol(count_ptr, &count_end, 10);
+        if (errno) {
+            // cannot convert count number to string
+            return protocol_error_t{};
+        } else if (count == -1) {
+            size_t consumed = count_consumed + already_consumed;
+            return helper::markup_nil(consumed, count_string_ref);
+        } else if (count < -1) {
+            // unacceptable count value for array
+            return protocol_error_t{};
+        }
+
+        array_helper elements{already_consumed + count_consumed,
+                              static_cast<size_t>(count)};
+        long marked_elements{0};
+        Iterator element_from = from + count_consumed;
+        while (marked_elements < count) {
+            auto element_result = raw_parse<Iterator, Policy>(element_from, to);
+            auto *element = boost::get<element_t>(&element_result);
+            if (!element) {
+                return element_result;
             }
-            auto &parsed_data =
-                boost::get<positive_wrapper_t>(optional_parse_result);
-            shift += parsed_data.consumed;
+            element_from += element->consumed;
+            elements.push(*element);
+            ++marked_elements;
         }
-        return optional_wrapper_t{positive_wrapper_t{shift + already_consumed}};
-    }
-};
-
-template <typename P, typename T> struct Extractor {};
-
-template <typename Policy> struct Extractor<Policy, extractor_tags::e_string> {
-
-    template <typename Iterator>
-    optional_parse_result_t<Iterator, Policy>
-    operator()(Iterator &from, Iterator &to, size_t already_consumed) const {
-        using helper = ExtractorHelper<Iterator, Policy>;
-
-        auto from_t(get_terminator().cbegin()), to_t(get_terminator().cend());
-        auto found_terminator = std::search(from, to, from_t, to_t);
-
-        if (found_terminator == to) {
-            return not_enough_data_t{};
-        } else {
-            size_t consumed = already_consumed +
-                              std::distance(from, found_terminator) +
-                              get_terminator().size();
-            return helper::extract_string(consumed, from, found_terminator);
-        }
-    }
-};
-
-template <typename Policy> struct Extractor<Policy, extractor_tags::e_error> {
-    template <typename Iterator>
-    optional_parse_result_t<Iterator, Policy>
-    operator()(Iterator &from, Iterator &to, size_t already_consumed) const {
-        using helper = ExtractorHelper<Iterator, Policy>;
-
-        Extractor<Policy, extractor_tags::e_string> e;
-        auto parse_result = e(from, to, already_consumed);
-
-        auto *positive_result =
-            boost::get<parse_result_mapper_t<Iterator, Policy>>(&parse_result);
-        if (!positive_result) {
-            return not_enough_data_t{};
-        } else {
-            return helper::extract_error(positive_result);
-        }
-    }
-};
-
-template <typename Policy> struct Extractor<Policy, extractor_tags::e_int> {
-    template <typename Iterator>
-    optional_parse_result_t<Iterator, Policy>
-    operator()(Iterator &from, Iterator &to, size_t already_consumed) const {
-        using helper = ExtractorHelper<Iterator, Policy>;
-
-        Extractor<Policy, extractor_tags::e_string> e;
-        auto parse_result = e(from, to, already_consumed);
-
-        auto *positive_result =
-            boost::get<parse_result_mapper_t<Iterator, Policy>>(&parse_result);
-        if (!positive_result) {
-            return not_enough_data_t{};
-        } else {
-            return helper::extract_int(positive_result);
-        }
-    }
-};
-
-template <typename Policy>
-struct Extractor<Policy, extractor_tags::e_bulk_string> {
-    template <typename Iterator>
-    optional_parse_result_t<Iterator, Policy>
-    operator()(Iterator &from, Iterator &to, size_t already_consumed) const {
-        using helper = ExtractorHelper<Iterator, Policy>;
-        using KeepPolicy = parsing_policy::keep_result;
-
-        Extractor<KeepPolicy, extractor_tags::e_string> e;
-
-        auto parse_result = e(from, to, 0);
-        auto *positive_result =
-            boost::get<parse_result_mapper_t<Iterator, KeepPolicy>>(
-                &parse_result);
-        if (!positive_result) {
-            return not_enough_data_t{};
-        }
-
-        auto &count_string =
-            boost::get<markers::string_t<Iterator>>(positive_result->result);
-        std::string s{count_string.from, count_string.to};
-        int count = boost::lexical_cast<int>(s);
-        if (count == -1) {
-            return helper::extract_nil(
-                positive_result->consumed + already_consumed, count_string);
-        } else if (count < -1) {
-            throw std::runtime_error(std::string("Value ") + s +
-                                     " in unacceptable for bulk strings");
-        } else {
-            return helper::extract_bulk_string(
-                already_consumed, positive_result->consumed, count, from, to);
-        }
-    }
-};
-
-template <typename Policy> struct Extractor<Policy, extractor_tags::e_array> {
-    template <typename Iterator>
-    optional_parse_result_t<Iterator, Policy>
-    operator()(Iterator &from, Iterator &to, size_t already_consumed) const {
-        using helper = ExtractorHelper<Iterator, Policy>;
-        using KeepPolicy = parsing_policy::keep_result;
-
-        Extractor<KeepPolicy, extractor_tags::e_string> e;
-        auto parse_result = e(from, to, 0);
-        auto *positive_result =
-            boost::get<parse_result_mapper_t<Iterator, KeepPolicy>>(
-                &parse_result);
-        if (!positive_result) {
-            return not_enough_data_t{};
-        }
-
-        auto &count_string =
-            boost::get<markers::string_t<Iterator>>(positive_result->result);
-        std::string s{count_string.from, count_string.to};
-        int count = boost::lexical_cast<int>(s);
-        if (count == -1) {
-            return helper::extract_nil(
-                positive_result->consumed + already_consumed, count_string);
-        } else if (count < -1) {
-            throw std::runtime_error(std::string("Value ") + s +
-                                     " in unacceptable for arrays");
-        } else {
-            return helper::extract_array(
-                already_consumed, positive_result->consumed, count, from, to);
-        }
+        return elements.get();
     }
 };
 
 template <typename Iterator, typename Policy>
-static optional_parse_result_t<Iterator, Policy> raw_parse(Iterator &from,
-                                                           Iterator &to) {
-    if (from == to) {
-        return not_enough_data_t{};
+using primary_parser_t = boost::variant<
+    not_enough_data_t, protocol_error_t, string_parser_t<Iterator, Policy>,
+    int_parser_t<Iterator, Policy>, error_parser_t<Iterator, Policy>,
+    bulk_string_parser_t<Iterator, Policy>, array_parser_t<Iterator, Policy>>;
+
+template <typename Iterator, typename Policy>
+struct unwrap_primary_parser_t
+    : public boost::static_visitor<parse_result_t<Iterator, Policy>> {
+    using wrapped_result_t = parse_result_t<Iterator, Policy>;
+
+    const Iterator &from_;
+    const Iterator &to_;
+
+    unwrap_primary_parser_t(const Iterator &from, const Iterator &to)
+        : from_{from}, to_{to} {}
+
+    wrapped_result_t operator()(const not_enough_data_t &value) const {
+        return value;
     }
 
-    auto marker = *from++;
+    wrapped_result_t operator()(const protocol_error_t &value) const {
+        return value;
+    }
 
-    switch (marker) {
-    case '+': {
-        Extractor<Policy, extractor_tags::e_string> e;
-        return e(from, to, 1);
+    template <typename Parser>
+    wrapped_result_t operator()(const Parser &ignored) const {
+        auto next_from = from_ + 1;
+        return Parser::apply(next_from, to_, 1);
     }
-    case '-': {
-        Extractor<Policy, extractor_tags::e_error> e;
-        return e(from, to, 1);
+};
+
+template <typename Iterator, typename Policy>
+struct construct_primary_parcer_t {
+    using result_t = primary_parser_t<Iterator, Policy>;
+
+    static auto apply(const Iterator &from, const Iterator &to) -> result_t {
+        if (from == to) {
+            return not_enough_data_t{};
+        }
+
+        switch (*from) {
+        case '+': {
+            return string_parser_t<Iterator, Policy>{};
+        }
+        case '-': {
+            return error_parser_t<Iterator, Policy>{};
+        }
+        case ':': {
+            return int_parser_t<Iterator, Policy>{};
+        }
+        case '$': {
+            return bulk_string_parser_t<Iterator, Policy>{};
+        }
+        case '*': {
+            return array_parser_t<Iterator, Policy>{};
+        }
+        }
+        // wrong introduction;
+        return protocol_error_t{};
     }
-    case ':': {
-        Extractor<Policy, extractor_tags::e_int> e;
-        return e(from, to, 1);
-    }
-    case '$': {
-        Extractor<Policy, extractor_tags::e_bulk_string> e;
-        return e(from, to, 1);
-    }
-    case '*': {
-        Extractor<Policy, extractor_tags::e_array> e;
-        return e(from, to, 1);
-    }
-    default: { throw std::runtime_error("wrong introduction"); }
-    }
-    throw std::runtime_error("wrong introduction");
+};
+
+template <typename Iterator, typename Policy>
+parse_result_t<Iterator, Policy> raw_parse(const Iterator &from,
+                                           const Iterator &to) {
+    auto primary =
+        construct_primary_parcer_t<Iterator, Policy>::apply(from, to);
+    return boost::apply_visitor(
+        unwrap_primary_parser_t<Iterator, Policy>(from, to), primary);
 }
 
+} // namespace details
+
 template <typename Iterator, typename Policy>
-parse_result_t<Iterator, Policy> Protocol::parse(Iterator &from,
-                                                 Iterator &to) noexcept {
-    try {
-        auto result = raw_parse<Iterator, Policy>(from, to);
-        return parse_result_t<Iterator, Policy>{result};
-    } catch (std::exception &e) {
-        return protocol_error_t{e.what()};
-    }
+parse_result_t<Iterator, Policy> Protocol::parse(Iterator from, Iterator to) {
+    return details::raw_parse<Iterator, Policy>(from, to);
 }
 
 std::ostream &Protocol::serialize(std::ostream &buff,
                                   const single_command_t &cmd) {
-    buff << '*' << (cmd.arguments.size()) << get_terminator();
+    buff << '*' << (cmd.arguments.size()) << terminator;
 
     for (const auto &arg : cmd.arguments) {
-        buff << '$' << arg.size() << get_terminator() << arg
-             << get_terminator();
+        buff << '$' << arg.size() << terminator << arg << terminator;
     }
     return buff;
 }
-};
+
+} // namespace bredis
