@@ -415,7 +415,8 @@ parse_result_t<Iterator, Policy> raw_parse(const Iterator &from,
 } // namespace details
 
 template <typename Iterator, typename Policy>
-parse_result_t<Iterator, Policy> Protocol::parse(Iterator from, Iterator to) {
+parse_result_t<Iterator, Policy> Protocol::parse(const Iterator &from,
+                                                 const Iterator &to) {
     return details::raw_parse<Iterator, Policy>(from, to);
 }
 

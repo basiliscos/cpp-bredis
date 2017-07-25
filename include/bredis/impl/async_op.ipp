@@ -75,8 +75,7 @@ operator()(boost::system::error_code error_code,
         size_t cumulative_consumption = 0;
 
         do {
-            auto from = begin + cumulative_consumption;
-            auto parse_result = Protocol::parse(from, end);
+            auto parse_result = Protocol::parse(begin, end);
             auto *parse_error = boost::get<protocol_error_t>(&parse_result);
             if (parse_error) {
                 error_code = parse_error->code;
@@ -85,6 +84,7 @@ operator()(boost::system::error_code error_code,
                 auto &positive_result =
                     boost::get<positive_result_t>(parse_result);
                 results.elements.emplace_back(positive_result.result);
+                begin += positive_result.consumed;
                 cumulative_consumption += positive_result.consumed;
             }
         } while (results.elements.size() < replies_count_);
