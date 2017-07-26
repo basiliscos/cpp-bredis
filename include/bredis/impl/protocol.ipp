@@ -17,20 +17,47 @@
 namespace bredis {
 
 struct static_string_t {
-    const char *begin_;
-    const char *end_;
-    size_t size_;
+    const char *begin;
+    size_t size;
 
-    constexpr static_string_t(const char *ptr, size_t size)
-        : begin_{ptr}, size_{size}, end_{ptr + size} {}
+    constexpr static_string_t(const char *ptr, size_t sz)
+        : begin{ptr}, size{sz} {}
 
-    constexpr const char *cbegin() const { return begin_; };
-    constexpr const char *cend() const { return end_; };
-    constexpr size_t size() const { return size_; };
+    template <typename Iterator>
+    Iterator search(Iterator first, Iterator last) const {
+        auto *end = begin + size;
+        for (;; ++first) {
+            Iterator it = first;
+            for (auto *s_it = begin;; ++it, ++s_it) {
+                if (s_it == end) {
+                    return first;
+                }
+                if (it == last) {
+                    return last;
+                }
+                if (!(*it == *s_it)) {
+                    break;
+                }
+            }
+        }
+    }
+
+    template <typename Iterator>
+    bool equal(Iterator first, Iterator last) const {
+        auto *start = begin;
+        auto *end = begin + size;
+
+        for (; (first != last) && (start != end); ++first, ++start) {
+            if (!(*first == *start)) {
+                return false;
+            }
+        }
+        return true;
+    }
 };
 
 template <typename T> T &operator<<(T &stream, const static_string_t &str) {
-    return stream << str.begin_;
+    return stream << str.begin;
 }
 
 namespace {
@@ -170,8 +197,7 @@ template <typename Iterator, typename Policy> struct string_parser_t {
         -> parse_result_t<Iterator, Policy> {
         using helper = markup_helper_t<Iterator, Policy>;
 
-        auto found_terminator =
-            std::search(from, to, terminator.cbegin(), terminator.cend());
+        auto found_terminator = terminator.search(from, to);
 
         if (found_terminator == to) {
             return not_enough_data_t{};
@@ -179,7 +205,7 @@ template <typename Iterator, typename Policy> struct string_parser_t {
 
         size_t consumed = already_consumed +
                           std::distance(from, found_terminator) +
-                          terminator.size();
+                          terminator.size;
         return helper::markup_string(consumed, from, found_terminator);
     }
 };
@@ -261,15 +287,14 @@ template <typename Iterator, typename Policy> struct bulk_string_parser_t {
         auto head = from + count_consumed;
         size_t left = std::distance(head, to);
         size_t ucount = static_cast<size_t>(count);
-        auto terminator_size = terminator.size();
+        auto terminator_size = terminator.size;
         if (left < ucount + terminator_size) {
             return not_enough_data_t{};
         }
         auto tail = head + ucount;
         auto tail_end = tail + terminator_size;
 
-        bool found_terminator =
-            std::equal(tail, tail_end, terminator.cbegin(), terminator.cend());
+        bool found_terminator = terminator.equal(tail, tail_end);
         if (!found_terminator) {
             return protocol_error_t{
                 Error::make_error_code(bredis_errors::bulk_terminator)};
