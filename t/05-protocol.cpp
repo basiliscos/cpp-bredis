@@ -203,6 +203,17 @@ TEST_CASE("malformed bulk string(3)", "[protocol]") {
     REQUIRE(r->code.message() == "Terminator for bulk string not found");
 };
 
+TEST_CASE("malformed bulk string(4)", "[protocol]") {
+    using Policy = r::parsing_policy::drop_result;
+    std::string ok =
+        "$4555555555555555555555555555555555555555555555555555\r\nsomemm";
+    Buffer buff(ok.c_str(), ok.size());
+    auto from = Iterator::begin(buff), to = Iterator::end(buff);
+    auto parsed_result = r::Protocol::parse<Iterator, Policy>(from, to);
+    r::protocol_error_t *r = boost::get<r::protocol_error_t>(&parsed_result);
+    REQUIRE(r->code.message() == "Cannot convert count to number");
+};
+
 TEST_CASE("empty array", "[protocol]") {
     std::string ok = "*0\r\n";
     Buffer buff(ok.c_str(), ok.size());
@@ -239,6 +250,15 @@ TEST_CASE("malformed array", "[protocol]") {
     auto parsed_result = r::Protocol::parse(from, to);
     r::protocol_error_t *r = boost::get<r::protocol_error_t>(&parsed_result);
     REQUIRE(r->code.message() == "Unacceptable count value");
+};
+
+TEST_CASE("malformed array (2)", "[protocol]") {
+    std::string ok = "*555555555555555555555555555555555555555\r\nsome\r\n";
+    Buffer buff(ok.c_str(), ok.size());
+    auto from = Iterator::begin(buff), to = Iterator::end(buff);
+    auto parsed_result = r::Protocol::parse(from, to);
+    r::protocol_error_t *r = boost::get<r::protocol_error_t>(&parsed_result);
+    REQUIRE(r->code.message() == "Cannot convert count to number");
 };
 
 TEST_CASE("patrial array(1)", "[protocol]") {
