@@ -71,6 +71,15 @@ template <typename Iterator, typename Policy>
 parse_result_t<Iterator, Policy> raw_parse(const Iterator &from,
                                            const Iterator &to);
 
+struct count_value_t {
+    size_t value;
+    size_t consumed;
+};
+
+template <typename Iterator, typename Policy>
+using count_variant_t =
+    boost::variant<count_value_t, parse_result_t<Iterator, Policy>>;
+
 template <typename Iterator, typename Policy> struct markup_helper_t {
     using result_wrapper_t = parse_result_t<Iterator, Policy>;
     using positive_wrapper_t = parse_result_mapper_t<Iterator, Policy>;
@@ -172,22 +181,47 @@ struct array_helper_t<Iterator, parsing_policy::drop_result> {
     result_t get() { return result_t{item_t{consumed_}}; }
 };
 
-template <typename Iterator, typename Policy> struct unwrap_error_t {
-    using wrapped_result_t = parse_result_t<Iterator, Policy>;
+template <typename Iterator, typename Policy>
+struct unwrap_count_t
+    : public boost::static_visitor<count_variant_t<Iterator, Policy>> {
+    using wrapped_result_t = count_variant_t<Iterator, Policy>;
+    using negative_result_t = parse_result_t<Iterator, Policy>;
+    using positive_input_t =
+        parse_result_mapper_t<Iterator, parsing_policy::keep_result>;
 
     wrapped_result_t operator()(const not_enough_data_t &value) const {
-        return value;
+        return wrapped_result_t{negative_result_t{value}};
     }
 
     wrapped_result_t operator()(const protocol_error_t &value) const {
-        return value;
+        return wrapped_result_t{negative_result_t{value}};
     }
 
-    template <typename Parser>
-    wrapped_result_t operator()(const Parser &ignored) const {
-        assert("non-reacheable code");
-        return protocol_error_t{
-            Error::make_error_code(bredis_errors::parser_error)};
+    wrapped_result_t operator()(const positive_input_t &value) const {
+        using string_t = markers::string_t<Iterator>;
+        using helper = markup_helper_t<Iterator, Policy>;
+
+        auto &count_string_ref = boost::get<string_t>(value.result);
+        std::string count_string{count_string_ref.from, count_string_ref.to};
+        auto count_consumed = value.consumed;
+        const char *count_ptr = count_string.c_str();
+        char *count_end;
+
+        errno = 0;
+        long count = strtol(count_ptr, &count_end, 10);
+        if (errno) {
+            return wrapped_result_t{protocol_error_t{
+                Error::make_error_code(bredis_errors::count_conversion)}};
+        } else if (count == -1) {
+            return helper::markup_nil(count_consumed, count_string_ref);
+        } else if (count < -1) {
+            return wrapped_result_t{protocol_error_t{
+                Error::make_error_code(bredis_errors::count_range)}};
+        }
+
+        return wrapped_result_t{
+            count_value_t{static_cast<size_t>(count), count_consumed},
+        };
     }
 };
 
@@ -250,48 +284,27 @@ template <typename Iterator, typename Policy> struct bulk_string_parser_t {
         -> parse_result_t<Iterator, Policy> {
 
         using helper = markup_helper_t<Iterator, Policy>;
+        using count_unwrapper_t = unwrap_count_t<Iterator, Policy>;
         using keep_policy = parsing_policy::keep_result;
-        using wrapped_string_t = parse_result_mapper_t<Iterator, keep_policy>;
         using count_parser_t = string_parser_t<Iterator, keep_policy>;
-        using count_unwrapper_t = unwrap_error_t<Iterator, Policy>;
-        using string_t = markers::string_t<Iterator>;
-        using array_helper = array_helper_t<Iterator, Policy>;
-        using element_t = parse_result_mapper_t<Iterator, Policy>;
+        using result_t = parse_result_t<Iterator, Policy>;
 
-        auto count_result = count_parser_t::apply(from, to, 0);
-        auto *count_string_wrapped =
-            boost::get<wrapped_string_t>(&count_result);
-        if (!count_string_wrapped) {
-            return boost::apply_visitor(count_unwrapper_t{}, count_result);
-        }
-        auto &count_string_ref =
-            boost::get<string_t>(count_string_wrapped->result);
-        std::string count_string{count_string_ref.from, count_string_ref.to};
-        auto count_consumed = count_string_wrapped->consumed;
-        const char *count_ptr = count_string.c_str();
-        char *count_end;
-
-        errno = 0;
-        long count = strtol(count_ptr, &count_end, 10);
-        if (errno) {
-            return protocol_error_t{
-                Error::make_error_code(bredis_errors::count_conversion)};
-        } else if (count == -1) {
-            size_t consumed = count_consumed + already_consumed;
-            return helper::markup_nil(consumed, count_string_ref);
-        } else if (count < -1) {
-            return protocol_error_t{
-                Error::make_error_code(bredis_errors::count_range)};
+        auto count_result = count_parser_t::apply(from, to, already_consumed);
+        auto count_int_result =
+            boost::apply_visitor(count_unwrapper_t{}, count_result);
+        auto *count_wrapped = boost::get<count_value_t>(&count_int_result);
+        if (!count_wrapped) {
+            return boost::get<result_t>(count_int_result);
         }
 
-        auto head = from + count_consumed;
+        auto head = from + (count_wrapped->consumed - already_consumed);
         size_t left = std::distance(head, to);
-        size_t ucount = static_cast<size_t>(count);
+        size_t count = count_wrapped->value;
         auto terminator_size = terminator.size;
-        if (left < ucount + terminator_size) {
+        if (left < count + terminator_size) {
             return not_enough_data_t{};
         }
-        auto tail = head + ucount;
+        auto tail = head + count;
         auto tail_end = tail + terminator_size;
 
         bool found_terminator = terminator.equal(tail, tail_end);
@@ -299,8 +312,7 @@ template <typename Iterator, typename Policy> struct bulk_string_parser_t {
             return protocol_error_t{
                 Error::make_error_code(bredis_errors::bulk_terminator)};
         }
-        size_t consumed =
-            count_consumed + ucount + terminator_size + already_consumed;
+        size_t consumed = count_wrapped->consumed + count + terminator_size;
 
         return helper::markup_string(consumed, head, tail);
     }
@@ -312,44 +324,26 @@ template <typename Iterator, typename Policy> struct array_parser_t {
         -> parse_result_t<Iterator, Policy> {
 
         using helper = markup_helper_t<Iterator, Policy>;
+        using count_unwrapper_t = unwrap_count_t<Iterator, Policy>;
+        using result_t = parse_result_t<Iterator, Policy>;
         using keep_policy = parsing_policy::keep_result;
-        using wrapped_string_t = parse_result_mapper_t<Iterator, keep_policy>;
         using count_parser_t = string_parser_t<Iterator, keep_policy>;
-        using count_unwrapper_t = unwrap_error_t<Iterator, Policy>;
-        using string_t = markers::string_t<Iterator>;
         using array_helper = array_helper_t<Iterator, Policy>;
         using element_t = parse_result_mapper_t<Iterator, Policy>;
 
-        auto count_result = count_parser_t::apply(from, to, 0);
-        auto *count_string_wrapped =
-            boost::get<wrapped_string_t>(&count_result);
-        if (!count_string_wrapped) {
-            return boost::apply_visitor(count_unwrapper_t{}, count_result);
-        }
-        auto &count_string_ref =
-            boost::get<string_t>(count_string_wrapped->result);
-        std::string count_string{count_string_ref.from, count_string_ref.to};
-        auto count_consumed = count_string_wrapped->consumed;
-        const char *count_ptr = count_string.c_str();
-        char *count_end;
-
-        errno = 0;
-        long count = strtol(count_ptr, &count_end, 10);
-        if (errno) {
-            return protocol_error_t{
-                Error::make_error_code(bredis_errors::count_conversion)};
-        } else if (count == -1) {
-            size_t consumed = count_consumed + already_consumed;
-            return helper::markup_nil(consumed, count_string_ref);
-        } else if (count < -1) {
-            return protocol_error_t{
-                Error::make_error_code(bredis_errors::count_range)};
+        auto count_result = count_parser_t::apply(from, to, already_consumed);
+        auto count_int_result =
+            boost::apply_visitor(count_unwrapper_t{}, count_result);
+        auto *count_wrapped = boost::get<count_value_t>(&count_int_result);
+        if (!count_wrapped) {
+            return boost::get<result_t>(count_int_result);
         }
 
-        array_helper elements{already_consumed + count_consumed,
-                              static_cast<size_t>(count)};
+        auto count = count_wrapped->value;
+        array_helper elements{count_wrapped->consumed, count};
         long marked_elements{0};
-        Iterator element_from = from + count_consumed;
+        Iterator element_from =
+            from + (count_wrapped->consumed - already_consumed);
         while (marked_elements < count) {
             auto element_result = raw_parse<Iterator, Policy>(element_from, to);
             auto *element = boost::get<element_t>(&element_result);
