@@ -40,7 +40,7 @@ Results achieved with `examples/speed_test_async_multi.cpp` for 1 thread, Intel 
 
 |  bredis (commands/s)       | redox (commands/s)           |
 |----------------------------|------------------------------|
-|  1.30257e+06               |  1.19214e+06                 | 
+|  1.30257e+06               |  1.19214e+06                 |
 
 Results are not completely fair, because of usage of different semantics in
 APIs; however they are still interesting, as there are used different
@@ -435,16 +435,16 @@ Represents results of parse attempt. It is `boost::variant` of the following typ
 `no_enogh_data_t` is empty struct, meaning that buffer just does not contains enough
 information to completely parse it.
 
-`protocol_error_t` has `std::string what` member, descriping the error in protocol,
-(e.g. when type in stream is specified as integer, but it cannot be converted to integer).
-This error should never occur in production code, meaning that no (logical) errors
-are expected in redis-server nor in bredis parser. The error might occur if buffer 
-is corrupted.
+`protocol_error_t` has `boost::system::error_code code` member, descriping the error
+in protocol, (e.g. when type in stream is specified as integer, but it cannot be
+converted to integer). This error should never occur in production code, meaning
+that no (logical) errors are expected in redis-server nor in bredis parser. The
+error might occur if buffer is corrupted.
 
 `Policy` (namespace `bredis::parsing_policy`) specifies what to do with with result:
-either drop it (`bredis::parsing_policy::drop_result`) or keep it 
-(`bredis::parsing_policy::keep_result`). The helper 
-`parse_result_mapper_t<Iterator, Policy>` helps to get proper 
+either drop it (`bredis::parsing_policy::drop_result`) or keep it
+(`bredis::parsing_policy::keep_result`). The helper
+`parse_result_mapper_t<Iterator, Policy>` helps to get proper
 `positive_parse_result_t<Iterator, Policy>` type.
 
 `positive_parse_result_t<Iterator, Policy>` contains members:
