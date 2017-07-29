@@ -19,6 +19,17 @@ Boost::ASIO low-level redis client (connector)
 
 ### 0.03
 - improved protocol parser (no memory allocations during input stream validity check)
+- more detailed information in `protocol_error_t`
+- added async `incr` speed test example
+- [small API breakage] `positive_parse_result_t` was enriched with parcing policy;
+now instead of `positive_parse_result_t<Iterator>` should be written:
+
+```cpp
+using Policy = r::parsing_policy::keep_result;
+using result_t = r::parse_result_mapper_t<Iterator, Policy>;
+```
+- [small API breakage] `protocol_error_t` instead of `std::string what` member
+now contains `boost::system::error_code code`
 
 ### 0.02
 - added windows support
