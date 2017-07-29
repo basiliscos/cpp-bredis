@@ -205,8 +205,7 @@ TEST_CASE("malformed bulk string(3)", "[protocol]") {
 
 TEST_CASE("malformed bulk string(4)", "[protocol]") {
     using Policy = r::parsing_policy::drop_result;
-    std::string ok =
-        "$4555555555555555555555555555555555555555555555555555\r\nsomemm";
+    std::string ok = "$36893488147419103232\r\nsomemm";
     Buffer buff(ok.c_str(), ok.size());
     auto from = Iterator::begin(buff), to = Iterator::end(buff);
     auto parsed_result = r::Protocol::parse<Iterator, Policy>(from, to);
@@ -253,7 +252,7 @@ TEST_CASE("malformed array", "[protocol]") {
 };
 
 TEST_CASE("malformed array (2)", "[protocol]") {
-    std::string ok = "*555555555555555555555555555555555555555\r\nsome\r\n";
+    std::string ok = "*36893488147419103232\r\nsome\r\n";
     Buffer buff(ok.c_str(), ok.size());
     auto from = Iterator::begin(buff), to = Iterator::end(buff);
     auto parsed_result = r::Protocol::parse(from, to);
