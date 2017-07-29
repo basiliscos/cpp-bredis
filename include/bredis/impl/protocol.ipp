@@ -189,11 +189,7 @@ struct unwrap_count_t
     using positive_input_t =
         parse_result_mapper_t<Iterator, parsing_policy::keep_result>;
 
-    wrapped_result_t operator()(const not_enough_data_t &value) const {
-        return wrapped_result_t{negative_result_t{value}};
-    }
-
-    wrapped_result_t operator()(const protocol_error_t &value) const {
+    template <typename T> wrapped_result_t operator()(const T &value) const {
         return wrapped_result_t{negative_result_t{value}};
     }
 
@@ -237,9 +233,8 @@ template <typename Iterator, typename Policy> struct string_parser_t {
             return not_enough_data_t{};
         }
 
-        size_t consumed = already_consumed +
-                          std::distance(from, found_terminator) +
-                          terminator.size;
+        size_t consumed = already_consumed + terminator.size +
+                          std::distance(from, found_terminator);
         return helper::markup_string(consumed, from, found_terminator);
     }
 };
