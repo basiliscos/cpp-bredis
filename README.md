@@ -305,8 +305,8 @@ First, wrap your commands into tranaction:
 
 r::command_container_t tx_commands = {
     r::single_command_t("MULTI"),
-        r::single_command_t("INCR", "foo"),
-        r::single_command_t("GET", "bar"),
+    r::single_command_t("INCR", "foo"),
+    r::single_command_t("GET", "bar"),
     r::single_command_t("EXEC"),
 };
 r::command_wrapper_t cmd(tx_commands);
@@ -326,7 +326,7 @@ c.async_read(rx_buff, [&](const auto& error_code, auto&& r){
     assert(replies.elements.size() == 4);
     auto eq_OK = r::marker_helpers::equality<Iterator>("OK");
     auto eq_QUEUED = r::marker_helpers::equality<Iterator>("QUEUED");
-    assert(boost::apply_visitor(eq_OK, replies.elements[0]);
+    assert(boost::apply_visitor(eq_OK, replies.elements[0]));
     assert(boost::apply_visitor(eq_QUEUED, replies.elements[1]));
     assert(boost::apply_visitor(eq_QUEUED, replies.elements[2]));
 
