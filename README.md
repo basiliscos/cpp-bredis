@@ -17,6 +17,9 @@ Boost::ASIO low-level redis client (connector)
 
 ## Changelog
 
+### 0.04
+ - [bugfix] removed unneeded `tx_buff.commit()` on `async_write` which corrupted buffer
+
 ### 0.03
 - improved protocol parser (no memory allocations during input stream validity check)
 - more detailed information in `protocol_error_t`

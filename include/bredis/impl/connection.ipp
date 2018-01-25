@@ -33,7 +33,6 @@ Connection<NextLayer>::async_write(DynamicBuffer &tx_buff,
     std::ostream os(&tx_buff);
     auto string = boost::apply_visitor(command_serializer_visitor(), command);
     os.write(string.c_str(), string.size());
-    tx_buff.commit(string.size());
 
     real_handler_t handler(std::forward<WriteCallback>(write_callback));
     return async_write(stream_, tx_buff, handler);
