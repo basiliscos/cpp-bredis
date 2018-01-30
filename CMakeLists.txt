@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.0)
 project (bredis)
 
+find_package (Threads)
+
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -10,18 +12,8 @@ enable_testing()
 add_definitions(-DBOOST_ERROR_CODE_HEADER_ONLY)
 #add_definitions(-DBREDIS_DEBUG)
 
-find_package(
-    Boost
-    COMPONENTS
-        chrono
-        coroutine
-        context
-        filesystem
-        regex
-        system
-        thread
-    REQUIRED
-)
+include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+conan_basic_setup()
 
 if(CMAKE_COMPILER_IS_GNUCXX)
     set(CMAKE_CXX_FLAGS "-g -O0 -fprofile-arcs -ftest-coverage")
@@ -58,9 +50,10 @@ if(CMAKE_COMPILER_IS_GNUCXX)
     )
 endif()
 
-include_directories(${bredis_SOURCE_DIR}/include ${Boost_INCLUDE_DIRS})
-MESSAGE(STATUS "boost inc: " ${Boost_INCLUDE_DIRS})
-MESSAGE(STATUS "boost libs: " ${Boost_LIBRARIES})
+include_directories(${bredis_SOURCE_DIR}/include)
+#include_directories(${bredis_SOURCE_DIR}/include ${Boost_INCLUDE_DIRS})
+#MESSAGE(STATUS "boost inc: " ${Boost_INCLUDE_DIRS})
+#MESSAGE(STATUS "boost libs: " ${Boost_LIBRARIES})
 
 # ASIO maintenance is lagging behind the rest of boost, see
 # https://github.com/chriskohlhoff/asio/pull/200 for one of the proposed patches.
