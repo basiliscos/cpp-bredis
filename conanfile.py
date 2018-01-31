@@ -47,24 +47,15 @@ class BredisConan(ConanFile):
     exports_sources = "include/*", "CMakeLists.txt", "examples/speed_test_async_multi.cpp"
     no_copy_source = True
 
-
-    #default_options = "shared=False"
     generators = "cmake"
-    # exports = "CMakeLists.txt", "include*", "examples*", "t*"
+    exports = "CMakeLists.txt", "include*", "examples*", "t*"
 
     # this is not building a library, just tests
-    def source(self):
+    def build(self):
         cmake = CMake(self)
         cmake.configure()
         cmake.build()
         cmake.test()
-        # pass
-        ## self.run("git clone git@github.com:basiliscos/cpp-bredis.git")
-        ## self.run("cd cpp-bredis && git checkout issue-5")
-
-    def build(self):
-        pass
-
     def package(self):
         self.copy("*.hpp", dst="include", src="include")
         self.copy("*.ipp", dst="include", src="include")
