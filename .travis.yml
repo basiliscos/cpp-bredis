@@ -33,6 +33,7 @@ script:
     #- if [ "$CXX" == "g++-5" ]; then make coverage VERBOSE=1; bash <(curl -s https://codecov.io/bash) -X gcov; fi
     #- conan create user/channel
     - mkdir build && cd build
+    - if [ "$CXX" == "g++-5" ]; then sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-5.0 60 --slave /usr/bin/g++ g++ /usr/bin/g++-5.9; fi
     - conan install .. --build missing
     - cmake .. && make && ctest
 
