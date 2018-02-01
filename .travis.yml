@@ -31,7 +31,9 @@ script:
     #- make test
     #- if [ "$CXX" == "g++-5" ]; then whereis gcov-5; fi
     #- if [ "$CXX" == "g++-5" ]; then make coverage VERBOSE=1; bash <(curl -s https://codecov.io/bash) -X gcov; fi
-    - conan create user/channel
+    #- conan create user/channel
+    - mkdir build && cd build
+    - conan install ..
 
 
 install:
