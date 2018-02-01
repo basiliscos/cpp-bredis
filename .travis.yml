@@ -37,6 +37,7 @@ script:
 install:
 #    - if [ "$CXX" = "g++" ]; then export CXX="g++-5"; export CC="gcc-5"; fi
 #    - if [ "$CXX" = "clang++" ]; then export CXX="clang++"; fi
-    - pip install conan
+    - sudo apt-get update -qq
+    - pip install --user conan
     - conan user
 
