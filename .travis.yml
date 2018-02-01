@@ -7,13 +7,13 @@ compiler:
 os:
     - linux
 
-before_script:
-    - wget -q -O - http://sourceforge.net/projects/boost/files/boost/1.64.0/boost_1_64_0.tar.gz | tar -xz
-    - cd boost_1_64_0 && ./bootstrap.sh --with-libraries=coroutine,context,chrono,system,thread,regex,filesystem
-    - ./b2  --ignore-site-config && cd ..
-    - mkdir build
-    - cd build
-    - cmake -DBOOST_ROOT=`pwd`/../boost_1_64_0 ..
+#before_script:
+#    - wget -q -O - http://sourceforge.net/projects/boost/files/boost/1.64.0/boost_1_64_0.tar.gz | tar -xz
+#    - cd boost_1_64_0 && ./bootstrap.sh --with-libraries=coroutine,context,chrono,system,thread,regex,filesystem
+#    - ./b2  --ignore-site-config && cd ..
+#    - mkdir build
+#    - cd build
+#    - cmake -DBOOST_ROOT=`pwd`/../boost_1_64_0 ..
 
 addons:
   apt:
@@ -26,13 +26,17 @@ addons:
     - lcov
 
 script:
-    - $CXX --version
-    - make
-    - make test
-    - if [ "$CXX" == "g++-5" ]; then whereis gcov-5; fi
-    - if [ "$CXX" == "g++-5" ]; then make coverage VERBOSE=1; bash <(curl -s https://codecov.io/bash) -X gcov; fi
+    #- $CXX --version
+    #- make
+    #- make test
+    #- if [ "$CXX" == "g++-5" ]; then whereis gcov-5; fi
+    #- if [ "$CXX" == "g++-5" ]; then make coverage VERBOSE=1; bash <(curl -s https://codecov.io/bash) -X gcov; fi
+    - conan create user/channel
 
 
 install:
-    - if [ "$CXX" = "g++" ]; then export CXX="g++-5"; export CC="gcc-5"; fi
-    - if [ "$CXX" = "clang++" ]; then export CXX="clang++"; fi
+#    - if [ "$CXX" = "g++" ]; then export CXX="g++-5"; export CC="gcc-5"; fi
+#    - if [ "$CXX" = "clang++" ]; then export CXX="clang++"; fi
+    - pip install conan
+    - conan user
+
