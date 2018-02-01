@@ -31,7 +31,7 @@ script:
     - if [ "$CXX" = "g++" ]; then bash <(curl -s https://codecov.io/bash) -X gcov ; fi
 
 install:
-    - if [ "$CXX" = "g++" ]; then export CXX="g++-5"; export CC="gcc-5"; export CFLAGS="-g -O0 -fprofile-arcs -ftest-coverage"; export CXXFLAGS="-g -O0 -fprofile-arcs -ftest-coverage" fi
+    - if [ "$CXX" = "g++" ]; then export CXX="g++-5"; export CC="gcc-5"; export CFLAGS="-g -O0 -fprofile-arcs -ftest-coverage"; export CXXFLAGS="-g -O0 -fprofile-arcs -ftest-coverage"; fi
     - if [ "$CXX" = "clang++" ]; then export CXX="clang++"; fi
     - sudo apt-get update -qq
     - pip install --user conan
