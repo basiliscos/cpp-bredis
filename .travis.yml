@@ -41,5 +41,6 @@ install:
 #    - if [ "$CXX" = "clang++" ]; then export CXX="clang++"; fi
     - sudo apt-get update -qq
     - pip install --user conan
+    - conan remote add conan-community https://api.bintray.com/conan/conan-community/conan
     - conan user
 
