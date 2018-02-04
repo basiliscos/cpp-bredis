@@ -40,12 +40,15 @@ before_build:
 build_script:
     - cmd: mkdir build
     - cmd: cd build
-    - cmd: conan install .. --build missing -o boost:shared=False -o boost:without_filesystem=False
+    - cmd: conan install .. --build missing -o boost:shared=True -o boost:without_filesystem=False
     - cmd: cmake ../  -G "Visual Studio 15 2017 Win64"
     - cmd: cmake --build . --config Release
 
 test_script:
 #  - ps: cd builds
     - dir
+    # copy boost dlls into bin folder
+    - conan imports ..
+    - cmd: cp ../redis-server.exe bin
     - ctest -VV -C "%CONFIG%"
 
