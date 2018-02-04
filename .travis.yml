@@ -27,7 +27,8 @@ script:
     - conan install .. --build missing
     - cmake .. && make VERBOSE=1 && ctest
     - if [ "$CXX" == "g++-5" ]; then lcov --directory . --capture --output-file coverage.info --gcov-tool gcov-5; fi
-    - if [ "$CXX" == "g++-5" ]; then lcov --remove coverage.info "'/*.conan/*'" "'/usr/*'" "'/*/t/*'" --output-file coverage.info.cleaned; fi
+    - if [ "$CXX" == "g++-5" ]; then lcov --remove coverage.info "'/*.conan/*'" "'/usr/*'" --output-file coverage.info.cleaned; fi
+    - if [ "$CXX" == "g++-5" ]; then rm coverage.info; fi
     - if [ "$CXX" == "g++-5" ]; then bash <(curl -s https://codecov.io/bash) -X gcov ; fi
 
 install:
