@@ -45,6 +45,6 @@ build_script:
     - cmd: cmake --build . --config Release
 
 test_script:
-  - ps: cd builds
+#  - ps: cd builds
   - ctest -VV -C "%CONFIG%"
 
