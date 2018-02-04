@@ -63,5 +63,8 @@ class BredisConan(ConanFile):
     def package_id(self):
         self.info.header_only()
 
+    def imports(self):
+        self.copy("*", src="bin", dist="", ignore_case=True)
+
     #def package_info(self):
     #    self.cpp_info.libs = ["cpp-bredis"]
