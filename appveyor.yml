@@ -14,15 +14,18 @@ platform:
 #  - ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
 
 environment:
-    BOOST_ROOT: "C:\\Libraries\\boost_1_64_0"
+#    BOOST_ROOT: "C:\\Libraries\\boost_1_64_0"
 #    BOOST_LIBRARYDIR: "C:\\Libraries\\boost_1_64_0\\lib32-msvc-15.0"
 
 
 before_build:
     - cmake --version
-    - echo %BOOST_ROOT%
-    - dir "C:\Libraries"
-    - dir "%BOOST_ROOT%"
+    #- echo %BOOST_ROOT%
+    #- dir "C:\Libraries"
+    #- dir "%BOOST_ROOT%"
+    - cmd: set PATH=%PATH%;%PYTHON%/Scripts/
+    - cmd: pip.exe install conan
+    - cmd: conan --version
     - ps: wget 'https://github.com/MSOpenTech/redis/releases/download/win-3.0.504/Redis-x64-3.0.504.zip' -OutFile "Redis-x64-3.0.504.zip"
     - '@ECHO redis downloaded deployed'
     - dir
@@ -31,15 +34,17 @@ before_build:
     # redis
     - set PATH=%APPVEYOR_BUILD_FOLDER%;%PATH%
     # boost
-    - set PATH=%BOOST_ROOT%\lib64-msvc-14.1;%PATH%
+    # - set PATH=%BOOST_ROOT%\lib64-msvc-14.1;%PATH%
     - echo %PATH%
 
 build_script:
-  - cmake -G "Visual Studio 15 2017 Win64" -H. -B_builds -DBOOST_ROOT="%BOOST_ROOT%"
-#  -DBOOST_LIBRARYDIR="%BOOST_LIBRARYDIR%"
-  - cmake --build _builds
+    - cmd: mkdir build
+    - cmd: cd build
+    - cmd: conan install .. --build missing
+    - cmd: cmake ../  -G "Visual Studio 15 2017 Win64"
+    - cmd: cmake --build . --config Release
 
 test_script:
-  - ps: cd _builds
+  - ps: cd builds
   - ctest -VV -C "%CONFIG%"
 
