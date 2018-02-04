@@ -40,7 +40,7 @@ before_build:
 build_script:
     - cmd: mkdir build
     - cmd: cd build
-    - cmd: conan install .. --build missing
+    - cmd: conan install .. --build missing -o boost:without_filesystem=False
     - cmd: cmake ../  -G "Visual Studio 15 2017 Win64"
     - cmd: cmake --build . --config Release
 
