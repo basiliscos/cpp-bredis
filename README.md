@@ -65,7 +65,7 @@ parsing libraries (written from scratch vs [hiredis](https://github.com/redis/hi
 
 The general idea is that the result of trying to parse a redis reply can be either: not enough data, protocol error (in an extreme case) or some positive parse result. The last one is just **markers** of the result, which is actually stored in the *receive buffer* (i.e. outside of markers, and outside of the bredis-connection).
 
-The the further work with markers depends on your needs: it is possible to either **scan** the result for the expected results (e.g. for a `PONG` reply on a `PING` command, or for `OK`/`QUEUED` replies on `MULTI`/`EXEC` commands) or to **extract** the results (the common redis types: `nil`, `string`, `error`, `int` or a (recursive) array of them).
+The further work with markers depends on your needs: it is possible to either **scan** the result for the expected results (e.g. for a `PONG` reply on a `PING` command, or for `OK`/`QUEUED` replies on `MULTI`/`EXEC` commands) or to **extract** the results (the common redis types: `nil`, `string`, `error`, `int` or a (recursive) array of them).
 
 When the data in the receive buffer is no longer required, it should be consumed.
 
