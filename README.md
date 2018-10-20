@@ -442,11 +442,11 @@ Header: `include/bredis/Result.hpp`
 Namespace: `bredis`
 
 Represents the results of a parse attempt. It is a `boost::variant` of the following types:
-- `no_enogh_data_t`
+- `not_enough_data_t`
 - `protocol_error_t`
 - `positive_parse_result_t<Iterator, Policy>`
 
-`no_enogh_data_t` is a empty struct. It means that buffer just does not contain enough
+`not_enough_data_t` is a empty struct. It means that buffer just does not contain enough
 information to completely parse it.
 
 `protocol_error_t` has a `boost::system::error_code code` member. It describes the error
