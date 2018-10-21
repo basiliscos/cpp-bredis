@@ -660,6 +660,9 @@ MIT
 
 # Contributors
 
+- [Derek Colley](https://github.com/dcolley)
+- [Stefan Hacker](https://github.com/hacst)
+- [Yuval Hager](https://github.com/yhager)
 - [Vinnie Falco](https://github.com/vinniefalco)
 
 ## See also
