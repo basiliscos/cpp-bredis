@@ -336,7 +336,7 @@ template <typename Iterator, typename Policy> struct array_parser_t {
 
         auto count = count_wrapped->value;
         array_helper elements{count_wrapped->consumed, count};
-        long marked_elements{0};
+        size_t marked_elements{0};
         Iterator element_from =
             from + (count_wrapped->consumed - already_consumed);
         while (marked_elements < count) {
