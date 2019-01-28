@@ -17,6 +17,11 @@ Boost::ASIO low-level redis client (connector)
 
 ## Changelog
 
+### 0.05
+- fixed level 4 warning in MSVC
+- fixed compilation issues on archlinux
+- improved documentation (numerous typos etc.)
+
 ### 0.04
  - [bugfix] removed unneeded `tx_buff.commit()` on `async_write` which corrupted buffer
 
