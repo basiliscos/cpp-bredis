@@ -662,6 +662,7 @@ MIT
 
 - [Derek Colley](https://github.com/dcolley)
 - [Stefan Hacker](https://github.com/hacst)
+- [nkochakian](https://github.com/nkochakian)
 - [Yuval Hager](https://github.com/yhager)
 - [Vinnie Falco](https://github.com/vinniefalco)
 
