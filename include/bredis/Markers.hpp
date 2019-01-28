@@ -8,6 +8,7 @@
 
 #include <boost/variant.hpp>
 #include <boost/variant/recursive_variant.hpp>
+#include <vector>
 
 namespace bredis {
 
