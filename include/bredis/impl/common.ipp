@@ -29,9 +29,9 @@ struct consumed_parse : public boost::static_visitor<int> {
         return static_cast<int>(value.consumed);
     }
 
-    int operator()(const not_enough_data_t &value) const { return 0; }
+    int operator()(const not_enough_data_t &/*value*/) const { return 0; }
 
-    int operator()(const protocol_error_t &value) const { return -1; }
+    int operator()(const protocol_error_t &/*value*/) const { return -1; }
 };
 
 template <typename Iterator> class MatchResult {

@@ -58,7 +58,7 @@ class async_read_op {
 template <typename NextLayer, typename DynamicBuffer, typename ReadCallback>
 void async_read_op<NextLayer, DynamicBuffer, ReadCallback>::
 operator()(boost::system::error_code error_code,
-           std::size_t bytes_transferred) {
+           std::size_t /*bytes_transferred*/) {
     using Iterator = typename to_iterator<DynamicBuffer>::iterator_t;
     using positive_result_t =
         parse_result_mapper_t<Iterator, parsing_policy::keep_result>;

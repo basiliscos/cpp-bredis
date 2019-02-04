@@ -96,7 +96,7 @@ Connection<NextLayer>::read(DynamicBuffer &rx_buff,
     using Iterator = typename to_iterator<DynamicBuffer>::iterator_t;
     using result_t = BREDIS_PARSE_RESULT(DynamicBuffer);
 
-    auto rx_bytes = read_until(stream_, rx_buff, MatchResult<Iterator>(1), ec);
+    /*auto rx_bytes =*/ read_until(stream_, rx_buff, MatchResult<Iterator>(1), ec);
     if (ec) {
         return result_t{{}, 0};
     }
