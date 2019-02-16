@@ -21,6 +21,7 @@ find_package(
         regex
         system
         thread
+        program_options
     REQUIRED
 )
 
