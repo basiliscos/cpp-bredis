@@ -45,6 +45,20 @@ TEST_CASE("stream", "[connection]") {
     r::Connection<next_layer_t> c(std::move(socket));
 
     Buffer rx_buff;
+    c.write(r::single_command_t{ "INFO" });
+    auto parse_result0 = c.read(rx_buff);
+    auto extract0 = boost::apply_visitor(Extractor(), parse_result0.result);
+    auto info = boost::get<r::extracts::string_t>(extract0);
+    rx_buff.consume(parse_result0.consumed);
+    auto it_begin = info.str.begin();
+    auto it_end = info.str.end();
+    std::string version_str = "redis_version:5.";
+    if (info.str.find("redis_version:5.") == std::string::npos) {
+        /* not supported by earlier redis versions */
+        return;
+    }
+
+
     c.write(r::single_command_t{ "XADD", "mystream", "*", "cpu-temp", "23.4", "load", "2.3" });
     auto parse_result1 = c.read(rx_buff);
     auto extract1 = boost::apply_visitor(Extractor(), parse_result1.result);
