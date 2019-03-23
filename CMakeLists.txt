@@ -141,3 +141,7 @@ add_executable(t-21-coroutine t/21-coroutine.cpp)
 target_link_libraries(t-21-coroutine ${LINK_DEPENDENCIES})
 add_test("t-21-coroutine" t-21-coroutine)
 
+add_executable(t-23-stream t/23-stream.cpp)
+target_link_libraries(t-23-stream ${LINK_DEPENDENCIES})
+add_test("t-23-stream" t-23-stream)
+
