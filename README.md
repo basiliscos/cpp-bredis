@@ -409,6 +409,13 @@ r::Connection<next_layer_t> c(socket);
 socket.cancel();
 ```
 
+## Thread-safety
+
+`bredis` itself is thread-agnostic, however the underlying socket (`next_layer_t`)
+and used buffers are usually not thread-safe. To handle that in multi-thead
+environment the access to those objects should be sequenced via
+`asio::io_context::strand` . See the `examples/multi-threads-1.cpp`.
+
 ## API
 
 ### `Iterator` template

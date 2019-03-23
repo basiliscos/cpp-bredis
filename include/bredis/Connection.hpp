@@ -1,6 +1,7 @@
 //
 //
-// Copyright (c) 2017 Ivan Baidakou (basiliscos) (the dot dmol at gmail dot com)
+// Copyright (c) 2017, 2019 Ivan Baidakou (basiliscos) (the dot dmol at gmail
+// dot com)
 //
 // Distributed under the MIT Software License
 //
@@ -27,9 +28,8 @@
 
 namespace bredis {
 
-#define BREDIS_PARSE_RESULT(B)                                                 \
-    positive_parse_result_t<typename to_iterator<B>::iterator_t,               \
-                            bredis::parsing_policy::keep_result>
+#define BREDIS_PARSE_RESULT(B, P)                                              \
+    positive_parse_result_t<typename to_iterator<B>::iterator_t, P>
 
 template <typename NextLayer> class Connection {
 
@@ -51,23 +51,25 @@ template <typename NextLayer> class Connection {
     async_write(DynamicBuffer &tx_buff, const command_wrapper_t &command,
                 WriteCallback &&write_callback);
 
-    template <typename DynamicBuffer, typename ReadCallback>
+    template <typename DynamicBuffer, typename ReadCallback,
+              typename Policy = bredis::parsing_policy::keep_result>
     BOOST_ASIO_INITFN_RESULT_TYPE(ReadCallback,
                                   void(boost::system::error_code,
-                                       BREDIS_PARSE_RESULT(DynamicBuffer)))
+                                       BREDIS_PARSE_RESULT(DynamicBuffer,
+                                                           Policy)))
     async_read(DynamicBuffer &rx_buff, ReadCallback &&read_callback,
-               std::size_t replies_count = 1);
+               std::size_t replies_count = 1, Policy policy = Policy{});
 
     /* synchronous interface */
     void write(const command_wrapper_t &command);
     void write(const command_wrapper_t &command, boost::system::error_code &ec);
 
     template <typename DynamicBuffer>
-    BREDIS_PARSE_RESULT(DynamicBuffer)
+    BREDIS_PARSE_RESULT(DynamicBuffer, bredis::parsing_policy::keep_result)
     read(DynamicBuffer &rx_buff);
 
     template <typename DynamicBuffer>
-    BREDIS_PARSE_RESULT(DynamicBuffer)
+    BREDIS_PARSE_RESULT(DynamicBuffer, bredis::parsing_policy::keep_result)
     read(DynamicBuffer &rx_buff, boost::system::error_code &ec);
 };
 
