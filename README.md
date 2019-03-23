@@ -383,6 +383,38 @@ boost::asio::spawn(
     });
 ```
 
+## Steams
+
+There is no specific support for streams (appeared in redis 5.0) in bredis,
+they are just usual `XADD`, `XRANGE` etc. commands and corresponding replies. 
+
+```cpp
+...
+Buffer rx_buff;
+c.write(r::single_command_t{ "XADD", "mystream", "*", "cpu-temp", "23.4", "load", "2.3" });
+auto parse_result1 = c.read(rx_buff);
+auto extract1 = boost::apply_visitor(Extractor(), parse_result1.result);
+auto id1 = boost::get<r::extracts::string_t>(extract1);
+
+c.write(r::single_command_t{ "XADD", "mystream", "*", "cpu-temp", "23.2", "load", "2.1" });
+auto parse_result2 = c.read(rx_buff);
+auto extract2 = boost::apply_visitor(Extractor(), parse_result2.result);
+auto id2 = boost::get<r::extracts::string_t>(extract2);
+rx_buff.consume(parse_result2.consumed);
+
+c.write(r::single_command_t{ "XRANGE" , "mystream",  id1.str, id2.str});
+auto parse_result3 = c.read(rx_buff);
+auto extract3 = boost::apply_visitor(Extractor(), parse_result3.result);
+rx_buff.consume(parse_result3.consumed);
+
+auto& outer_arr = boost::get<r::extracts::array_holder_t>(extract3);
+auto& inner_arr1 = boost::get<r::extracts::array_holder_t>(outer_arr.elements[0]);
+auto& inner_arr2 = boost::get<r::extracts::array_holder_t>(outer_arr.elements[1]);
+... 
+
+```
+
+
 ## Inspecting network traffic
 
 See `t/SocketWithLogging.hpp` for an example. The main idea is quite simple:
