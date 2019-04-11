@@ -443,6 +443,9 @@ socket.cancel();
 
 ## API
 
+There's a convenience header include/bredis.hpp, doing `#include "bredis.hpp"` will include
+every header under include/bredis/ .
+
 ### `Iterator` template
 
 The underlying iterator type used for the dynamic buffer type (e.g. `boost::asio::streambuf`)
@@ -702,6 +705,7 @@ MIT
 - [nkochakian](https://github.com/nkochakian)
 - [Yuval Hager](https://github.com/yhager)
 - [Vinnie Falco](https://github.com/vinniefalco)
+- [Stephen Coleman](https://github.com/omegacoleman)
 
 ## See also
 - https://github.com/Cylix/cpp_redis
