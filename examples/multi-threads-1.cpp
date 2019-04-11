@@ -28,10 +28,7 @@
 #include <boost/program_options.hpp>
 #include <boost/tokenizer.hpp>
 
-#include <bredis/Connection.hpp>
-#include <bredis/Extract.hpp>
-#include <bredis/Extract.hpp>
-#include <bredis/MarkerHelpers.hpp>
+#include <bredis.hpp>
 //#include "../t/SocketWithLogging.hpp"
 
 // alias namespaces
