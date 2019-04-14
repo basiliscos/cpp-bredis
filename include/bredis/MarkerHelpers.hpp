@@ -178,6 +178,6 @@ class check_subscription : public boost::static_visitor<bool> {
     }
 };
 
-} // marker_helpers
+} // namespace marker_helpers
 
-} // bredis
+} // namespace bredis

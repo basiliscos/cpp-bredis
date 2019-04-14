@@ -24,6 +24,6 @@ class Protocol {
     static inline std::ostream &serialize(std::ostream &buff,
                                           const single_command_t &cmd);
 };
-};
+}; // namespace bredis
 
 #include "impl/protocol.ipp"
