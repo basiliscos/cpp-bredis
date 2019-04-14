@@ -145,3 +145,7 @@ add_executable(22-ping_drop-policy t/22-ping_drop-policy.cpp)
 target_link_libraries(22-ping_drop-policy ${LINK_DEPENDENCIES})
 add_test("22-ping_drop-policy" 22-ping_drop-policy)
 
+add_executable(t-23-stream t/23-stream.cpp)
+target_link_libraries(t-23-stream ${LINK_DEPENDENCIES})
+add_test("t-23-stream" t-23-stream)
+
