@@ -7,6 +7,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 include (CTest)
 enable_testing()
 
+
+
 add_definitions(-DBOOST_ERROR_CODE_HEADER_ONLY)
 add_definitions(-DBOOST_COROUTINES_NO_DEPRECATION_WARNING)
 #add_definitions(-DBREDIS_DEBUG)
@@ -70,7 +72,9 @@ if(WIN32)
     set(LINK_DEPENDENCIES ${Boost_LIBRARIES} catch_lib)
     add_definitions(-DBOOST_ALL_DYN_LINK -DBOOST_THREAD_USE_LIB -D_WIN32_WINNT=0x0501)
 else()
-    set(LINK_DEPENDENCIES pthread ${Boost_LIBRARIES} catch_lib)
+    add_definitions(-Wall -Wextra -pedantic -Werror)
+    #add_definitions(-fsanitize=undefined -fsanitize=address -fno-omit-frame-pointer)
+    set(LINK_DEPENDENCIES pthread ${Boost_LIBRARIES} catch_lib) #  asan ubsan
 endif()
 
 add_subdirectory(examples)
@@ -140,6 +144,10 @@ add_test("t-20-promise" t-20-promise)
 add_executable(t-21-coroutine t/21-coroutine.cpp)
 target_link_libraries(t-21-coroutine ${LINK_DEPENDENCIES})
 add_test("t-21-coroutine" t-21-coroutine)
+
+add_executable(t-22-ping_drop-policy t/22-ping_drop-policy.cpp)
+target_link_libraries(t-22-ping_drop-policy ${LINK_DEPENDENCIES})
+add_test("t-22-ping_drop-policy" t-22-ping_drop-policy)
 
 add_executable(t-23-stream t/23-stream.cpp)
 target_link_libraries(t-23-stream ${LINK_DEPENDENCIES})

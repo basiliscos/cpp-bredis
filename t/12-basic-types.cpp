@@ -64,33 +64,39 @@ TEST_CASE("ping", "[connection]") {
         r::single_command_t("time"),
     };
     std::vector<read_callback_t> callbacks{
-        [&](const boost::system::error_code &error_code, ParseResult &&r) {
+        [&](const boost::system::error_code&error_code, ParseResult &&r) {
             auto extract = boost::apply_visitor(Extractor(), r.result);
             REQUIRE(boost::get<r::extracts::int_t>(extract) == 0);
             REQUIRE(order == 0);
+            REQUIRE(!error_code);
         },
         [&](const boost::system::error_code &error_code, ParseResult &&r) {
             auto extract = boost::apply_visitor(Extractor(), r.result);
             REQUIRE(boost::get<r::extracts::nil_t>(&extract));
             REQUIRE(order == 1);
+            REQUIRE(!error_code);
         },
         [&](const boost::system::error_code &error_code, ParseResult &&r) {
             auto extract = boost::apply_visitor(Extractor(), r.result);
             REQUIRE(boost::get<r::extracts::string_t>(extract).str == "OK");
             REQUIRE(order == 2);
+            REQUIRE(!error_code);
         },
         [&](const boost::system::error_code &error_code, ParseResult &&r) {
             auto extract = boost::apply_visitor(Extractor(), r.result);
             REQUIRE(boost::get<r::extracts::string_t>(extract).str == "value");
             REQUIRE(order == 3);
+            REQUIRE(!error_code);
         },
         [&](const boost::system::error_code &error_code, ParseResult &&r) {
             auto extract = boost::apply_visitor(Extractor(), r.result);
             REQUIRE(boost::get<r::extracts::error_t>(extract).str ==
                     "ERR wrong number of arguments for 'llen' command");
             REQUIRE(order == 4);
+            REQUIRE(!error_code);
         },
         [&](const boost::system::error_code &error_code, ParseResult &&r) {
+            REQUIRE(!error_code);
             REQUIRE(order == 5);
             auto extract = boost::apply_visitor(Extractor(), r.result);
             auto &arr = boost::get<r::extracts::array_holder_t>(extract);
@@ -125,4 +131,4 @@ TEST_CASE("ping", "[connection]") {
            std::future_status::ready) {
         io_service.run_one();
     }
-};
+}

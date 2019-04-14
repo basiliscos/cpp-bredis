@@ -60,4 +60,4 @@ TEST_CASE("ping", "[connection]") {
         });
 
     io_service.run();
-};
+}

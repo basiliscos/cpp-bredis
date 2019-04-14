@@ -1,6 +1,7 @@
 //
 //
-// Copyright (c) 2017 Ivan Baidakou (basiliscos) (the dot dmol at gmail dot com)
+// Copyright (c) 2017-2019 Ivan Baidakou (basiliscos) (the dot dmol at gmail dot
+// com)
 //
 // Distributed under the MIT Software License
 //
@@ -47,7 +48,7 @@ struct stringizer : public boost::static_visitor<std::string> {
         return "[int] " + r;
     }
 
-    std::string operator()(const markers::nil_t<Iterator> &value) const {
+    std::string operator()(const markers::nil_t<Iterator> &) const {
         return "[nil] ";
     }
 
@@ -75,7 +76,7 @@ class equality : public boost::static_visitor<bool> {
     equality(std::string str)
         : copy_(str), begin_(std::begin(copy_)), end_(std::end(copy_)) {}
 
-    template <typename T> bool operator()(const T &value) const {
+    template <typename T> bool operator()(const T & /*value */) const {
         return false;
     }
 
@@ -118,7 +119,7 @@ class check_subscription : public boost::static_visitor<bool> {
     template <typename Command>
     check_subscription(Command &&cmd) : cmd_{std::forward<Command>(cmd)} {}
 
-    template <typename T> bool operator()(const T &value) const {
+    template <typename T> bool operator()(const T & /*value*/) const {
         return false;
     }
 
@@ -178,6 +179,6 @@ class check_subscription : public boost::static_visitor<bool> {
     }
 };
 
-} // marker_helpers
+} // namespace marker_helpers
 
-} // bredis
+} // namespace bredis

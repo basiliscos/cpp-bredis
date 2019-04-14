@@ -1,22 +1,26 @@
 //
 //
-// Copyright (c) 2017 Ivan Baidakou (basiliscos) (the dot dmol at gmail dot com)
+// Copyright (c) 2017-2019 Ivan Baidakou (basiliscos) (the dot dmol at gmail dot com)
 //
 // Distributed under the MIT Software License
 //
 // mimics performance measurements from
 // https://github.com/hmartiro/redox/blob/master/examples/speed_test_async_multi.cpp
 //
-// Results (1 thread, Intel Core i7-4800MQ, linux)
+// Results (1 thread, Intel Core i7-8550U, void-linux, gcc 8.3.0)
 //
-//   bredis (commands/s)   |  redox (commands/s)
-//  -----------------------+-----------------------
-//        1.30257e+06      |    1.19214e+06
+//  bredis (commands/s) | bredis(*) (commands/s) | redox (commands/s)
+// ---------------------+------------------------+---------------------
+//       1.59325e+06    |      2.50826e+06       |    0.999375+06
 //
 // Results are not completely fair, because of usage of different semantics in
 // APIs; however they are still interesting, as there are used different
 // underlying event libraries (Boost::ASIO vs libev) as well redis protocol
 // parsing library (written from scratch vs hiredis)
+//
+// (*) bredis with drop_result policy, i.e. replies from redis server are
+// scanned only for formal correctness and never delivered to the caller
+
 
 #include <algorithm>
 #include <atomic>
@@ -43,6 +47,7 @@ double time_s() {
 // alias namespaces
 namespace r = bredis;
 namespace asio = boost::asio;
+using boost::get;
 
 int main(int argc, char **argv) {
     // common setup
@@ -50,8 +55,10 @@ int main(int argc, char **argv) {
     using next_layer_t = socket_t;
     using Buffer = boost::asio::streambuf;
     using Iterator = typename r::to_iterator<Buffer>::iterator_t;
+    using policy_t = r::parsing_policy::drop_result;
+    //using policy_t = r::parsing_policy::keep_result;
 
-    if (argc < 1) {
+    if (argc < 2) {
         std::cout << "Usage : " << argv[0] << " ip:port \n";
         return 1;
     }
@@ -70,12 +77,10 @@ int main(int argc, char **argv) {
 
     // write subscribe cmd
     r::single_command_t cmd_incr{"INCR", "simple_loop:count"};
-    r::single_command_t cmd_get{"GET", "simple_loop:count"};
     r::command_container_t cmd_container;
-    for (auto i = 0; i < cmds_count; ++i) {
+    for (size_t i = 0; i < cmds_count; ++i) {
         cmd_container.push_back(cmd_incr);
     }
-    cmd_container.push_back(cmd_get);
 
     r::command_wrapper_t cmd_wpapper{std::move(cmd_container)};
 
@@ -92,29 +97,27 @@ int main(int argc, char **argv) {
     r::Connection<next_layer_t> c(std::move(socket));
 
     Buffer tx_buff, rx_buff;
-    std::promise<std::string> completion_promise;
-    std::future<std::string> completion_future =
-        completion_promise.get_future();
+    std::promise<void> completion_promise;
+    auto completion_future = completion_promise.get_future();
 
     c.async_read(
         rx_buff,
         [&](const boost::system::error_code &ec, auto &&r) {
             assert(!ec);
-            auto &replies =
-                boost::get<r::markers::array_holder_t<Iterator>>(r.result);
-            auto &last_reply = replies.elements.at(replies.elements.size() - 1);
-            auto &str_reply =
-                boost::get<r::markers::string_t<Iterator>>(last_reply);
-            std::string value{str_reply.from, str_reply.to};
+            (void)ec;
             rx_buff.consume(r.consumed);
-            count += replies.elements.size() - 1;
-            completion_promise.set_value(value);
+            // cannot be done with drop_result
+            //auto &replies = get<r::markers::array_holder_t<Iterator>>(r.result);
+            //count += replies.elements.size() - 1;
+            count = cmds_count;
+            completion_promise.set_value();
             std::cout << "done reading...\n";
         },
-        cmds_count + 1);
+    cmds_count, policy_t{});
 
     c.async_write(tx_buff, cmd_wpapper, [&](const boost::system::error_code &ec,
                                             auto bytes_transferred) {
+        (void)ec;
         assert(!ec);
         tx_buff.consume(bytes_transferred);
         std::cout << "done writing...\n";
@@ -130,13 +133,20 @@ int main(int argc, char **argv) {
 
     io_service.run();
     std::cout << "done...\n";
+    completion_future.get();
+
+    c.write(r::single_command_t{"GET", "simple_loop:count"});
+    auto r = c.read(rx_buff);
+    auto &str_reply = get<r::markers::string_t<Iterator>>(r.result);
+
+    std::string counter_value {str_reply.from, str_reply.to};
 
     double actual_freq = (double)count / t_elapsed;
     std::cout << "Sent " << cmds_count << " commands in " << t_elapsed << "s, "
               << "that's " << actual_freq << " commands/s."
               << "\n";
 
-    std::cout << "Final value of counter: " << completion_future.get() << "\n";
+    std::cout << "Final value of counter: " << counter_value << "\n";
 
     std::cout << "exiting...\n";
     return 0;

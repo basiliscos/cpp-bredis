@@ -50,8 +50,6 @@ TEST_CASE("stream", "[connection]") {
     auto extract0 = boost::apply_visitor(Extractor(), parse_result0.result);
     auto info = boost::get<r::extracts::string_t>(extract0);
     rx_buff.consume(parse_result0.consumed);
-    auto it_begin = info.str.begin();
-    auto it_end = info.str.end();
     std::string version_str = "redis_version:5.";
     if (info.str.find("redis_version:5.") == std::string::npos) {
         /* not supported by earlier redis versions */
@@ -93,4 +91,4 @@ TEST_CASE("stream", "[connection]") {
     REQUIRE(boost::get<r::extracts::string_t>(arr2.elements[1]).str == "23.2");
     REQUIRE(boost::get<r::extracts::string_t>(arr2.elements[2]).str == "load");
     REQUIRE(boost::get<r::extracts::string_t>(arr2.elements[3]).str == "2.1");
-};
+}

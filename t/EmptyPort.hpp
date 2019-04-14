@@ -99,7 +99,7 @@ inline port_t impl<TCP>::get_random_impl(const char *host) {
     throw std::runtime_error("Cannot get random port");
 }
 
-inline void impl<TCP>::fill_struct(const socket_t &socket, sockaddr_in &addr,
+inline void impl<TCP>::fill_struct(const socket_t & /*socket*/, sockaddr_in &addr,
                                    const port_t port, const char *host) {
     std::memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
@@ -168,4 +168,4 @@ inline bool wait_port(const port_t port, const char *host = "127.0.0.1",
                       D max_wait = D(500)) {
     return impl<T>::template wait_port_impl<D>(port, host, max_wait);
 }
-};
+}

@@ -27,4 +27,4 @@ using result_t = std::unique_ptr<TestServer>;
 result_t make_server(std::initializer_list<std::string> &&args) {
     return std::make_unique<TestServer>(std::move(args));
 }
-};
+}

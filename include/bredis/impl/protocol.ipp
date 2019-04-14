@@ -121,12 +121,13 @@ struct markup_helper_t<Iterator, parsing_policy::drop_result> {
     using positive_wrapper_t = parse_result_mapper_t<Iterator, policy_t>;
     using string_t = markers::string_t<Iterator>;
 
-    static auto markup_string(size_t consumed, const Iterator &/*from*/,
-                              const Iterator &/*to*/) -> result_wrapper_t {
+    static auto markup_string(size_t consumed, const Iterator & /*from*/,
+                              const Iterator &
+                              /*to*/) -> result_wrapper_t {
         return result_wrapper_t{positive_wrapper_t{consumed}};
     }
 
-    static auto markup_nil(size_t consumed, const string_t &/*str*/)
+    static auto markup_nil(size_t consumed, const string_t & /*str*/)
         -> result_wrapper_t {
         return result_wrapper_t{positive_wrapper_t{consumed}};
     }
@@ -318,7 +319,6 @@ template <typename Iterator, typename Policy> struct array_parser_t {
                       size_t already_consumed)
         -> parse_result_t<Iterator, Policy> {
 
-        using helper = markup_helper_t<Iterator, Policy>;
         using count_unwrapper_t = unwrap_count_t<Iterator, Policy>;
         using result_t = parse_result_t<Iterator, Policy>;
         using keep_policy = parsing_policy::keep_result;
@@ -379,7 +379,7 @@ struct unwrap_primary_parser_t
     }
 
     template <typename Parser>
-    wrapped_result_t operator()(const Parser &/*ignored*/) const {
+    wrapped_result_t operator()(const Parser & /*ignored*/) const {
         auto next_from = from_ + 1;
         return Parser::apply(next_from, to_, 1);
     }
