@@ -17,6 +17,14 @@ Boost::ASIO low-level redis client (connector)
 
 ## Changelog
 
+### 0.06
+- the `parsing_policy::drop_result` was documented and made applicable in client code
+- updated preformance results
+- fixed compliation warnings (`-Wall -Wextra -pedantic -Werror`)
+- added shortcut header `include/bredis.hpp`
+- added redis-streams usage example
+- added multi-thread example
+
 ### 0.05
 - fixed level 4 warning in MSVC
 - fixed compilation issues on archlinux
