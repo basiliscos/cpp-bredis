@@ -9,14 +9,18 @@
 //
 // Results (1 thread, Intel Core i7-8550U, void-linux, gcc 8.3.0)
 //
-//   bredis (commands/s)   |  redox (commands/s)
-//  -----------------------+-----------------------
-//        1.59325e+06      |    0.999375+06
+//  bredis (commands/s) | bredis(*) (commands/s) | redox (commands/s)
+// ---------------------+------------------------+---------------------
+//       1.59325e+06    |      2.50826e+06       |    0.999375+06
 //
 // Results are not completely fair, because of usage of different semantics in
 // APIs; however they are still interesting, as there are used different
 // underlying event libraries (Boost::ASIO vs libev) as well redis protocol
 // parsing library (written from scratch vs hiredis)
+//
+// (*) bredis with drop_result policy, i.e. replies from redis server are
+// scanned only for formal correctness and never delivered to the caller
+
 
 #include <algorithm>
 #include <atomic>

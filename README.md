@@ -57,14 +57,18 @@ can be done on the socket object outside of the connector)
 
 Results achieved with `examples/speed_test_async_multi.cpp` for 1 thread, Intel Core i7-4800MQ, gentoo linux
 
-|  bredis (commands/s)       | redox (commands/s)           |
-|----------------------------|------------------------------|
-|  1.30257e+06               |  1.19214e+06                 |
+| bredis (commands/s) | bredis(*) (commands/s) | redox (commands/s)
+|---------------------+------------------------+--------------------
+|      1.59325e+06    |      2.50826e+06       |    0.999375+06
 
 These results are not completely fair, because of the usage of different semantics in the
 APIs; however they are still interesting, as they are using different
 underlying event libraries ([Boost::ASIO](http://www.boost.org/doc/libs/release/libs/asio/) vs [libev](http://software.schmorp.de/pkg/libev.html)) as well as redis protocol
 parsing libraries (written from scratch vs [hiredis](https://github.com/redis/hiredis))
+
+`(*)` bredis with drop_result policy, i.e. replies from redis server are
+scanned only for formal correctness and never delivered to the caller.
+
 
 ## Work with the result
 
@@ -386,7 +390,7 @@ boost::asio::spawn(
 ## Steams
 
 There is no specific support for streams (appeared in redis 5.0) in bredis,
-they are just usual `XADD`, `XRANGE` etc. commands and corresponding replies. 
+they are just usual `XADD`, `XRANGE` etc. commands and corresponding replies.
 
 ```cpp
 ...
@@ -410,7 +414,7 @@ rx_buff.consume(parse_result3.consumed);
 auto& outer_arr = boost::get<r::extracts::array_holder_t>(extract3);
 auto& inner_arr1 = boost::get<r::extracts::array_holder_t>(outer_arr.elements[0]);
 auto& inner_arr2 = boost::get<r::extracts::array_holder_t>(outer_arr.elements[1]);
-... 
+...
 
 ```
 
@@ -447,6 +451,28 @@ socket.cancel();
 and used buffers are usually not thread-safe. To handle that in multi-thead
 environment the access to those objects should be sequenced via
 `asio::io_context::strand` . See the `examples/multi-threads-1.cpp`.
+
+
+## parsing_policy::drop_result
+The performance still can be boosted if it is known beforehand that the response from
+redis server is not needed at all. For example, the only possible response to `PING`
+command is `PONG` reply, usually there is no sense it validating that `PONG` reply,
+as soon as it is known, that redis-server alredy delivered us **some** reply
+(in practice it is `PONG`). Another example is `SET` command, when redis-server
+**usually** replies with `OK`.
+
+With `parsing_policy::drop_result` the reply result is just verified with formal
+compliance to redis protocol, and then it is discarded.
+
+It should be noted, that redis can reply back with error, which aslo correct
+reply, but the caller side isn't able to see it when `parsing_policy::drop_result`.
+So, it should be used with care, when you know what your are doing. You have
+been warned.
+
+It is safe, however, to mix different parsing policies on the same connection,
+i.e. write `SET` command and read it's reply with `parsing_policy::drop_result` and
+then write `GET` command and read it's reply with `parsing_policy::keep_result`.
+See the `examples/speed_test_async_multi.cpp`.
 
 ## API
 
@@ -682,7 +708,7 @@ The asynchronous read has the following signature:
 ```cpp
 void-or-deduced
 async_read(DynamicBuffer &rx_buff, ReadCallback read_callback,
-               std::size_t replies_count = 1);
+               std::size_t replies_count = 1, Policy = bredis::parsing_policy::keep_result{});
 ```
 
 It reads `replies_count` replies from the *next_layer* stream, which will be
