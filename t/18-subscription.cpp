@@ -165,4 +165,4 @@ TEST_CASE("subscription", "[connection]") {
     REQUIRE(messages[0] == "some-channel1:message-a1");
     REQUIRE(messages[1] == "some-channel1:message-a2");
     REQUIRE(messages[2] == "some-channel2:last");
-};
+}

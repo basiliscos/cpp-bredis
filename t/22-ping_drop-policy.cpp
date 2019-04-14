@@ -40,7 +40,7 @@ TEST_CASE("ping/drop-policy", "[connection]") {
     size_t count = 1000;
     r::single_command_t ping_cmd("ping");
     r::command_container_t ping_cmds_container;
-    for (auto i = 0; i < count; ++i) {
+    for (size_t i = 0; i < count; ++i) {
         ping_cmds_container.push_back(ping_cmd);
     }
     r::command_wrapper_t cmd(ping_cmds_container);
@@ -90,4 +90,4 @@ TEST_CASE("ping/drop-policy", "[connection]") {
            std::future_status::ready) {
         io_service.run_one();
     }
-};
+}

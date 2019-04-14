@@ -36,8 +36,8 @@ struct consumed_parse : public boost::static_visitor<int> {
 
 template <typename Iterator> class MatchResult {
   private:
-    std::size_t matched_results_;
     std::size_t expected_count_;
+    std::size_t matched_results_;
 
   public:
     MatchResult(std::size_t expected_count)

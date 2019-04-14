@@ -135,8 +135,8 @@ template <typename NextLayer, typename DynamicBuffer, typename ReadCallback,
 class async_read_op {
     NextLayer &stream_;
     DynamicBuffer &rx_buff_;
-    ReadCallback callback_;
     std::size_t replies_count_;
+    ReadCallback callback_;
 
   public:
     async_read_op(async_read_op &&) = default;

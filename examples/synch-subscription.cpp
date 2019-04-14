@@ -57,7 +57,7 @@ using optional_string_t =
     boost::optional<std::pair<string_wrapper_t, string_wrapper_t>>;
 
 struct payload_extractor : public boost::static_visitor<optional_string_t> {
-    template <typename T> optional_string_t operator()(const T &value) const {
+    template <typename T> optional_string_t operator()(const T & /* value */) const {
         return optional_string_t{};
     }
 

@@ -21,7 +21,7 @@ TEST_CASE("right consumption", "[protocol]") {
         "*3\r\n$7\r\nmessage\r\n$13\r\nsome-channel1\r\n$10\r\nmessage-a1\r\n";
 
     Buffer buff;
-    for (auto i = 0; i < full_message.size(); i++) {
+    for (size_t i = 0; i < full_message.size(); i++) {
         asio::const_buffers_1 v(full_message.c_str() + i, 1);
         buff.push_back(v);
     }

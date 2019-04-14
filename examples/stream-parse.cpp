@@ -56,7 +56,7 @@ using option_t = boost::optional<json_payload>;
 
 template <typename Iterator>
 struct json_extractor : public boost::static_visitor<option_t> {
-    template <typename T> option_t operator()(const T &value) const {
+    template <typename T> option_t operator()(const T & /*value*/) const {
         return option_t{};
     }
 

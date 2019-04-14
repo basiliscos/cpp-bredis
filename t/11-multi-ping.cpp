@@ -94,4 +94,4 @@ TEST_CASE("ping", "[connection]") {
            std::future_status::ready) {
         io_service.run_one();
     }
-};
+}

@@ -7,8 +7,11 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 include (CTest)
 enable_testing()
 
+
+
 add_definitions(-DBOOST_ERROR_CODE_HEADER_ONLY)
 add_definitions(-DBOOST_COROUTINES_NO_DEPRECATION_WARNING)
+add_definitions(-Wall -Wextra -pedantic -Werror)
 #add_definitions(-DBREDIS_DEBUG)
 
 find_package(

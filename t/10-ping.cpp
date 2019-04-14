@@ -51,7 +51,7 @@ TEST_CASE("ping", "[connection]") {
         tx_buff, "ping", [&](const auto &error_code, auto bytes_transferred) {
             REQUIRE(!error_code);
             tx_buff.consume(bytes_transferred);
-            c.async_read(rx_buff, [&](const auto &error_code, auto &&r) {
+            c.async_read(rx_buff, [&](const auto&, auto &&r) {
                 completion_promise.set_value(r);
                 rx_buff.consume(r.consumed);
             });
@@ -67,4 +67,4 @@ TEST_CASE("ping", "[connection]") {
         boost::apply_visitor(r::extractor<Iterator>(), parse_result.result);
     auto &reply_str = boost::get<r::extracts::string_t>(extract);
     REQUIRE(reply_str.str == "PONG");
-};
+}

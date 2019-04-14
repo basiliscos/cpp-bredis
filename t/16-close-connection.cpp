@@ -44,15 +44,16 @@ TEST_CASE("close-afrer-read", "[connection]") {
     std::string data = "bla-bla";
     std::string end_marker = "ping\r\n";
     Buffer remote_rx_buff;
-    asio::const_buffers_1 output_buf = asio::buffer(data.c_str(), data.size());
-    acceptor.async_accept(peer_socket, [&](const sys::error_code &error_code) {
-        BREDIS_LOG_DEBUG("async_accept: " << error_code.message() << ", "
+    acceptor.async_accept(peer_socket, [&](const sys::error_code& ec1) {
+        (void)ec1;
+        BREDIS_LOG_DEBUG("async_accept: " << ec1.message() << ", "
                                           << peer_socket.local_endpoint());
 
         async_read_until(peer_socket, remote_rx_buff, end_marker,
-                         [&](const sys::error_code &ec, std::size_t sz) {
+                         [&](const sys::error_code& ec2, std::size_t) {
+                            (void)ec2;
                              BREDIS_LOG_DEBUG("async_read: " << sz << ", "
-                                                             << ec.message());
+                                                             << ec2.message());
 
                              peer_socket.close();
                          });
@@ -71,7 +72,7 @@ TEST_CASE("close-afrer-read", "[connection]") {
         tx_buff, "ping", [&](const auto &error_code, auto bytes_transferred) {
             REQUIRE(!error_code);
             tx_buff.consume(bytes_transferred);
-            c.async_read(rx_buff, [&](const auto &error_code, ParseResult &&r) {
+            c.async_read(rx_buff, [&](const auto &error_code, ParseResult &&) {
                 REQUIRE(error_code);
                 REQUIRE(error_code.message() == "End of file");
                 completion_promise.set_value();
@@ -114,6 +115,7 @@ TEST_CASE("close-before-write", "[connection]") {
     std::string data = "bla-bla";
     std::string end_marker = "ping\r\n";
     acceptor.async_accept(peer_socket, [&](const sys::error_code &error_code) {
+        (void)error_code;
         BREDIS_LOG_DEBUG("async_accept: " << error_code.message() << ", "
                                           << peer_socket.local_endpoint());
         peer_socket.close();
@@ -131,7 +133,7 @@ TEST_CASE("close-before-write", "[connection]") {
         tx_buff, "ping", [&](const auto &error_code, auto bytes_transferred) {
             REQUIRE(!error_code);
             tx_buff.consume(bytes_transferred);
-            c.async_read(rx_buff, [&](const auto &error_code, ParseResult &&r) {
+            c.async_read(rx_buff, [&](const auto &error_code, ParseResult &&) {
                 REQUIRE(error_code);
                 // locale and os-dependent
                 // REQUIRE(error_code.message() == "Connection reset by peer");

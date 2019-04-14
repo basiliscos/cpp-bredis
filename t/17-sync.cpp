@@ -56,4 +56,4 @@ TEST_CASE("ping", "[connection]") {
     REQUIRE(!ec);
     REQUIRE(boost::apply_visitor(equality, parse_result.result));
     rx_buff.consume(parse_result.consumed);
-};
+}

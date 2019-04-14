@@ -319,7 +319,6 @@ template <typename Iterator, typename Policy> struct array_parser_t {
                       size_t already_consumed)
         -> parse_result_t<Iterator, Policy> {
 
-        using helper = markup_helper_t<Iterator, Policy>;
         using count_unwrapper_t = unwrap_count_t<Iterator, Policy>;
         using result_t = parse_result_t<Iterator, Policy>;
         using keep_policy = parsing_policy::keep_result;

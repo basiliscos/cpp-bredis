@@ -78,7 +78,7 @@ struct extractor : public boost::static_visitor<extracts::extraction_result_t> {
     }
 
     extracts::extraction_result_t
-    operator()(const markers::nil_t<Iterator> &value) const {
+    operator()(const markers::nil_t<Iterator> & /*value*/) const {
         return extracts::nil_t{};
     }
 

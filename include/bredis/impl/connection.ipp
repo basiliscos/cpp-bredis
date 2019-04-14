@@ -56,7 +56,6 @@ Connection<NextLayer>::async_read(DynamicBuffer &rx_buff,
     using Signature = void(boost::system::error_code, ParseResult);
     using real_handler_t =
         typename asio::handler_type<ReadCallback, Signature>::type;
-    using result_t = ::boost::asio::async_result<real_handler_t>;
 
     real_handler_t real_handler(std::forward<ReadCallback>(read_callback));
     asio::async_result<real_handler_t> async_result(real_handler);

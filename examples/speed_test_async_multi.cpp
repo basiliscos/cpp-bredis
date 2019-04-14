@@ -72,7 +72,7 @@ int main(int argc, char **argv) {
     r::single_command_t cmd_incr{"INCR", "simple_loop:count"};
     r::single_command_t cmd_get{"GET", "simple_loop:count"};
     r::command_container_t cmd_container;
-    for (auto i = 0; i < cmds_count; ++i) {
+    for (size_t i = 0; i < cmds_count; ++i) {
         cmd_container.push_back(cmd_incr);
     }
     cmd_container.push_back(cmd_get);

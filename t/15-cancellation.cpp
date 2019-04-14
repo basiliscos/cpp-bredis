@@ -51,10 +51,13 @@ TEST_CASE("cancel-on-read", "[cancellation]") {
     std::string end_marker = "ping\r\n";
     Buffer remote_rx_buff;
     acceptor.async_accept(peer_socket, [&](const sys::error_code &error_code) {
+        (void)error_code;
         BREDIS_LOG_DEBUG("async_accept: " << error_code.message() << ", "
                                           << peer_socket.local_endpoint());
         async_read_until(peer_socket, remote_rx_buff, end_marker,
                          [&](const sys::error_code &ec, std::size_t sz) {
+                             (void)ec;
+                             (void)sz;
                              BREDIS_LOG_DEBUG("async_read: " << sz << ", "
                                                              << ec.message());
                              socket.cancel();
@@ -69,7 +72,7 @@ TEST_CASE("cancel-on-read", "[cancellation]") {
         tx_buff, "ping", [&](const auto &error_code, auto bytes_transferred) {
             REQUIRE(!error_code);
             tx_buff.consume(bytes_transferred);
-            c.async_read(rx_buff, [&](const auto &error_code, ParseResult &&r) {
+            c.async_read(rx_buff, [&](const auto &error_code, ParseResult &&) {
                 REQUIRE(error_code);
                 // REQUIRE(error_code.message() == "Operation canceled");
                 completion_promise.set_value();
