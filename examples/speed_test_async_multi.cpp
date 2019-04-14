@@ -100,6 +100,7 @@ int main(int argc, char **argv) {
         rx_buff,
         [&](const boost::system::error_code &ec, auto &&r) {
             assert(!ec);
+            (void)ec;
             auto &replies =
                 boost::get<r::markers::array_holder_t<Iterator>>(r.result);
             auto &last_reply = replies.elements.at(replies.elements.size() - 1);
@@ -115,6 +116,7 @@ int main(int argc, char **argv) {
 
     c.async_write(tx_buff, cmd_wpapper, [&](const boost::system::error_code &ec,
                                             auto bytes_transferred) {
+        (void)ec;
         assert(!ec);
         tx_buff.consume(bytes_transferred);
         std::cout << "done writing...\n";

@@ -24,13 +24,14 @@ struct result_handler_t<Iterator, parsing_policy::drop_result> {
     using policy_t = parsing_policy::drop_result;
     using positive_result_t = parse_result_mapper_t<Iterator, policy_t>;
 
-    positive_result_t result;
     std::size_t replies_count;
     size_t cumulative_consumption;
     size_t count;
+    positive_result_t result;
 
     result_handler_t(std::size_t replies_count_)
-        : replies_count{replies_count_}, cumulative_consumption{0}, count{0} {}
+        : replies_count{replies_count_},
+          cumulative_consumption{0}, count{0}, result{0} {}
 
     void init() {
         // NO-OP;
@@ -52,11 +53,11 @@ struct result_handler_t<Iterator, parsing_policy::keep_result> {
     using policy_t = parsing_policy::keep_result;
     using positive_result_t = parse_result_mapper_t<Iterator, policy_t>;
 
-    positive_result_t result;
-    markers::array_holder_t<Iterator> tmp_results;
     std::size_t replies_count;
     size_t cumulative_consumption;
     size_t count;
+    positive_result_t result;
+    markers::array_holder_t<Iterator> tmp_results;
 
     result_handler_t(std::size_t replies_count_)
         : replies_count{replies_count_}, cumulative_consumption{0}, count{0} {}
