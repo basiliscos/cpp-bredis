@@ -465,8 +465,8 @@ With `parsing_policy::drop_result` the reply result is just verified with formal
 compliance to redis protocol, and then it is discarded.
 
 It should be noted, that redis can reply back with error, which aslo correct
-reply, but the caller side isn't able to see it when `parsing_policy::drop_result`.
-So, it should be used with care, when you know what your are doing. You have
+reply, but the caller side isn't able to see it when `parsing_policy::drop_result`
+is applied. So, it should be used with care, when you know what your are doing. You have
 been warned.
 
 It is safe, however, to mix different parsing policies on the same connection,
