@@ -55,8 +55,8 @@ int main(int argc, char **argv) {
     using next_layer_t = socket_t;
     using Buffer = boost::asio::streambuf;
     using Iterator = typename r::to_iterator<Buffer>::iterator_t;
-    using policy_t = r::parsing_policy::drop_result;
-    //using policy_t = r::parsing_policy::keep_result;
+    //using policy_t = r::parsing_policy::drop_result;
+    using policy_t = r::parsing_policy::keep_result;
 
     if (argc < 2) {
         std::cout << "Usage : " << argv[0] << " ip:port \n";
