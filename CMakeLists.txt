@@ -11,7 +11,6 @@ enable_testing()
 
 add_definitions(-DBOOST_ERROR_CODE_HEADER_ONLY)
 add_definitions(-DBOOST_COROUTINES_NO_DEPRECATION_WARNING)
-add_definitions(-Wall -Wextra -pedantic -Werror)
 #add_definitions(-DBREDIS_DEBUG)
 
 find_package(
@@ -73,6 +72,7 @@ if(WIN32)
     set(LINK_DEPENDENCIES ${Boost_LIBRARIES} catch_lib)
     add_definitions(-DBOOST_ALL_DYN_LINK -DBOOST_THREAD_USE_LIB -D_WIN32_WINNT=0x0501)
 else()
+    add_definitions(-Wall -Wextra -pedantic -Werror)
     set(LINK_DEPENDENCIES pthread ${Boost_LIBRARIES} catch_lib)
 endif()
 
