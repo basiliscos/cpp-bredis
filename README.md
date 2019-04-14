@@ -65,9 +65,9 @@ can be done on the socket object outside of the connector)
 
 Results achieved with `examples/speed_test_async_multi.cpp` for 1 thread, Intel Core i7-8550U, void-linux, gcc 8.3.0
 
-| bredis (commands/s) | bredis(*) (commands/s) | redox (commands/s)
-|---------------------+------------------------+--------------------
-|      1.59325e+06    |      2.50826e+06       |    0.999375+06
+ | bredis (commands/s) | bredis(*) (commands/s) | redox (commands/s)|
+ |---------------------|------------------------|-------------------|
+ |      1.59325e+06    |      2.50826e+06       |    0.999375+06    |
 
 These results are not completely fair, because of the usage of different semantics in the
 APIs; however they are still interesting, as they are using different
