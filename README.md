@@ -63,7 +63,7 @@ can be done on the socket object outside of the connector)
 
 ## Performance
 
-Results achieved with `examples/speed_test_async_multi.cpp` for 1 thread, Intel Core i7-4800MQ, gentoo linux
+Results achieved with `examples/speed_test_async_multi.cpp` for 1 thread, Intel Core i7-8550U, void-linux, gcc 8.3.0
 
 | bredis (commands/s) | bredis(*) (commands/s) | redox (commands/s)
 |---------------------+------------------------+--------------------
