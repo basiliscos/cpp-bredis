@@ -1,17 +1,17 @@
 //
 //
-// Copyright (c) 2017 Ivan Baidakou (basiliscos) (the dot dmol at gmail dot com)
+// Copyright (c) 2017-2019 Ivan Baidakou (basiliscos) (the dot dmol at gmail dot com)
 //
 // Distributed under the MIT Software License
 //
 // mimics performance measurements from
 // https://github.com/hmartiro/redox/blob/master/examples/speed_test_async_multi.cpp
 //
-// Results (1 thread, Intel Core i7-4800MQ, linux)
+// Results (1 thread, Intel Core i7-8550U, void-linux, gcc 8.3.0)
 //
 //   bredis (commands/s)   |  redox (commands/s)
 //  -----------------------+-----------------------
-//        1.30257e+06      |    1.19214e+06
+//        1.59325e+06      |    0.999375+06
 //
 // Results are not completely fair, because of usage of different semantics in
 // APIs; however they are still interesting, as there are used different
@@ -51,7 +51,7 @@ int main(int argc, char **argv) {
     using Buffer = boost::asio::streambuf;
     using Iterator = typename r::to_iterator<Buffer>::iterator_t;
 
-    if (argc < 1) {
+    if (argc < 2) {
         std::cout << "Usage : " << argv[0] << " ip:port \n";
         return 1;
     }
