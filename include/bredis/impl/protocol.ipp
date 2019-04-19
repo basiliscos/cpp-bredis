@@ -477,13 +477,13 @@ inline void Protocol::serialize(DynamicBuffer &buff,
         it += bytes;
         total += bytes;
 
-        bytes = buffer_copy(it, buffer(arg.data(), arg.size()));
-        it += bytes;
-        total += bytes;
+        buffer_copy(it, buffer(arg.data(), arg.size()));
+        it += arg.size();
+        total += arg.size();
 
-        bytes = buffer_copy(it, buffer("\r\n", terminator.size));
-        total += bytes;
-        it += bytes;
+        buffer_copy(it, buffer("\r\n", terminator.size));
+        total += terminator.size;
+        it += terminator.size;
     }
     buff.commit(total);
 }
