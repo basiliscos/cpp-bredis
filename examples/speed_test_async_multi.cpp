@@ -118,7 +118,7 @@ int main(int argc, char **argv) {
             // cannot be done with drop_result
             //auto &replies = get<r::markers::array_holder_t<Iterator>>(r.result);
             //count += replies.elements.size() - 1;
-            count = cmds_count;
+            count = static_cast<int>(cmds_count);
             completion_promise.set_value();
             std::cout << "done reading...\n";
         },

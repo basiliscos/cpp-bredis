@@ -154,3 +154,8 @@ add_executable(t-23-stream t/23-stream.cpp)
 target_link_libraries(t-23-stream ${LINK_DEPENDENCIES})
 add_test("t-23-stream" t-23-stream)
 
+if((Boost_MAJOR_VERSION GREATER_EQUAL 1) AND (Boost_MINOR_VERSION GREATER_EQUAL 70))
+    add_executable(t-24-dynbuff t/24-dynbuff.cpp)
+    target_link_libraries(t-24-dynbuff ${LINK_DEPENDENCIES})
+    add_test("t-24-dynbuff" t-24-dynbuff)
+endif()
