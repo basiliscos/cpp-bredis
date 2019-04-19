@@ -467,12 +467,12 @@ inline void Protocol::serialize(DynamicBuffer &buff,
     using namespace boost::asio;
     char data[buff_sz];
     std::size_t total =
-        snprintf(data, buff_sz, "*%lu\r\n", cmd.arguments.size());
+        snprintf(data, buff_sz, "*%zu\r\n", cmd.arguments.size());
     buffer_copy(it, buffer(data, total));
     it += total;
 
     for (const auto &arg : cmd.arguments) {
-        auto bytes = snprintf(data, buff_sz, "$%lu\r\n", arg.size());
+        auto bytes = snprintf(data, buff_sz, "$%zu\r\n", arg.size());
         buffer_copy(it, buffer(data, bytes));
         it += bytes;
         total += bytes;

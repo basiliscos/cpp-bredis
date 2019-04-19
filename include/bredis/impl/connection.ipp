@@ -61,12 +61,13 @@ Connection<NextLayer>::async_read(DynamicBuffer &rx_buff,
     using Callback = std::decay_t<ReadCallback>;
     using AsyncResult = asio::async_result<Callback, Signature>;
     using CompletionHandler = typename AsyncResult::completion_handler_type;
+    using ReadOp =
+        async_read_op<NextLayer, DynamicBuffer, CompletionHandler, Policy>;
 
     CompletionHandler handler(std::forward<ReadCallback>(read_callback));
     AsyncResult result(handler);
 
-    async_read_op<NextLayer, DynamicBuffer, CompletionHandler, Policy> async_op(
-        std::move(handler), stream_, rx_buff, replies_count);
+    ReadOp async_op(std::move(handler), stream_, rx_buff, replies_count);
 
     async_read_until(stream_, rx_buff, MatchResult<Iterator>(replies_count),
                      std::move(async_op));
