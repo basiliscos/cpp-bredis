@@ -26,16 +26,20 @@ Connection<NextLayer>::async_write(DynamicBuffer &tx_buff,
                                    WriteCallback &&write_callback) {
     namespace asio = boost::asio;
     namespace sys = boost::system;
+
     using boost::asio::async_write;
     using Signature = void(boost::system::error_code, std::size_t);
-    using real_handler_t =
-        typename asio::handler_type<WriteCallback, Signature>::type;
+    using Callback = std::decay_t<WriteCallback>;
+    using AsyncResult = asio::async_result<Callback, Signature>;
+    using CompletionHandler = typename AsyncResult::completion_handler_type;
     using serializer_t = command_serializer_visitor<DynamicBuffer>;
 
     boost::apply_visitor(serializer_t(tx_buff), command);
 
-    real_handler_t handler(std::forward<WriteCallback>(write_callback));
-    return async_write(stream_, tx_buff, handler);
+    CompletionHandler handler(std::forward<WriteCallback>(write_callback));
+    AsyncResult result(handler);
+    async_write(stream_, tx_buff, std::move(handler));
+    return result.get();
 }
 
 template <typename NextLayer>
@@ -49,22 +53,24 @@ Connection<NextLayer>::async_read(DynamicBuffer &rx_buff,
 
     namespace asio = boost::asio;
     namespace sys = boost::system;
+
     using boost::asio::async_read_until;
     using Iterator = typename to_iterator<DynamicBuffer>::iterator_t;
     using ParseResult = BREDIS_PARSE_RESULT(DynamicBuffer, Policy);
     using Signature = void(boost::system::error_code, ParseResult);
-    using real_handler_t =
-        typename asio::handler_type<ReadCallback, Signature>::type;
+    using Callback = std::decay_t<ReadCallback>;
+    using AsyncResult = asio::async_result<Callback, Signature>;
+    using CompletionHandler = typename AsyncResult::completion_handler_type;
 
-    real_handler_t real_handler(std::forward<ReadCallback>(read_callback));
-    asio::async_result<real_handler_t, Signature> async_result(real_handler);
+    CompletionHandler handler(std::forward<ReadCallback>(read_callback));
+    AsyncResult result(handler);
 
-    async_read_op<NextLayer, DynamicBuffer, real_handler_t, Policy> async_op(
-        std::move(real_handler), stream_, rx_buff, replies_count);
+    async_read_op<NextLayer, DynamicBuffer, CompletionHandler, Policy> async_op(
+        std::move(handler), stream_, rx_buff, replies_count);
 
     async_read_until(stream_, rx_buff, MatchResult<Iterator>(replies_count),
                      std::move(async_op));
-    return async_result.get();
+    return result.get();
 }
 
 template <typename NextLayer>
@@ -94,6 +100,7 @@ Connection<NextLayer>::read(DynamicBuffer &rx_buff,
                             boost::system::error_code &ec) {
     namespace asio = boost::asio;
     using boost::asio::read_until;
+
     using Iterator = typename to_iterator<DynamicBuffer>::iterator_t;
     using Policy = bredis::parsing_policy::keep_result;
     using result_t = BREDIS_PARSE_RESULT(DynamicBuffer, Policy);
