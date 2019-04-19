@@ -28,15 +28,17 @@ Connection<NextLayer>::async_write(DynamicBuffer &tx_buff,
     namespace sys = boost::system;
     using boost::asio::async_write;
     using Signature = void(boost::system::error_code, std::size_t);
-    using real_handler_t =
-        typename asio::handler_type<WriteCallback, Signature>::type;
+    using AsyncResult = asio::async_result<std::decay_t<WriteCallback>,Signature>;
+    using CompletionHandler = typename AsyncResult::completion_handler_type;
 
     std::ostream os(&tx_buff);
     auto string = boost::apply_visitor(command_serializer_visitor(), command);
     os.write(string.c_str(), string.size());
-
-    real_handler_t handler(std::forward<WriteCallback>(write_callback));
-    return async_write(stream_, tx_buff, handler);
+    
+    CompletionHandler handler(std::forward<WriteCallback>(write_callback));
+    AsyncResult result(handler);
+    async_write(stream_, tx_buff, handler);
+    return result.get();
 }
 
 template <typename NextLayer>
@@ -54,18 +56,18 @@ Connection<NextLayer>::async_read(DynamicBuffer &rx_buff,
     using Iterator = typename to_iterator<DynamicBuffer>::iterator_t;
     using ParseResult = BREDIS_PARSE_RESULT(DynamicBuffer, Policy);
     using Signature = void(boost::system::error_code, ParseResult);
-    using real_handler_t =
-        typename asio::handler_type<ReadCallback, Signature>::type;
-
-    real_handler_t real_handler(std::forward<ReadCallback>(read_callback));
-    asio::async_result<real_handler_t> async_result(real_handler);
-
-    async_read_op<NextLayer, DynamicBuffer, real_handler_t, Policy> async_op(
-        std::move(real_handler), stream_, rx_buff, replies_count);
+    using AsyncResult = asio::async_result<std::decay_t<ReadCallback>,Signature>;
+    using CompletionHandler = typename AsyncResult::completion_handler_type;
+		
+    CompletionHandler handler(std::forward<ReadCallback>(read_callback));
+    AsyncResult result(handler);
+		
+    async_read_op<NextLayer, DynamicBuffer, CompletionHandler, Policy> async_op(
+        handler, stream_, rx_buff, replies_count);
 
     async_read_until(stream_, rx_buff, MatchResult<Iterator>(replies_count),
                      std::move(async_op));
-    return async_result.get();
+    return result.get();
 }
 
 template <typename NextLayer>
