@@ -445,12 +445,11 @@ TEST_CASE("overfilled buffer", "[protocol]") {
 
 TEST_CASE("serialize + streambuf", "[protocol]") {
     boost::asio::streambuf buff;
-    //std::stringstream buff;
     r::single_command_t cmd("LLEN", "fmm.cheap-travles2");
     r::Protocol::serialize(buff, cmd);
     std::string expected("*2\r\n$4\r\nLLEN\r\n$18\r\nfmm.cheap-travles2\r\n");
 
-    char data[128];
+    char data[128] = {0};
     asio::buffer_copy(asio::buffer(data), asio::buffer(buff.data(), buff.size()));
     REQUIRE(data == expected);
 }
