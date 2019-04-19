@@ -32,8 +32,7 @@ Connection<NextLayer>::async_write(DynamicBuffer &tx_buff,
         typename asio::handler_type<WriteCallback, Signature>::type;
 
     std::ostream os(&tx_buff);
-    auto string = boost::apply_visitor(command_serializer_visitor(), command);
-    os.write(string.c_str(), string.size());
+    boost::apply_visitor(command_serializer_visitor(os), command);
 
     real_handler_t handler(std::forward<WriteCallback>(write_callback));
     return async_write(stream_, tx_buff, handler);
@@ -72,9 +71,10 @@ template <typename NextLayer>
 void Connection<NextLayer>::write(const command_wrapper_t &command,
                                   boost::system::error_code &ec) {
     namespace asio = boost::asio;
-    auto str = boost::apply_visitor(command_serializer_visitor(), command);
-    auto const output_buf = asio::buffer(str.c_str(), str.size());
-    asio::write(stream_, output_buf, ec);
+    asio::streambuf tx_buff;
+    std::ostream os(&tx_buff);
+    boost::apply_visitor(command_serializer_visitor(os), command);
+    asio::write(stream_, tx_buff, ec);
 }
 
 template <typename NextLayer>

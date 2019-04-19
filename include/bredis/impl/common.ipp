@@ -74,22 +74,22 @@ template <typename Iterator> class MatchResult {
     }
 };
 
-class command_serializer_visitor : public boost::static_visitor<std::string> {
+class command_serializer_visitor : public boost::static_visitor<void> {
+  private:
+    std::ostream &out_;
+
   public:
-    std::string operator()(const single_command_t &value) const {
-        std::stringstream out;
-        out.imbue(std::locale::classic());
-        Protocol::serialize(out, value);
-        return out.str();
+    command_serializer_visitor(std::ostream &out) : out_{out} {}
+    void operator()(const single_command_t &value) const {
+        out_.imbue(std::locale::classic());
+        Protocol::serialize(out_, value);
     }
 
-    std::string operator()(const command_container_t &value) const {
-        std::stringstream out;
-        out.imbue(std::locale::classic());
+    void operator()(const command_container_t &value) const {
+        out_.imbue(std::locale::classic());
         for (const auto &cmd : value) {
-            Protocol::serialize(out, cmd);
+            Protocol::serialize(out_, cmd);
         }
-        return out.str();
     }
 };
 

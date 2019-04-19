@@ -17,30 +17,52 @@
 
 namespace bredis {
 
-template <typename Iterator, typename Policy> struct result_handler_t;
+struct base_result_visitor_t : public boost::static_visitor<std::size_t> {
+    boost::system::error_code &error_code_;
+
+    base_result_visitor_t(boost::system::error_code &error_code)
+        : error_code_{error_code} {}
+
+    std::size_t operator()(const not_enough_data_t &) const { std::abort(); }
+
+    std::size_t operator()(const protocol_error_t &value) const {
+        error_code_ = value.code;
+        return 0;
+    }
+};
+
+template <typename Iterator, typename Policy> struct result_visitor_t;
 
 template <typename Iterator>
-struct result_handler_t<Iterator, parsing_policy::drop_result> {
+struct result_visitor_t<Iterator, parsing_policy::drop_result>
+    : public base_result_visitor_t {
+    using base_t = base_result_visitor_t;
     using policy_t = parsing_policy::drop_result;
     using positive_result_t = parse_result_mapper_t<Iterator, policy_t>;
 
     std::size_t replies_count;
+    positive_result_t &result;
     size_t cumulative_consumption;
     size_t count;
-    positive_result_t result;
 
-    result_handler_t(std::size_t replies_count_)
-        : replies_count{replies_count_},
-          cumulative_consumption{0}, count{0}, result{0} {}
+    static positive_result_t construct() { return positive_result_t{0}; }
+
+    result_visitor_t(boost::system::error_code &error_code,
+                     std::size_t replies_count_, positive_result_t &result_)
+        : base_t{error_code}, replies_count{replies_count_}, result{result_},
+          cumulative_consumption{0}, count{0} {}
 
     void init() {
         // NO-OP;
     }
 
-    bool on_result(positive_result_t &&parse_result) {
+    using base_t::operator();
+
+    size_t operator()(const positive_result_t &parse_result) {
         ++count;
         cumulative_consumption += parse_result.consumed;
-        return count < replies_count;
+        // return parse_result.consumed;
+        return count < replies_count ? parse_result.consumed : 0;
     }
 
     void complete_result() {
@@ -49,26 +71,34 @@ struct result_handler_t<Iterator, parsing_policy::drop_result> {
 };
 
 template <typename Iterator>
-struct result_handler_t<Iterator, parsing_policy::keep_result> {
+struct result_visitor_t<Iterator, parsing_policy::keep_result>
+    : public base_result_visitor_t {
+    using base_t = base_result_visitor_t;
     using policy_t = parsing_policy::keep_result;
     using positive_result_t = parse_result_mapper_t<Iterator, policy_t>;
 
     std::size_t replies_count;
+    positive_result_t &result;
     size_t cumulative_consumption;
     size_t count;
-    positive_result_t result;
     markers::array_holder_t<Iterator> tmp_results;
 
-    result_handler_t(std::size_t replies_count_)
-        : replies_count{replies_count_}, cumulative_consumption{0}, count{0} {}
+    static positive_result_t construct() { return positive_result_t{}; }
+
+    result_visitor_t(boost::system::error_code &error_code,
+                     std::size_t replies_count_, positive_result_t &result_)
+        : base_t{error_code}, replies_count{replies_count_}, result{result_},
+          cumulative_consumption{0}, count{0} {}
 
     void init() { tmp_results.elements.reserve(replies_count); }
 
-    bool on_result(positive_result_t &&parse_result) {
+    using base_t::operator();
+
+    size_t operator()(const positive_result_t &parse_result) {
         tmp_results.elements.emplace_back(std::move(parse_result.result));
         ++count;
         cumulative_consumption += parse_result.consumed;
-        return count < replies_count;
+        return count < replies_count ? parse_result.consumed : 0;
     }
 
     void complete_result() {
@@ -89,45 +119,36 @@ template <typename DynamicBuffer, typename Policy> struct async_read_op_impl {
     async_read_op_impl(DynamicBuffer &rx_buff, std::size_t replies_count)
         : rx_buff_{rx_buff}, replies_count_{replies_count} {}
     using Iterator = typename to_iterator<DynamicBuffer>::iterator_t;
-    using ResultHandler = result_handler_t<Iterator, Policy>;
+    using ResultVisitor = result_visitor_t<Iterator, Policy>;
     using positive_result_t = parse_result_mapper_t<Iterator, Policy>;
 
     positive_result_t op(boost::system::error_code &error_code,
                          std::size_t /*bytes_transferred*/) {
 
-        ResultHandler result_handler(replies_count_);
+        auto result = ResultVisitor::construct();
 
         if (!error_code) {
             auto const_buff = rx_buff_.data();
             auto begin = Iterator::begin(const_buff);
             auto end = Iterator::end(const_buff);
 
-            result_handler.init();
+            ResultVisitor visitor(error_code, replies_count_, result);
+            visitor.init();
 
-            bool continue_parsing;
+            std::size_t consumed{0};
             do {
-                using boost::get;
+                begin += consumed;
                 auto parse_result =
                     Protocol::parse<Iterator, Policy>(begin, end);
-                auto *parse_error = boost::get<protocol_error_t>(&parse_result);
-                if (parse_error) {
-                    error_code = parse_error->code;
-                    continue_parsing = false;
-                } else {
-                    auto &positive_result =
-                        get<positive_result_t>(parse_result);
-                    begin += positive_result.consumed;
-                    continue_parsing =
-                        result_handler.on_result(std::move(positive_result));
-                }
-            } while (continue_parsing);
+                consumed = boost::apply_visitor(visitor, parse_result);
+            } while (consumed);
 
             /* check again, as protocol error might be met */
             if (!error_code) {
-                result_handler.complete_result();
+                visitor.complete_result();
             }
         }
-        return result_handler.result;
+        return result;
     }
 };
 
