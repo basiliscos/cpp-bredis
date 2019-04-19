@@ -30,9 +30,9 @@ Connection<NextLayer>::async_write(DynamicBuffer &tx_buff,
     using Signature = void(boost::system::error_code, std::size_t);
     using real_handler_t =
         typename asio::handler_type<WriteCallback, Signature>::type;
+    using serializer_t = command_serializer_visitor<DynamicBuffer>;
 
-    std::ostream os(&tx_buff);
-    boost::apply_visitor(command_serializer_visitor(os), command);
+    boost::apply_visitor(serializer_t(tx_buff), command);
 
     real_handler_t handler(std::forward<WriteCallback>(write_callback));
     return async_write(stream_, tx_buff, handler);
@@ -57,7 +57,7 @@ Connection<NextLayer>::async_read(DynamicBuffer &rx_buff,
         typename asio::handler_type<ReadCallback, Signature>::type;
 
     real_handler_t real_handler(std::forward<ReadCallback>(read_callback));
-    asio::async_result<real_handler_t> async_result(real_handler);
+    asio::async_result<real_handler_t, Signature> async_result(real_handler);
 
     async_read_op<NextLayer, DynamicBuffer, real_handler_t, Policy> async_op(
         std::move(real_handler), stream_, rx_buff, replies_count);
@@ -72,8 +72,9 @@ void Connection<NextLayer>::write(const command_wrapper_t &command,
                                   boost::system::error_code &ec) {
     namespace asio = boost::asio;
     asio::streambuf tx_buff;
-    std::ostream os(&tx_buff);
-    boost::apply_visitor(command_serializer_visitor(os), command);
+    using serializer_t = command_serializer_visitor<asio::streambuf>;
+
+    boost::apply_visitor(serializer_t(tx_buff), command);
     asio::write(stream_, tx_buff, ec);
 }
 

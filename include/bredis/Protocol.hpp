@@ -21,8 +21,9 @@ class Protocol {
     static inline parse_result_t<Iterator, Policy> parse(const Iterator &from,
                                                          const Iterator &to);
 
-    static inline std::ostream &serialize(std::ostream &buff,
-                                          const single_command_t &cmd);
+    template <typename DynamicBuffer>
+    static inline void serialize(DynamicBuffer &buff,
+                                 const single_command_t &cmd);
 };
 
 } // namespace bredis

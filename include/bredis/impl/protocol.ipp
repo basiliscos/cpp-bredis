@@ -7,9 +7,11 @@
 #pragma once
 
 #include <algorithm>
+#include <boost/asio/buffer.hpp>
 #include <boost/asio/buffers_iterator.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/variant.hpp>
+#include <cstdio>
 #include <errno.h>
 #include <stdlib.h>
 #include <string>
@@ -434,14 +436,56 @@ parse_result_t<Iterator, Policy> Protocol::parse(const Iterator &from,
     return details::raw_parse<Iterator, Policy>(from, to);
 }
 
-std::ostream &Protocol::serialize(std::ostream &buff,
-                                  const single_command_t &cmd) {
-    buff << '*' << (cmd.arguments.size()) << terminator;
+inline std::size_t size_for_int(std::size_t arg) {
+    std::size_t r = 0;
+    while (arg) {
+        ++r;
+        arg /= 10;
+    }
+    return r;
+}
+
+inline std::size_t command_size(const single_command_t &cmd) {
+    std::size_t sz = 1                                    /* * */
+                     + size_for_int(cmd.arguments.size()) /* args size */
+                     + terminator.size;
 
     for (const auto &arg : cmd.arguments) {
-        buff << '$' << arg.size() << terminator << arg << terminator;
+        sz += 1                          /* $ */
+              + size_for_int(arg.size()) /* argument size */
+              + terminator.size + arg.size() + terminator.size;
     }
-    return buff;
+    return sz;
+}
+
+template <typename DynamicBuffer>
+inline void Protocol::serialize(DynamicBuffer &buff,
+                                const single_command_t &cmd) {
+
+    auto it = buff.prepare(command_size(cmd));
+    constexpr std::size_t buff_sz = 64;
+    using namespace boost::asio;
+    char data[buff_sz];
+    std::size_t total =
+        snprintf(data, buff_sz, "*%lu\r\n", cmd.arguments.size());
+    buffer_copy(it, buffer(data, total));
+    it += total;
+
+    for (const auto &arg : cmd.arguments) {
+        auto bytes = snprintf(data, buff_sz, "$%lu\r\n", arg.size());
+        buffer_copy(it, buffer(data, bytes));
+        it += bytes;
+        total += bytes;
+
+        bytes = buffer_copy(it, buffer(arg.data(), arg.size()));
+        it += bytes;
+        total += bytes;
+
+        bytes = buffer_copy(it, buffer("\r\n", terminator.size));
+        total += bytes;
+        it += bytes;
+    }
+    buff.commit(total);
 }
 
 } // namespace bredis

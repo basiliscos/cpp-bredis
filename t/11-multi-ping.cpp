@@ -1,6 +1,7 @@
 #include <boost/asio.hpp>
 #include <future>
 #include <vector>
+#include <string>
 
 #include "EmptyPort.hpp"
 #include "SocketWithLogging.hpp"
@@ -21,7 +22,12 @@ TEST_CASE("ping", "[connection]") {
 #else
     using next_layer_t = socket_t;
 #endif
-    using Buffer = boost::asio::streambuf;
+    using Buffer = boost::asio::dynamic_string_buffer<
+        std::string::value_type,
+        std::string::traits_type,
+        std::string::allocator_type
+    >;
+    //using Buffer = boost::asio::streambuf;
     using Iterator =
         boost::asio::buffers_iterator<typename Buffer::const_buffers_type,
                                       char>;
@@ -39,11 +45,7 @@ TEST_CASE("ping", "[connection]") {
 
     size_t count = 1000;
     r::single_command_t ping_cmd("ping");
-    r::command_container_t ping_cmds_container;
-    ping_cmds_container.reserve(count);
-    for (size_t i = 0; i < count; ++i) {
-        ping_cmds_container.push_back(ping_cmd);
-    }
+    r::command_container_t ping_cmds_container(count, ping_cmd);
     r::command_wrapper_t cmd(ping_cmds_container);
 
     uint16_t port = ep::get_random<ep::Kind::TCP>();
@@ -61,7 +63,11 @@ TEST_CASE("ping", "[connection]") {
     std::promise<result_t> completion_promise;
     std::future<result_t> completion_future = completion_promise.get_future();
 
-    Buffer tx_buff, rx_buff;
+    std::string rx_backend;
+    std::string tx_backend;
+    //Buffer tx_buff, rx_buff;
+    auto rx_buff = boost::asio::dynamic_buffer(rx_backend);
+    auto tx_buff = boost::asio::dynamic_buffer(tx_backend);
     read_callback_t read_callback =
         [&](const boost::system::error_code &error_code, ParseResult &&r) {
             if (error_code) {
@@ -79,6 +85,7 @@ TEST_CASE("ping", "[connection]") {
 
     write_callback_t write_callback = [&](
         const boost::system::error_code &error_code, auto bytes_transferred) {
+        (void)bytes_transferred;
         BREDIS_LOG_DEBUG("write_callback");
         if (error_code) {
             BREDIS_LOG_DEBUG("error: " << error_code.message());
