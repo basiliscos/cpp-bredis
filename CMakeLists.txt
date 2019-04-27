@@ -78,6 +78,8 @@ else()
     set(LINK_DEPENDENCIES pthread ${Boost_LIBRARIES} catch_lib) #  asan ubsan
 endif()
 
+set(BOOST_VERSION_OK, (Boost_MAJOR_VERSION GREATER_EQUAL 1) AND (Boost_MINOR_VERSION GREATER_EQUAL 70))
+
 add_subdirectory(examples)
 
 add_executable(t-05-protocol t/05-protocol.cpp)
@@ -138,9 +140,11 @@ add_executable(t-19-transaction t/19-transaction.cpp)
 target_link_libraries(t-19-transaction ${LINK_DEPENDENCIES})
 add_test("t-19-transaction" t-19-transaction)
 
-add_executable(t-20-promise t/20-promise.cpp)
-target_link_libraries(t-20-promise ${LINK_DEPENDENCIES})
-add_test("t-20-promise" t-20-promise)
+if(BOOST_VERSION_OK)
+    add_executable(t-20-promise t/20-promise.cpp)
+    target_link_libraries(t-20-promise ${LINK_DEPENDENCIES})
+    add_test("t-20-promise" t-20-promise)
+endif()
 
 add_executable(t-21-coroutine t/21-coroutine.cpp)
 target_link_libraries(t-21-coroutine ${LINK_DEPENDENCIES})
@@ -154,7 +158,7 @@ add_executable(t-23-stream t/23-stream.cpp)
 target_link_libraries(t-23-stream ${LINK_DEPENDENCIES})
 add_test("t-23-stream" t-23-stream)
 
-if((Boost_MAJOR_VERSION GREATER_EQUAL 1) AND (Boost_MINOR_VERSION GREATER_EQUAL 70))
+if(BOOST_VERSION_OK)
     add_executable(t-24-dynbuff t/24-dynbuff.cpp)
     target_link_libraries(t-24-dynbuff ${LINK_DEPENDENCIES})
     add_test("t-24-dynbuff" t-24-dynbuff)
