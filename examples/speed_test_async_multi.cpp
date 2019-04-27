@@ -11,7 +11,7 @@
 //
 //  bredis (commands/s) | bredis(*) (commands/s) | redox (commands/s)
 // ---------------------+------------------------+---------------------
-//       1.59325e+06    |      2.50826e+06       |    0.999375+06
+//       1.80845e+06    |      2.503e+06         |    0.999375+06
 //
 // Results are not completely fair, because of usage of different semantics in
 // APIs; however they are still interesting, as there are used different
@@ -60,8 +60,8 @@ int main(int argc, char **argv) {
         std::string::allocator_type
     >;
     using Iterator = typename r::to_iterator<Buffer>::iterator_t;
-    using policy_t = r::parsing_policy::drop_result;
-    //using policy_t = r::parsing_policy::keep_result;
+    //using policy_t = r::parsing_policy::drop_result;
+    using policy_t = r::parsing_policy::keep_result;
 
     if (argc < 2) {
         std::cout << "Usage : " << argv[0] << " ip:port \n";

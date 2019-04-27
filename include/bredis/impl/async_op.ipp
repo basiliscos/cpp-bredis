@@ -61,7 +61,6 @@ struct result_visitor_t<Iterator, parsing_policy::drop_result>
     size_t operator()(const positive_result_t &parse_result) {
         ++count;
         cumulative_consumption += parse_result.consumed;
-        // return parse_result.consumed;
         return count < replies_count ? parse_result.consumed : 0;
     }
 

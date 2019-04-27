@@ -2,6 +2,8 @@ find_package(Threads REQUIRED)
 
 set(LINK_DEPENDENCIES ${Boost_LIBRARIES} Threads::Threads)
 
+set(BOOST_VERSION_OK, (Boost_MAJOR_VERSION GREATER_EQUAL 1) AND (Boost_MINOR_VERSION GREATER_EQUAL 70))
+
 add_executable(stream-parse stream-parse.cpp)
 target_link_libraries(stream-parse ${LINK_DEPENDENCIES})
 

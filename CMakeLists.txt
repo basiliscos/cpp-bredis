@@ -78,7 +78,13 @@ else()
     set(LINK_DEPENDENCIES pthread ${Boost_LIBRARIES} catch_lib) #  asan ubsan
 endif()
 
-set(BOOST_VERSION_OK, (Boost_MAJOR_VERSION GREATER_EQUAL 1) AND (Boost_MINOR_VERSION GREATER_EQUAL 70))
+if ((Boost_MAJOR_VERSION GREATER_EQUAL 1) AND (Boost_MINOR_VERSION GREATER_EQUAL 70))
+    set(BOOST_VERSION_OK true)
+else()
+    set(BOOST_VERSION_OK false)
+endif()
+
+MESSAGE(STATUS "BOOST_VERSION_OK ${BOOST_VERSION_OK}")
 
 add_subdirectory(examples)
 

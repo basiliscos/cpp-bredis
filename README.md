@@ -67,7 +67,7 @@ Results achieved with `examples/speed_test_async_multi.cpp` for 1 thread, Intel 
 
  | bredis (commands/s) | bredis(*) (commands/s) | redox (commands/s)|
  |---------------------|------------------------|-------------------|
- |      1.59325e+06    |      2.50826e+06       |    0.999375+06    |
+ |      1.80845e+06    |      2.503e+06         |    0.999375+06    |
 
 These results are not completely fair, because of the usage of different semantics in the
 APIs; however they are still interesting, as they are using different
