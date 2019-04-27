@@ -17,6 +17,16 @@ Boost::ASIO low-level redis client (connector)
 
 ## Changelog
 
+### 0.07
+- minor parsing speed improvements (upto 10% in synthetic tests)
+- fix compilation issues on boost::asio 1.70
+- make it possible to use `DynamicBuffer_v2` (dynamic_string_buffer, dynamic_vector_buffer)
+    from boost::asio 1.70 in addition to `streambuf`. `DynamicBuffer_v1` was actually never
+    supported by `bredis`
+- [API breakage] `boos::asio::use_future` cannot be used with `bredis` and `boost::asio`
+    prior `v1.70` (see [issue](https://github.com/boostorg/asio/issues/226)). If you need
+    `use_future` then either upgrade boost::asio or use previous `bredis` version.
+
 ### 0.06
 - the `parsing_policy::drop_result` was documented and made applicable in client code
 - updated preformance results
