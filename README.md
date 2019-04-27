@@ -9,6 +9,7 @@ Boost::ASIO low-level redis client (connector)
 ## Features
 
 - header only
+- zero-copy (currently only for received replies from Redis)
 - low-level controls (i.e. you can cancel, or do manual DNS-resolving before a connection)
 - unix domain sockets support
 - works on linux (clang, gcc) and windows (msvc)
