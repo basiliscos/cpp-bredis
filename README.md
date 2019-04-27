@@ -758,6 +758,7 @@ MIT
 - [Yuval Hager](https://github.com/yhager)
 - [Vinnie Falco](https://github.com/vinniefalco)
 - [Stephen Coleman](https://github.com/omegacoleman)
+- [maxtorm miximtor](https://github.com/miximtor)
 
 ## See also
 - https://github.com/Cylix/cpp_redis
