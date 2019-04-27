@@ -19,7 +19,6 @@
 
 #include <boost/asio.hpp>
 #include <boost/asio/async_result.hpp>
-#include <boost/asio/handler_type.hpp>
 #include <boost/utility/string_ref.hpp>
 
 #include "Command.hpp"
