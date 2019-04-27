@@ -22,7 +22,11 @@ TEST_CASE("ping", "[connection]") {
 #else
     using next_layer_t = socket_t;
 #endif
-    using Buffer = boost::asio::streambuf;
+    using Buffer = boost::asio::dynamic_string_buffer<
+        std::string::value_type,
+        std::string::traits_type,
+        std::string::allocator_type
+    >;
     using Iterator =
         boost::asio::buffers_iterator<typename Buffer::const_buffers_type,
                                       char>;
@@ -58,7 +62,10 @@ TEST_CASE("ping", "[connection]") {
     std::promise<result_t> completion_promise;
     std::future<result_t> completion_future = completion_promise.get_future();
 
-    Buffer tx_buff, rx_buff;
+    std::string rx_backend;
+    std::string tx_backend;
+    auto rx_buff = Buffer(rx_backend);
+    auto tx_buff = Buffer(tx_backend);
     read_callback_t read_callback =
         [&](const boost::system::error_code &error_code, ParseResult &&r) {
             if (error_code) {

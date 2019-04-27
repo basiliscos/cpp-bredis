@@ -53,10 +53,15 @@ int main(int argc, char **argv) {
     // common setup
     using socket_t = asio::ip::tcp::socket;
     using next_layer_t = socket_t;
-    using Buffer = boost::asio::streambuf;
+    //using Buffer = boost::asio::streambuf;
+    using Buffer = boost::asio::dynamic_string_buffer<
+        std::string::value_type,
+        std::string::traits_type,
+        std::string::allocator_type
+    >;
     using Iterator = typename r::to_iterator<Buffer>::iterator_t;
-    //using policy_t = r::parsing_policy::drop_result;
-    using policy_t = r::parsing_policy::keep_result;
+    using policy_t = r::parsing_policy::drop_result;
+    //using policy_t = r::parsing_policy::keep_result;
 
     if (argc < 2) {
         std::cout << "Usage : " << argv[0] << " ip:port \n";
@@ -96,7 +101,11 @@ int main(int argc, char **argv) {
     // wrap it into bredis connection
     r::Connection<next_layer_t> c(std::move(socket));
 
-    Buffer tx_buff, rx_buff;
+    std::string tx_backend, rx_backend;
+    //tx_backend.reserve(cmds_count * 4);
+    //rx_backend.reserve(cmds_count * 4);
+    Buffer tx_buff(tx_backend), rx_buff(rx_backend);
+    //Buffer tx_buff, rx_buff;
     std::promise<void> completion_promise;
     auto completion_future = completion_promise.get_future();
 
@@ -109,7 +118,7 @@ int main(int argc, char **argv) {
             // cannot be done with drop_result
             //auto &replies = get<r::markers::array_holder_t<Iterator>>(r.result);
             //count += replies.elements.size() - 1;
-            count = cmds_count;
+            count = static_cast<int>(cmds_count);
             completion_promise.set_value();
             std::cout << "done reading...\n";
         },

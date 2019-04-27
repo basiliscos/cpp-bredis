@@ -74,21 +74,20 @@ template <typename Iterator> class MatchResult {
     }
 };
 
+template <typename DynamicBuffer>
 class command_serializer_visitor : public boost::static_visitor<void> {
   private:
-    std::ostream &out_;
+    DynamicBuffer &buff_;
 
   public:
-    command_serializer_visitor(std::ostream &out) : out_{out} {}
+    command_serializer_visitor(DynamicBuffer &buff) : buff_{buff} {}
     void operator()(const single_command_t &value) const {
-        out_.imbue(std::locale::classic());
-        Protocol::serialize(out_, value);
+        Protocol::serialize(buff_, value);
     }
 
     void operator()(const command_container_t &value) const {
-        out_.imbue(std::locale::classic());
         for (const auto &cmd : value) {
-            Protocol::serialize(out_, cmd);
+            Protocol::serialize(buff_, cmd);
         }
     }
 };

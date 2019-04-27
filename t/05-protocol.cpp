@@ -1,6 +1,7 @@
 #include <boost/asio/buffer.hpp>
 #include <vector>
 
+#include <boost/asio.hpp>
 #include "bredis/MarkerHelpers.hpp"
 #include "bredis/Protocol.hpp"
 #include "catch.hpp"
@@ -442,10 +443,24 @@ TEST_CASE("overfilled buffer", "[protocol]") {
             nullptr);
 }
 
-TEST_CASE("serialize", "[protocol]") {
-    std::stringstream buff;
+TEST_CASE("serialize + streambuf", "[protocol]") {
+    boost::asio::streambuf buff;
     r::single_command_t cmd("LLEN", "fmm.cheap-travles2");
     r::Protocol::serialize(buff, cmd);
     std::string expected("*2\r\n$4\r\nLLEN\r\n$18\r\nfmm.cheap-travles2\r\n");
-    REQUIRE(buff.str() == expected);
+
+    char data[128] = {0};
+    asio::buffer_copy(asio::buffer(data), asio::buffer(buff.data(), buff.size()));
+    REQUIRE(data == expected);
+}
+
+TEST_CASE("serialize + dynamic_string_buffer", "[protocol]") {
+    r::single_command_t cmd("LLEN", "fmm.cheap-travles2");
+    std::string buff_backend;
+    using Buff = asio::dynamic_string_buffer<char, std::char_traits<char>, std::allocator<char>>;
+    auto buff =  Buff(buff_backend);
+    r::Protocol::serialize(buff, cmd);
+    std::string expected("*2\r\n$4\r\nLLEN\r\n$18\r\nfmm.cheap-travles2\r\n");
+    std::string copy(std::begin(buff_backend), std::begin(buff_backend) + buff.size());
+    REQUIRE(copy == expected);
 }

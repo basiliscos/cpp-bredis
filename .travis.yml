@@ -8,12 +8,12 @@ os:
     - linux
 
 before_script:
-    - wget -q -O - https://sourceforge.net/projects/boost/files/boost/1.69.0/boost_1_69_0.tar.gz | tar -xz
-    - cd boost_1_69_0 && ./bootstrap.sh --with-libraries=coroutine,context,chrono,system,thread,regex,filesystem,program_options
+    - wget -q -O - https://sourceforge.net/projects/boost/files/boost/1.70.0/boost_1_70_0.tar.gz | tar -xz
+    - cd boost_1_70_0 && ./bootstrap.sh --with-libraries=coroutine,context,chrono,system,thread,regex,filesystem,program_options
     - ./b2  --ignore-site-config && cd ..
     - mkdir build
     - cd build
-    - cmake -DBOOST_ROOT=`pwd`/../boost_1_69_0 ..
+    - cmake -DBOOST_ROOT=`pwd`/../boost_1_70_0 ..
 
 addons:
   apt:
