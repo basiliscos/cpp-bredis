@@ -74,20 +74,28 @@ template <typename Iterator> class MatchResult {
     }
 };
 
-template <typename DynamicBuffer>
 class command_serializer_visitor : public boost::static_visitor<void> {
   private:
-    DynamicBuffer &buff_;
+    output_buff_t& buff_;
 
   public:
-    command_serializer_visitor(DynamicBuffer &buff) : buff_{buff} {}
-    void operator()(const single_command_t &value) const {
-        Protocol::serialize(buff_, value);
+    command_serializer_visitor(output_buff_t &buff) : buff_{buff} {}
+    void operator()(single_command_t &command) const {
+        buff_.reserve(command.buffers_count());
+        command.prepare(buff_);
     }
 
-    void operator()(const command_container_t &value) const {
-        for (const auto &cmd : value) {
-            Protocol::serialize(buff_, cmd);
+    void operator()(command_container_t &container) const {
+        std::uint32_t count = 0;
+
+        // precalc total const-buffs needed
+        for (const auto &cmd : container) {
+            count += cmd.buffers_count();
+        }
+        buff_.reserve(count);
+        // gather all buffers
+        for (auto &cmd : container) {
+            cmd.prepare(buff_);
         }
     }
 };

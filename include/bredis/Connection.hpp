@@ -47,7 +47,7 @@ template <typename NextLayer> class Connection {
     template <typename DynamicBuffer, typename WriteCallback>
     BOOST_ASIO_INITFN_RESULT_TYPE(WriteCallback,
                                   void(boost::system::error_code, std::size_t))
-    async_write(DynamicBuffer &tx_buff, const command_wrapper_t &command,
+    async_write(DynamicBuffer &tx_buff, command_wrapper_t &command,
                 WriteCallback &&write_callback);
 
     template <typename DynamicBuffer, typename ReadCallback,
@@ -60,8 +60,8 @@ template <typename NextLayer> class Connection {
                std::size_t replies_count = 1, Policy policy = Policy{});
 
     /* synchronous interface */
-    void write(const command_wrapper_t &command);
-    void write(const command_wrapper_t &command, boost::system::error_code &ec);
+    void write(command_wrapper_t &command);
+    void write(command_wrapper_t &command, boost::system::error_code &ec);
 
     template <typename DynamicBuffer>
     BREDIS_PARSE_RESULT(DynamicBuffer, bredis::parsing_policy::keep_result)

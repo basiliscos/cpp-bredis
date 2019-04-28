@@ -21,8 +21,8 @@ template <typename NextLayer>
 template <typename DynamicBuffer, typename WriteCallback>
 BOOST_ASIO_INITFN_RESULT_TYPE(WriteCallback,
                               void(boost::system::error_code, std::size_t))
-Connection<NextLayer>::async_write(DynamicBuffer &tx_buff,
-                                   const command_wrapper_t &command,
+Connection<NextLayer>::async_write(DynamicBuffer &,
+                                   command_wrapper_t &command,
                                    WriteCallback &&write_callback) {
     namespace asio = boost::asio;
     namespace sys = boost::system;
@@ -32,13 +32,14 @@ Connection<NextLayer>::async_write(DynamicBuffer &tx_buff,
     using Callback = std::decay_t<WriteCallback>;
     using AsyncResult = asio::async_result<Callback, Signature>;
     using CompletionHandler = typename AsyncResult::completion_handler_type;
-    using serializer_t = command_serializer_visitor<DynamicBuffer>;
+    using serializer_t = command_serializer_visitor;
 
+    output_buff_t tx_buff;
     boost::apply_visitor(serializer_t(tx_buff), command);
 
     CompletionHandler handler(std::forward<WriteCallback>(write_callback));
     AsyncResult result(handler);
-    async_write(stream_, tx_buff, std::move(handler));
+    async_write(stream_, std::move(tx_buff), std::move(handler));
     return result.get();
 }
 
@@ -75,18 +76,19 @@ Connection<NextLayer>::async_read(DynamicBuffer &rx_buff,
 }
 
 template <typename NextLayer>
-void Connection<NextLayer>::write(const command_wrapper_t &command,
+void Connection<NextLayer>::write(command_wrapper_t &command,
                                   boost::system::error_code &ec) {
     namespace asio = boost::asio;
-    asio::streambuf tx_buff;
-    using serializer_t = command_serializer_visitor<asio::streambuf>;
+    using serializer_t = command_serializer_visitor;
 
+    output_buff_t tx_buff;
     boost::apply_visitor(serializer_t(tx_buff), command);
+
     asio::write(stream_, tx_buff, ec);
 }
 
 template <typename NextLayer>
-void Connection<NextLayer>::write(const command_wrapper_t &command) {
+void Connection<NextLayer>::write(command_wrapper_t &command) {
     boost::system::error_code ec;
     this->write(command, ec);
     if (ec) {

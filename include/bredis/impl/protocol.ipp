@@ -445,47 +445,4 @@ inline std::size_t size_for_int(std::size_t arg) {
     return r;
 }
 
-inline std::size_t command_size(const single_command_t &cmd) {
-    std::size_t sz = 1                                    /* * */
-                     + size_for_int(cmd.arguments.size()) /* args size */
-                     + terminator.size;
-
-    for (const auto &arg : cmd.arguments) {
-        sz += 1                          /* $ */
-              + size_for_int(arg.size()) /* argument size */
-              + terminator.size + arg.size() + terminator.size;
-    }
-    return sz;
-}
-
-template <typename DynamicBuffer>
-inline void Protocol::serialize(DynamicBuffer &buff,
-                                const single_command_t &cmd) {
-
-    auto it = buff.prepare(command_size(cmd));
-    constexpr std::size_t buff_sz = 64;
-    using namespace boost::asio;
-    char data[buff_sz];
-    std::size_t total =
-        snprintf(data, buff_sz, "*%zu\r\n", cmd.arguments.size());
-    buffer_copy(it, buffer(data, total));
-    it += total;
-
-    for (const auto &arg : cmd.arguments) {
-        auto bytes = snprintf(data, buff_sz, "$%zu\r\n", arg.size());
-        buffer_copy(it, buffer(data, bytes));
-        it += bytes;
-        total += bytes;
-
-        buffer_copy(it, buffer(arg.data(), arg.size()));
-        it += arg.size();
-        total += arg.size();
-
-        buffer_copy(it, buffer("\r\n", terminator.size));
-        total += terminator.size;
-        it += terminator.size;
-    }
-    buff.commit(total);
-}
-
 } // namespace bredis

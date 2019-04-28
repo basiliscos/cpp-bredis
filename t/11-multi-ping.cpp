@@ -38,10 +38,13 @@ TEST_CASE("ping", "[connection]") {
 
     std::chrono::nanoseconds sleep_delay(1);
 
-    size_t count = 1000;
-    r::single_command_t ping_cmd("ping");
-    r::command_container_t ping_cmds_container(count, ping_cmd);
-    r::command_wrapper_t cmd(ping_cmds_container);
+    size_t count = 10000;
+    r::command_container_t ping_cmds_container;
+    ping_cmds_container.reserve(count);
+    for (size_t i = 0; i < count; ++i) {
+        ping_cmds_container.emplace_back("ping");
+    }
+    r::command_wrapper_t cmd(std::move(ping_cmds_container));
 
     uint16_t port = ep::get_random<ep::Kind::TCP>();
     auto port_str = boost::lexical_cast<std::string>(port);

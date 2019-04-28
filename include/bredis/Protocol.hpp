@@ -20,10 +20,6 @@ class Protocol {
     template <typename Iterator, typename Policy = parsing_policy::keep_result>
     static inline parse_result_t<Iterator, Policy> parse(const Iterator &from,
                                                          const Iterator &to);
-
-    template <typename DynamicBuffer>
-    static inline void serialize(DynamicBuffer &buff,
-                                 const single_command_t &cmd);
 };
 
 } // namespace bredis

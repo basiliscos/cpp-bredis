@@ -77,14 +77,14 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+    //std::size_t cmds_count = 500000;
     std::size_t cmds_count = 500000;
     std::atomic_int count{0};
 
     // write subscribe cmd
-    r::single_command_t cmd_incr{"INCR", "simple_loop:count"};
     r::command_container_t cmd_container;
     for (size_t i = 0; i < cmds_count; ++i) {
-        cmd_container.push_back(cmd_incr);
+        cmd_container.emplace_back("INCR", "simple_loop:count");
     }
 
     r::command_wrapper_t cmd_wpapper{std::move(cmd_container)};
@@ -144,7 +144,8 @@ int main(int argc, char **argv) {
     std::cout << "done...\n";
     completion_future.get();
 
-    c.write(r::single_command_t{"GET", "simple_loop:count"});
+    r::command_wrapper_t cmd_get(r::single_command_t{"GET", "simple_loop:count"});
+    c.write(cmd_get);
     auto r = c.read(rx_buff);
     auto &str_reply = get<r::markers::string_t<Iterator>>(r.result);
 
