@@ -15,6 +15,7 @@ namespace asio = boost::asio;
 namespace sys = boost::system;
 namespace ep = empty_port;
 namespace ts = test_server;
+namespace sys = boost::system;
 
 TEST_CASE("cancel-on-read", "[cancellation]") {
     using socket_t = asio::ip::tcp::socket;
@@ -69,14 +70,17 @@ TEST_CASE("cancel-on-read", "[cancellation]") {
 
     Buffer rx_buff, tx_buff;
     c.async_write(
-        tx_buff, "ping", [&](const auto &error_code, auto bytes_transferred) {
-            REQUIRE(!error_code);
+        tx_buff, "ping",
+        [&](const sys::error_code &ec, std::size_t bytes_transferred) {
+            REQUIRE(!ec);
             tx_buff.consume(bytes_transferred);
-            c.async_read(rx_buff, [&](const auto &error_code, ParseResult &&) {
-                REQUIRE(error_code);
-                // REQUIRE(error_code.message() == "Operation canceled");
-                completion_promise.set_value();
-            });
+            c.async_read(rx_buff,
+                         [&](const sys::error_code &ec, ParseResult &&) {
+                             REQUIRE(ec);
+                             // REQUIRE(error_code.message() == "Operation
+                             // canceled");
+                             completion_promise.set_value();
+                         });
         });
 
     while (completion_future.wait_for(sleep_delay) !=

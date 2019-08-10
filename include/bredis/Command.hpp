@@ -6,9 +6,9 @@
 //
 #pragma once
 
+#include <boost/core/enable_if.hpp>
 #include <boost/utility/string_ref.hpp>
 #include <boost/variant.hpp>
-#include <type_traits>
 #include <vector>
 
 #include "Result.hpp"
@@ -31,14 +31,14 @@ struct single_command_t {
     args_container_t arguments;
 
     template <typename... Args,
-              typename = std::enable_if_t<detail::are_all_constructible<
+              typename = boost::enable_if_t<detail::are_all_constructible<
                   boost::string_ref, Args...>::value>>
     single_command_t(Args &&... args) : arguments{std::forward<Args>(args)...} {
         static_assert(sizeof...(Args) >= 1, "Empty command is not allowed");
     }
 
     template <typename InputIterator,
-              typename = std::enable_if_t<std::is_constructible<
+              typename = boost::enable_if_t<std::is_constructible<
                   boost::string_ref, typename std::iterator_traits<
                                          InputIterator>::value_type>::value>>
     single_command_t(InputIterator first, InputIterator last)

@@ -47,6 +47,7 @@ double time_s() {
 // alias namespaces
 namespace r = bredis;
 namespace asio = boost::asio;
+namespace sys = boost::system;
 using boost::get;
 
 int main(int argc, char **argv) {
@@ -62,6 +63,7 @@ int main(int argc, char **argv) {
     using Iterator = typename r::to_iterator<Buffer>::iterator_t;
     //using policy_t = r::parsing_policy::drop_result;
     using policy_t = r::parsing_policy::keep_result;
+    using result_t = r::positive_parse_result_t<Iterator, policy_t>;
 
     if (argc < 2) {
         std::cout << "Usage : " << argv[0] << " ip:port \n";
@@ -111,7 +113,7 @@ int main(int argc, char **argv) {
 
     c.async_read(
         rx_buff,
-        [&](const boost::system::error_code &ec, auto &&r) {
+        [&](const sys::error_code &ec, result_t &&r) {
             assert(!ec);
             (void)ec;
             rx_buff.consume(r.consumed);
@@ -124,8 +126,8 @@ int main(int argc, char **argv) {
         },
     cmds_count, policy_t{});
 
-    c.async_write(tx_buff, cmd_wpapper, [&](const boost::system::error_code &ec,
-                                            auto bytes_transferred) {
+    c.async_write(tx_buff, cmd_wpapper, [&](const sys::error_code &ec,
+                                            std::size_t bytes_transferred) {
         (void)ec;
         assert(!ec);
         tx_buff.consume(bytes_transferred);

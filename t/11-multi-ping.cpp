@@ -1,7 +1,7 @@
 #include <boost/asio.hpp>
 #include <future>
-#include <vector>
 #include <string>
+#include <vector>
 
 #include "EmptyPort.hpp"
 #include "SocketWithLogging.hpp"
@@ -14,6 +14,7 @@ namespace r = bredis;
 namespace asio = boost::asio;
 namespace ep = empty_port;
 namespace ts = test_server;
+namespace sys = boost::system;
 
 TEST_CASE("ping", "[connection]") {
     using socket_t = asio::ip::tcp::socket;
@@ -59,23 +60,23 @@ TEST_CASE("ping", "[connection]") {
     std::future<result_t> completion_future = completion_promise.get_future();
 
     Buffer tx_buff, rx_buff;
-    read_callback_t read_callback =
-        [&](const boost::system::error_code &error_code, ParseResult &&r) {
-            if (error_code) {
-                BREDIS_LOG_DEBUG("error: " << error_code.message());
-                REQUIRE(!error_code);
-            }
+    read_callback_t read_callback = [&](const sys::error_code &error_code,
+                                        ParseResult &&r) {
+        if (error_code) {
+            BREDIS_LOG_DEBUG("error: " << error_code.message());
             REQUIRE(!error_code);
-            auto &replies =
-                boost::get<r::markers::array_holder_t<Iterator>>(r.result);
-            BREDIS_LOG_DEBUG("callback, size: " << replies.elements.size());
-            REQUIRE(replies.elements.size() == count);
-            completion_promise.set_value();
-            rx_buff.consume(r.consumed);
-        };
+        }
+        REQUIRE(!error_code);
+        auto &replies =
+            boost::get<r::markers::array_holder_t<Iterator>>(r.result);
+        BREDIS_LOG_DEBUG("callback, size: " << replies.elements.size());
+        REQUIRE(replies.elements.size() == count);
+        completion_promise.set_value();
+        rx_buff.consume(r.consumed);
+    };
 
-    write_callback_t write_callback = [&](
-        const boost::system::error_code &error_code, auto bytes_transferred) {
+    write_callback_t write_callback = [&](const sys::error_code &error_code,
+                                          std::size_t bytes_transferred) {
         (void)bytes_transferred;
         BREDIS_LOG_DEBUG("write_callback");
         if (error_code) {

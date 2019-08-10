@@ -1,12 +1,11 @@
 cmake_minimum_required(VERSION 3.0)
 project (bredis)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 include (CTest)
 enable_testing()
-
 
 
 add_definitions(-DBOOST_ERROR_CODE_HEADER_ONLY)

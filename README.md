@@ -18,6 +18,9 @@ Boost::ASIO low-level redis client (connector)
 
 ## Changelog
 
+### 0.08
+- relaxed c++ compiler requirements: c++11 can be used instead of c++14
+
 ### 0.07
 - minor parsing speed improvements (upto 10% in synthetic tests)
 - fix compilation issues on boost::asio 1.70
@@ -213,6 +216,7 @@ in case you don't want the throw-exception behaviour.
 ...
 namespace r = bredis;
 namespace asio = boost::asio;
+namespace sys = boost::system;
 ...
 using socket_t = asio::ip::tcp::socket;
 using Buffer = boost::asio::streambuf;
@@ -229,10 +233,10 @@ socket.connect(end_point);
 ...
 Buffer tx_buff, rx_buff;
 c.async_write(
-    tx_buff, r::single_command_t{"llen", "my-queue"}, [&](const auto &error_code, auto bytes_transferred) {
+    tx_buff, r::single_command_t{"llen", "my-queue"}, [&](const sys::error_code &ec, std::size_t bytes_transferred) {
         /* tx_buff must be consumed when it is no longer needed */
         tx_buff.consume(bytes_transferred);
-        c.async_read(rx_buff, [&](const auto &error_code, result_t &&r) {
+        c.async_read(rx_buff, [&](const sys::error_code &ec, result_t &&r) {
             /* see above how to work with the result */
             auto extract = boost::apply_visitor(r::extractor<Iterator>(), r.result);
             auto &queue_size = boost::get<r::extracts::int_t>(extract);
@@ -350,7 +354,7 @@ in the transaction (i.e. results for `INCR` and `GET` above)
 
 ```cpp
 Buffer rx_buff;
-c.async_read(rx_buff, [&](const auto& error_code, auto&& r){
+c.async_read(rx_buff, [&](const sys::error_code &ec, result_t&& r){
     auto &replies = boost::get<r::markers::array_holder_t<Iterator>>(r.result);
     /* scan stream for OK, QUEUED, QUEUED */
     ...

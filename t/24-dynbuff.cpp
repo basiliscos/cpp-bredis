@@ -14,6 +14,7 @@ namespace r = bredis;
 namespace asio = boost::asio;
 namespace ep = empty_port;
 namespace ts = test_server;
+namespace sys = boost::system;
 
 TEST_CASE("ping", "[connection]") {
     using socket_t = asio::ip::tcp::socket;
@@ -67,12 +68,12 @@ TEST_CASE("ping", "[connection]") {
     auto rx_buff = Buffer(rx_backend);
     auto tx_buff = Buffer(tx_backend);
     read_callback_t read_callback =
-        [&](const boost::system::error_code &error_code, ParseResult &&r) {
-            if (error_code) {
+        [&](const sys::error_code &ec, ParseResult &&r) {
+            if (ec) {
                 BREDIS_LOG_DEBUG("error: " << error_code.message());
-                REQUIRE(!error_code);
+                REQUIRE(!ec);
             }
-            REQUIRE(!error_code);
+            REQUIRE(!ec);
             auto &replies =
                 boost::get<r::markers::array_holder_t<Iterator>>(r.result);
             BREDIS_LOG_DEBUG("callback, size: " << replies.elements.size());
@@ -82,14 +83,14 @@ TEST_CASE("ping", "[connection]") {
         };
 
     write_callback_t write_callback = [&](
-        const boost::system::error_code &error_code, auto bytes_transferred) {
+        const sys::error_code &ec, std::size_t bytes_transferred) {
         (void)bytes_transferred;
         BREDIS_LOG_DEBUG("write_callback");
-        if (error_code) {
+        if (ec) {
             BREDIS_LOG_DEBUG("error: " << error_code.message());
-            REQUIRE(!error_code);
+            REQUIRE(!ec);
         }
-        REQUIRE(!error_code);
+        REQUIRE(!ec);
         tx_buff.consume(bytes_transferred);
     };
 
