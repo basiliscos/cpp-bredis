@@ -35,12 +35,15 @@
 namespace r = bredis;
 namespace asio = boost::asio;
 namespace po = boost::program_options;
+namespace sys = boost::system;
 
 using socket_t = asio::ip::tcp::socket;
 using next_layer_t = socket_t;
 //using next_layer_t = r::test::SocketWithLogging<asio::ip::tcp::socket>;
 using Buffer = boost::asio::streambuf;
 using Iterator = typename r::to_iterator<Buffer>::iterator_t;
+using Policy = r::parsing_policy::keep_result;
+using result_t = r::positive_parse_result_t<Iterator, Policy>;
 using Connection = r::Connection<next_layer_t>;
 
 struct redis_accessor_t {
@@ -64,8 +67,9 @@ struct producer_t {
         redis.conn.async_write(
             redis.tx_buff,
             cmd_ping,
-            asio::bind_executor(redis.strand, [self = this](const auto &error_code, size_t bytes_transferred){
-                if (!error_code){
+            asio::bind_executor(redis.strand, [this](const sys::error_code &ec, std::size_t bytes_transferred){
+                if (!ec){
+                    auto self = this;
                     self->redis.ping_count++;
                     self->redis.tx_buff.consume(bytes_transferred);
                     self->produce();
@@ -83,8 +87,9 @@ struct consumer_t {
     void consume(){
         redis.conn.async_read(
             redis.rx_buff,
-            asio::bind_executor(redis.strand, [self = this](const auto &error_code, auto &&r){
-                if(!error_code){
+            asio::bind_executor(redis.strand, [this](const sys::error_code &ec, result_t &&r){
+                if(!ec){
+                    auto self = this;
                     self->redis.pong_count++;
                     self->redis.rx_buff.consume(r.consumed);
                     self->consume();
@@ -103,8 +108,9 @@ struct watcher_t {
     void watch() {
         timer.expires_after(asio::chrono::seconds(1));
         timer.async_wait(
-            asio::bind_executor(redis.strand, [self = this](const auto &error_code){
-                if (!error_code) {
+            asio::bind_executor(redis.strand, [this](const sys::error_code &ec){
+                if (!ec) {
+                    auto self = this;
                     std::cout << "pings: " << self->redis.ping_count << ", pongs: " << self->redis.pong_count << "\n";
                     self->watch();
                 }

@@ -14,6 +14,7 @@ namespace r = bredis;
 namespace asio = boost::asio;
 namespace ep = empty_port;
 namespace ts = test_server;
+namespace sys = boost::system;
 
 TEST_CASE("transaction", "[connection]") {
     using socket_t = asio::ip::tcp::socket;
@@ -42,8 +43,10 @@ TEST_CASE("transaction", "[connection]") {
     asio::io_service io_service;
 
     r::command_container_t tx_commands = {
-        r::single_command_t("MULTI"), r::single_command_t("INCR", "foo"),
-        r::single_command_t("INCR", "bar"), r::single_command_t("EXEC"),
+        r::single_command_t("MULTI"),
+        r::single_command_t("INCR", "foo"),
+        r::single_command_t("INCR", "bar"),
+        r::single_command_t("EXEC"),
     };
     r::command_wrapper_t cmd(tx_commands);
 
@@ -57,9 +60,9 @@ TEST_CASE("transaction", "[connection]") {
     r::Connection<next_layer_t> c(std::move(socket));
 
     Buffer rx_buff, tx_buff;
-    read_callback_t read_callback = [&](
-        const boost::system::error_code &error_code, ParseResult &&r) {
-        REQUIRE(!error_code);
+    read_callback_t read_callback = [&](const sys::error_code &ec,
+                                        ParseResult &&r) {
+        REQUIRE(!ec);
 
         auto &replies =
             boost::get<r::markers::array_holder_t<Iterator>>(r.result);
@@ -85,11 +88,12 @@ TEST_CASE("transaction", "[connection]") {
     };
 
     c.async_read(rx_buff, read_callback, tx_commands.size());
-    c.async_write(tx_buff, cmd,
-                  [&](const auto &error_code, auto bytes_transferred) {
-                      tx_buff.consume(bytes_transferred);
-                      REQUIRE(!error_code);
-                  });
+    c.async_write(
+        tx_buff, cmd,
+        [&](const sys::error_code &ec, std::size_t bytes_transferred) {
+            tx_buff.consume(bytes_transferred);
+            REQUIRE(!ec);
+        });
 
     while (completion_future.wait_for(sleep_delay) !=
            std::future_status::ready) {

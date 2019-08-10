@@ -14,6 +14,7 @@ namespace r = bredis;
 namespace asio = boost::asio;
 namespace ep = empty_port;
 namespace ts = test_server;
+namespace sys = boost::system;
 
 TEST_CASE("ping", "[connection]") {
     using socket_t = asio::ip::tcp::socket;
@@ -48,10 +49,11 @@ TEST_CASE("ping", "[connection]") {
     Buffer tx_buff, rx_buff;
 
     c.async_write(
-        tx_buff, "ping", [&](const auto &error_code, auto bytes_transferred) {
+        tx_buff, "ping",
+        [&](const sys::error_code &error_code, std::size_t bytes_transferred) {
             REQUIRE(!error_code);
             tx_buff.consume(bytes_transferred);
-            c.async_read(rx_buff, [&](const auto&, auto &&r) {
+            c.async_read(rx_buff, [&](const sys::error_code &, result_t &&r) {
                 completion_promise.set_value(r);
                 rx_buff.consume(r.consumed);
             });

@@ -15,6 +15,7 @@ namespace r = bredis;
 namespace asio = boost::asio;
 namespace ep = empty_port;
 namespace ts = test_server;
+namespace sys = boost::system;
 
 TEST_CASE("ping", "[connection]") {
     using socket_t = asio::ip::tcp::socket;
@@ -64,7 +65,7 @@ TEST_CASE("ping", "[connection]") {
         r::single_command_t("time"),
     };
     std::vector<read_callback_t> callbacks{
-        [&](const boost::system::error_code&error_code, ParseResult &&r) {
+        [&](const boost::system::error_code &error_code, ParseResult &&r) {
             auto extract = boost::apply_visitor(Extractor(), r.result);
             REQUIRE(boost::get<r::extracts::int_t>(extract) == 0);
             REQUIRE(order == 0);
@@ -120,12 +121,13 @@ TEST_CASE("ping", "[connection]") {
             c.async_read(rx_buff, generic_callback);
         };
 
-    c.async_write(tx_buff, r::command_wrapper_t(cmds_container),
-                  [&](const auto &error_code, auto bytes_transferred) {
-                      REQUIRE(!error_code);
-                      tx_buff.consume(bytes_transferred);
-                      c.async_read(rx_buff, generic_callback);
-                  });
+    c.async_write(
+        tx_buff, r::command_wrapper_t(cmds_container),
+        [&](const sys::error_code &ec, std::size_t bytes_transferred) {
+            REQUIRE(!ec);
+            tx_buff.consume(bytes_transferred);
+            c.async_read(rx_buff, generic_callback);
+        });
 
     while (completion_future.wait_for(sleep_delay) !=
            std::future_status::ready) {

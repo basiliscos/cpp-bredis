@@ -9,9 +9,9 @@
 
 #include "common.ipp"
 #include <algorithm>
+#include <boost/type_traits/decay.hpp>
 #include <cassert>
 #include <ostream>
-#include <type_traits>
 
 #include "async_op.ipp"
 
@@ -29,7 +29,7 @@ Connection<NextLayer>::async_write(DynamicBuffer &tx_buff,
 
     using boost::asio::async_write;
     using Signature = void(boost::system::error_code, std::size_t);
-    using Callback = std::decay_t<WriteCallback>;
+    using Callback = boost::decay_t<WriteCallback>;
     using AsyncResult = asio::async_result<Callback, Signature>;
     using CompletionHandler = typename AsyncResult::completion_handler_type;
     using serializer_t = command_serializer_visitor<DynamicBuffer>;
@@ -58,7 +58,7 @@ Connection<NextLayer>::async_read(DynamicBuffer &rx_buff,
     using Iterator = typename to_iterator<DynamicBuffer>::iterator_t;
     using ParseResult = BREDIS_PARSE_RESULT(DynamicBuffer, Policy);
     using Signature = void(boost::system::error_code, ParseResult);
-    using Callback = std::decay_t<ReadCallback>;
+    using Callback = boost::decay_t<ReadCallback>;
     using AsyncResult = asio::async_result<Callback, Signature>;
     using CompletionHandler = typename AsyncResult::completion_handler_type;
     using ReadOp =

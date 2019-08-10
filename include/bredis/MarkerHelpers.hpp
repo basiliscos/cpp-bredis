@@ -8,6 +8,7 @@
 #pragma once
 
 #include <algorithm>
+#include <boost/algorithm/cxx14/equal.hpp>
 #include <boost/convert.hpp>
 #include <boost/convert/lexical_cast.hpp>
 #include <cctype>
@@ -81,21 +82,22 @@ class equality : public boost::static_visitor<bool> {
     }
 
     bool operator()(const markers::string_t<Iterator> &value) const {
-        auto helper = stringizer<Iterator>();
-        auto str = helper(value);
-        return std::equal(begin_, end_, value.from, value.to);
+        return boost::algorithm::equal(begin_, end_, value.from, value.to);
     }
 
     bool operator()(const markers::int_t<Iterator> &value) const {
-        return std::equal(begin_, end_, value.string.from, value.string.to);
+        return boost::algorithm::equal(begin_, end_, value.string.from,
+                                       value.string.to);
     }
 
     bool operator()(const markers::error_t<Iterator> &value) const {
-        return std::equal(begin_, end_, value.string.from, value.string.to);
+        return boost::algorithm::equal(begin_, end_, value.string.from,
+                                       value.string.to);
     }
 
     bool operator()(const markers::nil_t<Iterator> &value) const {
-        return std::equal(begin_, end_, value.string.from, value.string.to);
+        return boost::algorithm::equal(begin_, end_, value.string.from,
+                                       value.string.to);
     }
 };
 
@@ -172,8 +174,8 @@ class check_subscription : public boost::static_visitor<bool> {
             }
 
             const auto &channel_ = cmd_.arguments[idx];
-            return std::equal(channel_.cbegin(), channel_.cend(), channel->from,
-                              channel->to);
+            return boost::algorithm::equal(channel_.cbegin(), channel_.cend(),
+                                           channel->from, channel->to);
         }
         return false;
     }

@@ -12,12 +12,14 @@
 
 namespace test_server {
 struct TestServer {
-    std::unique_ptr<boost::process::child> child;
+    using child_t = std::unique_ptr<boost::process::child>;
+    child_t child;
 
     TestServer(std::initializer_list<std::string> &&args) {
         std::string stringized = boost::algorithm::join(args, " ");
         std::cout << "going to fork to start: " << stringized << std::endl;
-        child = std::make_unique<boost::process::child>(stringized);
+        auto process = new boost::process::child(stringized);
+        child.reset(process);
     }
     ~TestServer() { std::cout << "terminating child " << child->id() << "\n"; }
 };
@@ -25,6 +27,6 @@ struct TestServer {
 using result_t = std::unique_ptr<TestServer>;
 
 result_t make_server(std::initializer_list<std::string> &&args) {
-    return std::make_unique<TestServer>(std::move(args));
+    return result_t{new TestServer(std::move(args))};
 }
 }

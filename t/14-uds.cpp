@@ -18,6 +18,7 @@ namespace r = bredis;
 namespace asio = boost::asio;
 namespace ts = test_server;
 namespace ep = empty_port;
+namespace sys = boost::system;
 
 struct tmpfile_holder_t {
     char *filename_;
@@ -75,9 +76,9 @@ TEST_CASE("ping", "[connection]") {
     std::future<result_t> completion_future = completion_promise.get_future();
     Buffer rx_buff, tx_buff;
 
-    read_callback_t read_callback = [&](const auto &error_code,
+    read_callback_t read_callback = [&](const sys::error_code &ec,
                                         ParseResult &&r) {
-        REQUIRE(!error_code);
+        REQUIRE(!ec);
         rx_buff.consume(r.consumed);
 
         auto str = boost::apply_visitor(
@@ -96,12 +97,13 @@ TEST_CASE("ping", "[connection]") {
         completion_promise.set_value();
     };
 
-    c.async_write(tx_buff, cmd,
-                  [&](const auto &error_code, auto bytes_transferred) {
-                      REQUIRE(!error_code);
-                      tx_buff.consume(bytes_transferred);
-                      c.async_read(rx_buff, read_callback, count);
-                  });
+    c.async_write(
+        tx_buff, cmd,
+        [&](const sys::error_code &ec, std::size_t bytes_transferred) {
+            REQUIRE(!ec);
+            tx_buff.consume(bytes_transferred);
+            c.async_read(rx_buff, read_callback, count);
+        });
 
     while (completion_future.wait_for(sleep_delay) !=
            std::future_status::ready) {

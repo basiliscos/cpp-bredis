@@ -13,6 +13,7 @@ namespace r = bredis;
 namespace asio = boost::asio;
 namespace sys = boost::system;
 namespace ep = empty_port;
+namespace sys = boost::system;
 
 TEST_CASE("close-afrer-read", "[connection]") {
     using socket_t = asio::ip::tcp::socket;
@@ -44,20 +45,19 @@ TEST_CASE("close-afrer-read", "[connection]") {
     std::string data = "bla-bla";
     std::string end_marker = "ping\r\n";
     Buffer remote_rx_buff;
-    acceptor.async_accept(peer_socket, [&](const sys::error_code& ec1) {
+    acceptor.async_accept(peer_socket, [&](const sys::error_code &ec1) {
         (void)ec1;
         BREDIS_LOG_DEBUG("async_accept: " << ec1.message() << ", "
                                           << peer_socket.local_endpoint());
 
         async_read_until(peer_socket, remote_rx_buff, end_marker,
-                         [&](const sys::error_code& ec2, std::size_t) {
-                            (void)ec2;
+                         [&](const sys::error_code &ec2, std::size_t) {
+                             (void)ec2;
                              BREDIS_LOG_DEBUG("async_read: " << sz << ", "
                                                              << ec2.message());
 
                              peer_socket.close();
                          });
-
     });
 
     socket_t socket(io_service, end_point.protocol());
@@ -69,14 +69,16 @@ TEST_CASE("close-afrer-read", "[connection]") {
 
     Buffer rx_buff, tx_buff;
     c.async_write(
-        tx_buff, "ping", [&](const auto &error_code, auto bytes_transferred) {
-            REQUIRE(!error_code);
+        tx_buff, "ping",
+        [&](const sys::error_code &ec, std::size_t bytes_transferred) {
+            REQUIRE(!ec);
             tx_buff.consume(bytes_transferred);
-            c.async_read(rx_buff, [&](const auto &error_code, ParseResult &&) {
-                REQUIRE(error_code);
-                REQUIRE(error_code.message() == "End of file");
-                completion_promise.set_value();
-            });
+            c.async_read(rx_buff,
+                         [&](const sys::error_code &ec, ParseResult &&) {
+                             REQUIRE(ec);
+                             REQUIRE(ec.message() == "End of file");
+                             completion_promise.set_value();
+                         });
         });
 
     while (completion_future.wait_for(sleep_delay) !=
@@ -130,15 +132,18 @@ TEST_CASE("close-before-write", "[connection]") {
 
     Buffer rx_buff, tx_buff;
     c.async_write(
-        tx_buff, "ping", [&](const auto &error_code, auto bytes_transferred) {
-            REQUIRE(!error_code);
+        tx_buff, "ping",
+        [&](const sys::error_code &ec, std::size_t bytes_transferred) {
+            REQUIRE(!ec);
             tx_buff.consume(bytes_transferred);
-            c.async_read(rx_buff, [&](const auto &error_code, ParseResult &&) {
-                REQUIRE(error_code);
-                // locale and os-dependent
-                // REQUIRE(error_code.message() == "Connection reset by peer");
-                completion_promise.set_value();
-            });
+            c.async_read(rx_buff,
+                         [&](const sys::error_code &ec, ParseResult &&) {
+                             REQUIRE(ec);
+                             // locale and os-dependent
+                             // REQUIRE(error_code.message() == "Connection
+                             // reset by peer");
+                             completion_promise.set_value();
+                         });
         });
     while (completion_future.wait_for(sleep_delay) !=
            std::future_status::ready) {
