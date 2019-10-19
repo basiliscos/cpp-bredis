@@ -15,6 +15,7 @@ Boost::ASIO low-level redis client (connector)
 - works on linux (clang, gcc) and windows (msvc)
 - synchronous & asynchronous interface
 - inspired by [beast](https://github.com/vinniefalco/Beast)
+- requirements: boost `v1.69` minimum
 
 ## Changelog
 
