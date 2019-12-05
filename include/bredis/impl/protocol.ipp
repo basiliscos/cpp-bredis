@@ -442,7 +442,7 @@ inline std::size_t size_for_int(std::size_t arg) {
         ++r;
         arg /= 10;
     }
-    return r;
+    return std::max<size_t>(1, r); /* if r == 0 we clamp max to 1 to allow minimum containing "0" as char */
 }
 
 inline std::size_t command_size(const single_command_t &cmd) {
@@ -477,9 +477,11 @@ inline void Protocol::serialize(DynamicBuffer &buff,
         it += bytes;
         total += bytes;
 
-        buffer_copy(it, buffer(arg.data(), arg.size()));
-        it += arg.size();
-        total += arg.size();
+        if(!arg.empty()) {
+            buffer_copy(it, buffer(arg.data(), arg.size()));
+            it += arg.size();
+            total += arg.size();
+        }
 
         buffer_copy(it, buffer("\r\n", terminator.size));
         total += terminator.size;
