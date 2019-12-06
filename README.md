@@ -19,6 +19,9 @@ Boost::ASIO low-level redis client (connector)
 
 ## Changelog
 
+### 0.09
+- [bugfix] critical bug in protcol serialization on empty values
+
 ### 0.08
 - relaxed c++ compiler requirements: c++11 can be used instead of c++14
 
@@ -764,6 +767,7 @@ MIT
 - [Vinnie Falco](https://github.com/vinniefalco)
 - [Stephen Coleman](https://github.com/omegacoleman)
 - [maxtorm miximtor](https://github.com/miximtor)
+- [Ronny Nowak](https://github.com/dargun)
 
 ## See also
 - https://github.com/Cylix/cpp_redis
