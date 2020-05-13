@@ -289,7 +289,7 @@ template <typename Iterator, typename Policy> struct bulk_string_parser_t {
 
         auto count_result = count_parser_t::apply(from, to, already_consumed);
         auto count_int_result =
-            boost::apply_visitor(count_unwrapper_t{}, count_result);
+            boost::apply_visitor(count_unwrapper_t(), count_result);
         auto *count_wrapped = boost::get<count_value_t>(&count_int_result);
         if (!count_wrapped) {
             return boost::get<result_t>(count_int_result);
@@ -330,7 +330,7 @@ template <typename Iterator, typename Policy> struct array_parser_t {
 
         auto count_result = count_parser_t::apply(from, to, already_consumed);
         auto count_int_result =
-            boost::apply_visitor(count_unwrapper_t{}, count_result);
+            boost::apply_visitor(count_unwrapper_t(), count_result);
         auto *count_wrapped = boost::get<count_value_t>(&count_int_result);
         if (!count_wrapped) {
             return boost::get<result_t>(count_int_result);
