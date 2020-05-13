@@ -19,6 +19,9 @@ Boost::ASIO low-level redis client (connector)
 
 ## Changelog
 
+## 0.10
+- [bugfix] avoid access to protected destructor (c++17 compatibility)
+
 ### 0.09
 - [bugfix] critical bug in protcol serialization on empty values
 
@@ -768,6 +771,7 @@ MIT
 - [Stephen Coleman](https://github.com/omegacoleman)
 - [maxtorm miximtor](https://github.com/miximtor)
 - [Ronny Nowak](https://github.com/dargun)
+- [Stephen Chisholm](https://github.com/sbchisholm)
 
 ## See also
 - https://github.com/Cylix/cpp_redis
