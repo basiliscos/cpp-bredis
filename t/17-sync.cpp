@@ -31,10 +31,10 @@ TEST_CASE("ping", "[connection]") {
     auto port_str = boost::lexical_cast<std::string>(port);
     auto server = ts::make_server({"redis-server", "--port", port_str});
     ep::wait_port<ep::Kind::TCP>(port);
-    asio::io_service io_service;
+    asio::io_context io_service;
 
     asio::ip::tcp::endpoint end_point(
-        asio::ip::address::from_string("127.0.0.1"), port);
+        asio::ip::make_address("127.0.0.1"), port);
     socket_t socket(io_service, end_point.protocol());
     socket.connect(end_point);
 

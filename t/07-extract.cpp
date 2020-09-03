@@ -8,7 +8,7 @@
 namespace r = bredis;
 namespace asio = boost::asio;
 
-using Buffer = asio::const_buffers_1;
+using Buffer = asio::const_buffer;
 using Iterator = boost::asio::buffers_iterator<Buffer, char>;
 
 TEST_CASE("string extraction", "[protocol]") {

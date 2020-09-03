@@ -176,21 +176,14 @@ class async_read_op {
         return asio_handler_is_continuation(std::addressof(op->callback_));
     }
 
-    friend void *asio_handler_allocate(std::size_t size, async_read_op *op) {
-        using boost::asio::asio_handler_allocate;
-        return asio_handler_allocate(size, std::addressof(op->callback_));
+    boost::asio::associated_allocator_t<ReadCallback> get_allocator() const noexcept
+    {
+        return boost::asio::get_associated_allocator(callback_);
     }
 
-    friend void asio_handler_deallocate(void *p, std::size_t size,
-                                        async_read_op *op) {
-        using boost::asio::asio_handler_deallocate;
-        return asio_handler_deallocate(p, size, std::addressof(op->callback_));
-    }
-
-    template <class Function>
-    friend void asio_handler_invoke(Function &&f, async_read_op *op) {
-        using boost::asio::asio_handler_invoke;
-        return asio_handler_invoke(f, std::addressof(op->callback_));
+    boost::asio::associated_executor_t<ReadCallback> get_executor() const noexcept
+    {
+        return boost::asio::get_associated_executor(callback_);
     }
 };
 

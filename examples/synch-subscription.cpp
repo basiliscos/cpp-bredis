@@ -111,8 +111,8 @@ int main(int argc, char **argv) {
 
     try {
         // connect to redis
-        asio::io_service io_service;
-        auto ip_address = asio::ip::address::from_string(dst_parts[0]);
+        asio::io_context io_service;
+        auto ip_address = asio::ip::make_address(dst_parts[0]);
         auto port = boost::lexical_cast<std::uint16_t>(dst_parts[1]);
         std::cout << "connecting to " << address << "\n";
         asio::ip::tcp::endpoint end_point(ip_address, port);

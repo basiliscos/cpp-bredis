@@ -33,9 +33,9 @@ TEST_CASE("protocol-error", "[connection]") {
     std::chrono::milliseconds sleep_delay(1);
 
     uint16_t port = ep::get_random<ep::Kind::TCP>();
-    asio::io_service io_service;
+    asio::io_context io_service;
     asio::ip::tcp::endpoint end_point(
-        asio::ip::address::from_string("127.0.0.1"), port);
+        asio::ip::make_address("127.0.0.1"), port);
     asio::ip::tcp::acceptor acceptor(io_service, end_point.protocol());
 
     acceptor.bind(end_point);
@@ -45,7 +45,7 @@ TEST_CASE("protocol-error", "[connection]") {
     std::string data = "bla-bla";
     std::string end_marker = "ping\r\n";
     Buffer remote_rx_buff;
-    asio::const_buffers_1 output_buf = asio::buffer(data.c_str(), data.size());
+    asio::const_buffer output_buf = asio::buffer(data.c_str(), data.size());
     acceptor.async_accept(peer_socket, [&](const sys::error_code &error_code) {
         (void)error_code;
         BREDIS_LOG_DEBUG("async_accept: " << error_code.message() << ", "

@@ -165,7 +165,7 @@ using Iterator = typename r::to_iterator<Buffer>::iterator_t;
 ...
 /* establishing connection to redis is outside of bredis */
 asio::ip::tcp::endpoint end_point(
-    asio::ip::address::from_string("127.0.0.1"), port);
+    asio::ip::make_address("127.0.0.1"), port);
 socket_t socket(io_service, end_point.protocol());
 socket.connect(end_point);
 
@@ -234,7 +234,7 @@ using result_t = r::parse_result_mapper_t<Iterator, Policy>;
 ...
 /* establishing the connection to redis is outside of bredis */
 asio::ip::tcp::endpoint end_point(
-    asio::ip::address::from_string("127.0.0.1"), port);
+    asio::ip::make_address("127.0.0.1"), port);
 socket_t socket(io_service, end_point.protocol());
 socket.connect(end_point);
 ...
@@ -467,7 +467,7 @@ outside of the bredis connection.
 using socket_t = asio::ip::tcp::socket;
 using next_layer_t = socket_t &;
 ...
-asio::ip::tcp::endpoint end_point(asio::ip::address::from_string("127.0.0.1"), port);
+asio::ip::tcp::endpoint end_point(asio::ip::make_address("127.0.0.1"), port);
 socket_t socket(io_service, end_point.protocol());
 socket.connect(end_point);
 r::Connection<next_layer_t> c(socket);

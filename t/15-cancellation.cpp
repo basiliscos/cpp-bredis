@@ -35,9 +35,9 @@ TEST_CASE("cancel-on-read", "[cancellation]") {
     std::chrono::milliseconds sleep_delay(1);
 
     uint16_t port = ep::get_random<ep::Kind::TCP>();
-    asio::io_service io_service;
+    asio::io_context io_service;
     asio::ip::tcp::endpoint end_point(
-        asio::ip::address::from_string("127.0.0.1"), port);
+        asio::ip::make_address("127.0.0.1"), port);
     asio::ip::tcp::acceptor acceptor(io_service, end_point.protocol());
 
     acceptor.bind(end_point);

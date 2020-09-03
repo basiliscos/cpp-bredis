@@ -10,6 +10,7 @@ enable_testing()
 
 add_definitions(-DBOOST_ERROR_CODE_HEADER_ONLY)
 add_definitions(-DBOOST_COROUTINES_NO_DEPRECATION_WARNING)
+add_definitions(-DBOOST_ASIO_NO_DEPRECATED)
 #add_definitions(-DBREDIS_DEBUG)
 
 find_package(

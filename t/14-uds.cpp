@@ -65,7 +65,7 @@ TEST_CASE("ping", "[connection]") {
     }
     r::command_wrapper_t cmd(ping_cmds_container);
 
-    asio::io_service io_service;
+    asio::io_context io_service;
 
     asio::local::stream_protocol::endpoint end_point(redis_socket);
     socket_t socket(io_service, end_point.protocol());

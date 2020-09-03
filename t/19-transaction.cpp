@@ -40,7 +40,7 @@ TEST_CASE("transaction", "[connection]") {
     auto port_str = boost::lexical_cast<std::string>(port);
     auto server = ts::make_server({"redis-server", "--port", port_str});
     ep::wait_port<ep::Kind::TCP>(port);
-    asio::io_service io_service;
+    asio::io_context io_service;
 
     r::command_container_t tx_commands = {
         r::single_command_t("MULTI"),
@@ -54,7 +54,7 @@ TEST_CASE("transaction", "[connection]") {
     std::future<result_t> completion_future = completion_promise.get_future();
 
     asio::ip::tcp::endpoint end_point(
-        asio::ip::address::from_string("127.0.0.1"), port);
+        asio::ip::make_address("127.0.0.1"), port);
     socket_t socket(io_service, end_point.protocol());
     socket.connect(end_point);
     r::Connection<next_layer_t> c(std::move(socket));
