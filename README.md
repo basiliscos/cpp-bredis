@@ -19,7 +19,7 @@ Boost::ASIO low-level redis client (connector)
 
 ## Changelog
 
-## 0.11
+### 0.11
 - [feature, possible breakage] add `BOOST_ASIO_NO_DEPRECATED` definition
 for better support boost `v1.74` and modernize boost API usage
 
