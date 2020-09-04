@@ -138,8 +138,8 @@ int main(int argc, char **argv) {
     uint16_t port = vm.count("host") ? vm["port"].as<std::uint16_t>() : 6379;
 
     asio::io_context io;
-    //asio::io_service io_service;
-    auto ip_address = asio::ip::address::from_string(host);
+    //asio::io_context io_service;
+    auto ip_address = asio::ip::make_address(host);
     std::cout << "connecting to " << host << ":" << port << "\n";
     asio::ip::tcp::endpoint end_point(ip_address, port);
     socket_t socket(io, end_point.protocol());

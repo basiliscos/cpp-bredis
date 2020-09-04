@@ -45,14 +45,10 @@ class SocketWithLogging {
     template <typename BufferSequence>
     static void dump(const char *prefix, const BufferSequence &buffers,
                      std::size_t size) {
-        using boost::asio::buffer_cast;
-        using boost::asio::buffer_size;
-
         std::string content;
         content.reserve(size);
         for (auto const &buffer : buffers) {
-            content.append(buffer_cast<char const *>(buffer),
-                           buffer_size(buffer));
+            content.append(buffer.data(), buffer.size());
         }
         LogPolicy::log(prefix, content);
     }

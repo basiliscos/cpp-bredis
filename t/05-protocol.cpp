@@ -9,7 +9,7 @@
 namespace r = bredis;
 namespace asio = boost::asio;
 
-using Buffer = asio::const_buffers_1;
+using Buffer = asio::const_buffer;
 using Iterator = boost::asio::buffers_iterator<Buffer, char>;
 using Policy = r::parsing_policy::keep_result;
 using positive_result_t = r::parse_result_mapper_t<Iterator, Policy>;
