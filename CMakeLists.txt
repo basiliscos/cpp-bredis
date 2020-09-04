@@ -152,9 +152,12 @@ if(BOOST_VERSION_OK)
     add_test("t-20-promise" t-20-promise)
 endif()
 
-add_executable(t-21-coroutine t/21-coroutine.cpp)
-target_link_libraries(t-21-coroutine ${LINK_DEPENDENCIES})
-add_test("t-21-coroutine" t-21-coroutine)
+# seems boost is periodically broken. Please, send a fixing PR if u know how
+if ((Boost_MAJOR_VERSION GREATER_EQUAL 1) AND (Boost_MINOR_VERSION GREATER_EQUAL 74))
+    add_executable(t-21-coroutine t/21-coroutine.cpp)
+    target_link_libraries(t-21-coroutine ${LINK_DEPENDENCIES})
+    add_test("t-21-coroutine" t-21-coroutine)
+endif()
 
 add_executable(t-22-ping_drop-policy t/22-ping_drop-policy.cpp)
 target_link_libraries(t-22-ping_drop-policy ${LINK_DEPENDENCIES})
