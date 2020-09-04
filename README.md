@@ -19,7 +19,11 @@ Boost::ASIO low-level redis client (connector)
 
 ## Changelog
 
-## 0.10
+## 0.11
+- [feature, possible breakage] add `BOOST_ASIO_NO_DEPRECATED` definition
+for better support boost `v1.74` and modernize boost API usage
+
+### 0.10
 - [bugfix] avoid access to protected destructor (c++17 compatibility)
 
 ### 0.09
@@ -772,6 +776,7 @@ MIT
 - [maxtorm miximtor](https://github.com/miximtor)
 - [Ronny Nowak](https://github.com/dargun)
 - [Stephen Chisholm](https://github.com/sbchisholm)
+- [amensel](https://github.com/amensel)
 
 ## See also
 - https://github.com/Cylix/cpp_redis
