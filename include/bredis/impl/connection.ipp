@@ -18,60 +18,37 @@
 namespace bredis {
 
 template <typename NextLayer>
-template <typename DynamicBuffer, typename WriteCallback>
-BOOST_ASIO_INITFN_RESULT_TYPE(WriteCallback,
+template <typename DynamicBuffer, typename CompletionToken>
+BOOST_ASIO_INITFN_RESULT_TYPE(CompletionToken,
                               void(boost::system::error_code, std::size_t))
 Connection<NextLayer>::async_write(DynamicBuffer &tx_buff,
                                    const command_wrapper_t &command,
-                                   WriteCallback &&write_callback) {
+                                   CompletionToken &&write_callback) {
     namespace asio = boost::asio;
     namespace sys = boost::system;
 
     using boost::asio::async_write;
-    using Signature = void(boost::system::error_code, std::size_t);
-    using Callback = boost::decay_t<WriteCallback>;
-    using AsyncResult = asio::async_result<Callback, Signature>;
-    using CompletionHandler = typename AsyncResult::completion_handler_type;
     using serializer_t = command_serializer_visitor<DynamicBuffer>;
 
     boost::apply_visitor(serializer_t(tx_buff), command);
-
-    CompletionHandler handler(std::forward<WriteCallback>(write_callback));
-    AsyncResult result(handler);
-    async_write(stream_, tx_buff, std::move(handler));
-    return result.get();
+    return async_write(stream_, tx_buff, std::forward<CompletionToken>(write_callback));
 }
 
 template <typename NextLayer>
-template <typename DynamicBuffer, typename ReadCallback, typename Policy>
-BOOST_ASIO_INITFN_RESULT_TYPE(ReadCallback,
-                              void(const boost::system::error_code,
+template <typename DynamicBuffer, typename CompletionToken, typename Policy>
+BOOST_ASIO_INITFN_RESULT_TYPE(CompletionToken,
+                              void(boost::system::error_code,
                                    BREDIS_PARSE_RESULT(DynamicBuffer, Policy)))
 Connection<NextLayer>::async_read(DynamicBuffer &rx_buff,
-                                  ReadCallback &&read_callback,
+                                  CompletionToken &&completion_token,
                                   std::size_t replies_count, Policy) {
-
-    namespace asio = boost::asio;
-    namespace sys = boost::system;
-
     using boost::asio::async_read_until;
-    using Iterator = typename to_iterator<DynamicBuffer>::iterator_t;
     using ParseResult = BREDIS_PARSE_RESULT(DynamicBuffer, Policy);
     using Signature = void(boost::system::error_code, ParseResult);
-    using Callback = boost::decay_t<ReadCallback>;
-    using AsyncResult = asio::async_result<Callback, Signature>;
-    using CompletionHandler = typename AsyncResult::completion_handler_type;
-    using ReadOp =
-        async_read_op<NextLayer, DynamicBuffer, CompletionHandler, Policy>;
 
-    CompletionHandler handler(std::forward<ReadCallback>(read_callback));
-    AsyncResult result(handler);
-
-    ReadOp async_op(std::move(handler), stream_, rx_buff, replies_count);
-
-    async_read_until(stream_, rx_buff, MatchResult<Iterator>(replies_count),
-                     std::move(async_op));
-    return result.get();
+    return boost::asio::async_compose<CompletionToken, Signature>(
+        async_read_op_impl<NextLayer, DynamicBuffer, Policy>{stream_, rx_buff, replies_count},
+        completion_token, stream_);
 }
 
 template <typename NextLayer>

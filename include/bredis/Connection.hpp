@@ -44,19 +44,19 @@ template <typename NextLayer> class Connection {
     inline const NextLayer &next_layer() const { return stream_; }
 
     /* asynchronous interface */
-    template <typename DynamicBuffer, typename WriteCallback>
-    BOOST_ASIO_INITFN_RESULT_TYPE(WriteCallback,
+    template <typename DynamicBuffer, typename CompletionToken>
+    BOOST_ASIO_INITFN_RESULT_TYPE(CompletionToken,
                                   void(boost::system::error_code, std::size_t))
     async_write(DynamicBuffer &tx_buff, const command_wrapper_t &command,
-                WriteCallback &&write_callback);
+                CompletionToken &&completion_token);
 
-    template <typename DynamicBuffer, typename ReadCallback,
+    template <typename DynamicBuffer, typename CompletionToken,
               typename Policy = bredis::parsing_policy::keep_result>
-    BOOST_ASIO_INITFN_RESULT_TYPE(ReadCallback,
+    BOOST_ASIO_INITFN_RESULT_TYPE(CompletionToken,
                                   void(boost::system::error_code,
                                        BREDIS_PARSE_RESULT(DynamicBuffer,
                                                            Policy)))
-    async_read(DynamicBuffer &rx_buff, ReadCallback &&read_callback,
+    async_read(DynamicBuffer &rx_buff, CompletionToken &&completion_token,
                std::size_t replies_count = 1, Policy policy = Policy{});
 
     /* synchronous interface */

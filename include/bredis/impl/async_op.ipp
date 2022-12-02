@@ -111,15 +111,18 @@ struct result_visitor_t<Iterator, parsing_policy::keep_result>
     }
 };
 
-template <typename DynamicBuffer, typename Policy> struct async_read_op_impl {
+template <typename NextLayer, typename DynamicBuffer, typename Policy> struct async_read_op_impl {
+    NextLayer &stream_;
     DynamicBuffer &rx_buff_;
     std::size_t replies_count_;
+    enum class state_t { init, read, done } state_ = state_t::init;
 
-    async_read_op_impl(DynamicBuffer &rx_buff, std::size_t replies_count)
-        : rx_buff_{rx_buff}, replies_count_{replies_count} {}
     using Iterator = typename to_iterator<DynamicBuffer>::iterator_t;
     using ResultVisitor = result_visitor_t<Iterator, Policy>;
     using positive_result_t = parse_result_mapper_t<Iterator, Policy>;
+
+    async_read_op_impl(NextLayer &stream, DynamicBuffer &rx_buff, std::size_t replies_count) :
+        stream_(stream), rx_buff_(rx_buff), replies_count_(replies_count) {}
 
     positive_result_t op(boost::system::error_code &error_code,
                          std::size_t /*bytes_transferred*/) {
@@ -149,53 +152,25 @@ template <typename DynamicBuffer, typename Policy> struct async_read_op_impl {
         }
         return result;
     }
-};
 
-template <typename NextLayer, typename DynamicBuffer, typename ReadCallback,
-          typename Policy>
-class async_read_op {
-    NextLayer &stream_;
-    DynamicBuffer &rx_buff_;
-    std::size_t replies_count_;
-    ReadCallback callback_;
-
-  public:
-    async_read_op(async_read_op &&) = default;
-    async_read_op(const async_read_op &) = default;
-
-    template <class DeducedHandler>
-    async_read_op(DeducedHandler &&deduced_handler, NextLayer &stream,
-                  DynamicBuffer &rx_buff, std::size_t replies_count)
-        : stream_(stream), rx_buff_(rx_buff), replies_count_(replies_count),
-          callback_(std::forward<ReadCallback>(deduced_handler)) {}
-
-    void operator()(boost::system::error_code, std::size_t bytes_transferred);
-
-    friend bool asio_handler_is_continuation(async_read_op *op) {
-        using boost::asio::asio_handler_is_continuation;
-        return asio_handler_is_continuation(std::addressof(op->callback_));
-    }
-
-    boost::asio::associated_allocator_t<ReadCallback> get_allocator() const noexcept
-    {
-        return boost::asio::get_associated_allocator(callback_);
-    }
-
-    boost::asio::associated_executor_t<ReadCallback> get_executor() const noexcept
-    {
-        return boost::asio::get_associated_executor(callback_);
+    template<typename Self>
+    void operator()(Self& self, boost::system::error_code error_code = {}, std::size_t bytes_transferred = {}) {
+        switch (state_) {
+            case state_t::init:
+                state_ = state_t::read;
+                async_read_until(stream_, rx_buff_, MatchResult<Iterator>(replies_count_), std::move(self));
+                break;
+            case state_t::read:
+            {
+                state_ = state_t::done;
+                auto result = op(error_code, bytes_transferred); // Do not inline! We are sequencing computations
+                self.complete(error_code, result);
+                break;
+            }
+            default:
+                assert(false && "We are in unexpected state");
+        }
     }
 };
-
-template <typename NextLayer, typename DynamicBuffer, typename ReadCallback,
-          typename Policy>
-void async_read_op<NextLayer, DynamicBuffer, ReadCallback, Policy>::
-operator()(boost::system::error_code error_code,
-           std::size_t bytes_transferred) {
-    using op_impl = async_read_op_impl<DynamicBuffer, Policy>;
-    callback_(
-        error_code,
-        op_impl(rx_buff_, replies_count_).op(error_code, bytes_transferred));
-}
 
 } // namespace bredis
