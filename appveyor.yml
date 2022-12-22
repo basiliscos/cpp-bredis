@@ -20,7 +20,7 @@ environment:
 
 before_build:
     - cmake --version
-    - cmake
+    - cmake --help
     - echo %BOOST_ROOT%
     - dir "C:\Libraries"
     - dir "%BOOST_ROOT%"
