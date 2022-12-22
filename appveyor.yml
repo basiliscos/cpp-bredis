@@ -1,5 +1,5 @@
 # Operating system (build VM template)
-os: Visual Studio 2017
+os: Visual Studio 2019
 
 platform:
 #    x64
@@ -19,6 +19,7 @@ environment:
 
 
 before_build:
+    - pause
     - cmake --version
     - echo %BOOST_ROOT%
     - dir "C:\Libraries"
