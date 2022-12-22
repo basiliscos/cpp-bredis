@@ -1,5 +1,5 @@
 # Operating system (build VM template)
-os: Visual Studio 2017
+os: Visual Studio 2019
 
 platform:
 #    x64
@@ -8,18 +8,19 @@ platform:
 
 # enable rdp
 #init:
-#  - ps: iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+#    - ps: iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
 
 #on_finish:
 #  - ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
 
 environment:
-    BOOST_ROOT: "C:\\Libraries\\boost_1_69_0"
+    BOOST_ROOT: "C:\\Libraries\\boost_1_77_0"
 #    BOOST_LIBRARYDIR: "C:\\Libraries\\boost_1_64_0\\lib32-msvc-15.0"
 
 
 before_build:
     - cmake --version
+    - cmake --help
     - echo %BOOST_ROOT%
     - dir "C:\Libraries"
     - dir "%BOOST_ROOT%"
@@ -31,11 +32,12 @@ before_build:
     # redis
     - set PATH=%APPVEYOR_BUILD_FOLDER%;%PATH%
     # boost
-    - set PATH=%BOOST_ROOT%\lib64-msvc-14.1;%PATH%
+    - set PATH=%BOOST_ROOT%\lib64-msvc-14.2;%PATH%
     - echo %PATH%
 
 build_script:
-  - cmake -G "Visual Studio 15 2017 Win64" -H. -B_builds -DBOOST_ROOT="%BOOST_ROOT%"
+#  - pause
+  - cmake -H. -B_builds -DBOOST_ROOT="%BOOST_ROOT%"
 #  -DBOOST_LIBRARYDIR="%BOOST_LIBRARYDIR%"
   - cmake --build _builds
 
