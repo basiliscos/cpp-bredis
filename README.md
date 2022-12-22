@@ -19,9 +19,15 @@ Boost::ASIO low-level redis client (connector),
 - works on linux (clang, gcc) and windows (msvc)
 - synchronous & asynchronous interface
 - inspired by [beast](https://github.com/vinniefalco/Beast)
-- requirements: boost `v1.70` minimum
+- requirements: boost `v1.77` minimum
 
 ## Changelog
+
+### 0.12
+- [feature, breakging] modernize API to use completion token instead of
+using completion handler, which makes it possible to use `bredis` with
+coroutines. Thanks to [Usevalad Sauta](https://github.com/VsevolodSauta).
+Successfully tested with boost `v1.77`, lower versions might not work
 
 ### 0.11
 - [feature, possible breakage] add `BOOST_ASIO_NO_DEPRECATED` definition
